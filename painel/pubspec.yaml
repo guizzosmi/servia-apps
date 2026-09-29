@@ -1,0 +1,25 @@
+name: servia_painel
+description: "ServIA - painel web do gestor (cadastros, planejamento, financeiro)."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  servia_comum:
+    path: ../comum
+  supabase_flutter: ^2.14.0
+  go_router: ^14.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

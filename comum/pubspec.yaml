@@ -1,0 +1,15 @@
+name: servia_comum
+description: "ServIA - tema, configuração e sessão compartilhados entre o painel e o app."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.14.0
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
