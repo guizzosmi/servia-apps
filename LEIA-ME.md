@@ -19,8 +19,14 @@ painel/lib/
     definicoes.dart         o "motor": tipos de campo, colunas, filhos
     catalogo.dart           a descrição de cada cadastro (tabela, colunas, campos)
     servico.dart            leitura e gravação no banco
-    lista.dart, campos.dart lista com busca e campos especiais (busca de registro, múltipla escolha)
+    lista.dart, campos.dart lista com busca e campos especiais (busca de registro, múltipla escolha, cor)
+  servicos/
+    funcoes.dart            chamada das Edge Functions
+    etiquetas_pdf.dart      PDF A4 das etiquetas QR
 ```
+
+Telas fora do motor de cadastros: usuários e aparelhos (só o admin, gravam pelas funções
+`usuarios-admin` e `dispositivo-acao`) e etiquetas QR.
 
 Para criar um cadastro novo: crie a tabela no `servia-plataforma` (com `aplicar_padrao_empresa`)
 e acrescente uma `CadastroDef` em `catalogo.dart`. Lista, busca, formulário, validação e

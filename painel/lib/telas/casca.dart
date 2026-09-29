@@ -88,6 +88,11 @@ class _Menu extends StatelessWidget {
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),
+        if (Sessao.atual?.tem(Papel.admin) ?? false) ...[
+          grupo('Administração'),
+          item(Icons.manage_accounts_outlined, 'Usuários', '/usuarios'),
+          item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
+        ],
         grupo('Em breve'),
         const ListTile(
           dense: true,

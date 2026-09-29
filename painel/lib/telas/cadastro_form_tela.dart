@@ -52,7 +52,6 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
     TipoCampo.email,
     TipoCampo.telefone,
     TipoCampo.documento,
-    TipoCampo.cor,
     TipoCampo.data,
   };
 
@@ -135,7 +134,6 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
     switch (c.tipo) {
       case TipoCampo.texto:
       case TipoCampo.textoLongo:
-      case TipoCampo.cor:
         return t.isEmpty ? null : t;
       case TipoCampo.email:
         return t.isEmpty ? null : t.toLowerCase();
@@ -161,6 +159,7 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
         return List<String>.from((_valores[c.nome] as List?) ?? const []);
       case TipoCampo.opcoes:
       case TipoCampo.lookup:
+      case TipoCampo.cor:
         return _valores[c.nome];
     }
   }
@@ -184,8 +183,6 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
         case TipoCampo.documento:
           final d = _digitos(t);
           if (d.length != 11 && d.length != 14) return 'CPF (11) ou CNPJ (14) dígitos';
-        case TipoCampo.cor:
-          if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(t)) return 'Use o formato #RRGGBB';
         default:
           break;
       }
@@ -340,6 +337,13 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
             ),
           ),
         );
+      case TipoCampo.cor:
+        return CampoCor(
+          campo: c,
+          valor: _valores[c.nome] as String?,
+          habilitado: habilitado,
+          aoMudar: (v) => _mudou(c.nome, v),
+        );
       case TipoCampo.multiOpcoes:
         return CampoMultiOpcoes(
           campo: c,
@@ -413,21 +417,7 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
             labelText: _rotulo(c),
             helperText: c.ajuda ??
                 (c.tipo == TipoCampo.listaTexto ? 'Separe por vírgula' : null),
-            prefixIcon: c.tipo == TipoCampo.cor
-                ? Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: corDeTexto(_textos[c.nome]!.text),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  )
-                : null,
           ),
-          onChanged: c.tipo == TipoCampo.cor ? (_) => setState(() {}) : null,
           validator: (t) => _validar(c, t),
         );
     }

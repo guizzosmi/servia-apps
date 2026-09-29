@@ -6,12 +6,16 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cadastros/catalogo.dart';
+import 'telas/aparelhos_tela.dart';
 import 'telas/cadastro_form_tela.dart';
 import 'telas/cadastro_lista_tela.dart';
 import 'telas/casca.dart';
 import 'telas/empresa_tela.dart';
+import 'telas/etiquetas_tela.dart';
 import 'telas/inicio_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/usuario_tela.dart';
+import 'telas/usuarios_tela.dart';
 
 /// Papéis que podem usar o painel (o admin passa em todos).
 const papeisDoPainel = [Papel.gestor, Papel.financeiro];
@@ -44,6 +48,9 @@ final rotas = GoRouter(
     if (!sessao.temEmpresa || !sessao.temAlgum(papeisDoPainel)) {
       return '/empresa';
     }
+    // Usuários e aparelhos: só o admin (o servidor confere de novo).
+    final soAdmin = local.startsWith('/usuarios') || local.startsWith('/aparelhos');
+    if (soAdmin && !sessao.tem(Papel.admin)) return '/';
     return null;
   },
   errorBuilder: (context, state) => const _NaoEncontrada(),
@@ -55,6 +62,25 @@ final rotas = GoRouter(
           Casca(local: state.matchedLocation, child: filho),
       routes: [
         GoRoute(path: '/', builder: (_, __) => const InicioTela()),
+        GoRoute(path: '/etiquetas', builder: (_, __) => const EtiquetasTela()),
+        GoRoute(path: '/aparelhos', builder: (_, __) => const AparelhosTela()),
+        GoRoute(
+          path: '/usuarios',
+          builder: (_, __) => const UsuariosTela(),
+          routes: [
+            GoRoute(
+              path: 'novo',
+              builder: (_, __) => const UsuarioTela(key: ValueKey('usuario-novo'), id: null),
+            ),
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return UsuarioTela(key: ValueKey('usuario-$id'), id: id);
+              },
+            ),
+          ],
+        ),
         GoRoute(
           path: '/c/:cadastro',
           builder: (_, state) {

@@ -6,4 +6,9 @@ class Config {
   static const supabaseUrl = 'https://srtokvosnwtyewiempyw.supabase.co';
   static const supabaseChavePublica =
       'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH';
+
+  /// Domínio dos e-mails técnicos do login por matrícula + PIN
+  /// (`<matricula>@<codigo-da-conta>.<dominio>`). Igual ao segredo
+  /// DOMINIO_EMAIL_APP das funções (padrão servia.app).
+  static const dominioEmailApp = 'servia.app';
 }

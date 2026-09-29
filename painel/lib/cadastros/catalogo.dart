@@ -270,6 +270,7 @@ final List<CadastroDef> catalogo = [
     colunasBusca: ['codigo', 'descricao', 'marca', 'modelo', 'numero_serie'],
     ordem: 'codigo',
     colunaTitulo: 'codigo',
+    acoes: [AcaoCadastro('Etiquetas QR', Icons.qr_code_2, '/etiquetas')],
     colunas: [
       ColunaDef('codigo', 'Código', flex: 1),
       ColunaDef('descricao', 'Descrição', flex: 3),
@@ -279,7 +280,7 @@ final List<CadastroDef> catalogo = [
     ],
     campos: [
       CampoDef('codigo', 'Código (plaqueta/patrimônio)', obrigatorio: true, metade: true,
-          ajuda: 'O número que está na etiqueta do equipamento'),
+          ajuda: 'O número da plaqueta do cliente (pode repetir entre clientes diferentes)'),
       CampoDef('qr_token', 'Código do QR', somenteLeitura: true, somenteNaEdicao: true,
           metade: true, ajuda: 'Gerado pelo sistema; vai na etiqueta QR'),
       CampoDef('cliente_id', 'Cliente',

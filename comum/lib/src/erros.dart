@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _duplicados = {
   'clientes_documento_uk': 'Já existe um cliente com este CPF/CNPJ.',
   'clientes_interno_uk': 'Esta empresa já tem o cliente interno.',
-  'equipamentos_codigo_uk': 'Já existe um equipamento ativo com este código.',
+  'equipamentos_codigo_uk': 'Este cliente já tem um equipamento ativo com este código.',
   'produtos_codigo_uk': 'Já existe um produto ou serviço com este código.',
   'modelos_medicao_codigo_uk': 'Este tipo de equipamento já tem uma medição com este código.',
   'colaboradores_usuario_uk': 'Este usuário já está ligado a outro colaborador.',
@@ -17,6 +17,9 @@ String mensagemDeErro(Object e) {
   if (e is AuthException) {
     final m = e.message.toLowerCase();
     if (m.contains('invalid login')) return 'E-mail ou senha incorretos.';
+    if (m.contains('banned')) {
+      return 'Usuário desativado. Fale com o administrador da sua empresa.';
+    }
     if (m.contains('email not confirmed')) {
       return 'E-mail ainda não confirmado.';
     }

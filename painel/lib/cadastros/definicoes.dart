@@ -123,6 +123,16 @@ class FilhoDef {
   final Map<String, String> herdar;
 }
 
+/// Botão extra no topo da lista (ex.: "Etiquetas QR" nos equipamentos).
+class AcaoCadastro {
+  const AcaoCadastro(this.rotulo, this.icone, this.rota);
+  final String rotulo;
+  final IconData icone;
+
+  /// Tela aberta ao clicar (ex.: '/etiquetas').
+  final String rota;
+}
+
 typedef AntesDeSalvar = void Function(
     Map<String, dynamic> dados, Map<String, dynamic>? original);
 
@@ -145,6 +155,7 @@ class CadastroDef {
     this.podeExcluir,
     this.antesDeSalvar,
     this.aviso,
+    this.acoes = const [],
   });
 
   /// Usada na rota: `/c/<chave>`
@@ -175,6 +186,9 @@ class CadastroDef {
 
   /// Texto de orientação exibido no topo da lista.
   final String? aviso;
+
+  /// Botões extras no topo da lista.
+  final List<AcaoCadastro> acoes;
 }
 
 /// Lê um valor por caminho com pontos ('clientes.nome').

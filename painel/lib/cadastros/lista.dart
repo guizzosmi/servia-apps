@@ -128,6 +128,15 @@ class _ListaCadastroState extends State<ListaCadastro> {
             ),
           ),
         ),
+        if (!widget.embutida && largo)
+          for (final a in def.acoes) ...[
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () => context.push(a.rota),
+              icon: Icon(a.icone),
+              label: Text(a.rotulo),
+            ),
+          ],
         if (editar) ...[
           const SizedBox(width: 8),
           widget.embutida
