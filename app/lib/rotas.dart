@@ -16,6 +16,7 @@ final rotas = GoRouter(
   redirect: (context, state) {
     final estado = EstadoApp.instancia;
     final local = state.matchedLocation;
+    if (estado.apagadoPorOrdem) return local == '/apagado' ? null : '/apagado';
     if (!estado.entrou) return local == '/login' ? null : '/login';
     if (local == '/reentrar') return null;
     if (estado.revogado) return local == '/revogado' ? null : '/revogado';
@@ -26,6 +27,7 @@ final rotas = GoRouter(
     GoRoute(path: '/login', builder: (_, __) => const LoginTela()),
     GoRoute(path: '/reentrar', builder: (_, __) => const LoginTela(reentrar: true)),
     GoRoute(path: '/revogado', builder: (_, __) => const RevogadoTela()),
+    GoRoute(path: '/apagado', builder: (_, __) => const ApagadoTela()),
     GoRoute(path: '/hoje', builder: (_, __) => const HojeTela()),
     GoRoute(path: '/sincronizacao', builder: (_, __) => const SincronizacaoTela()),
     GoRoute(path: '/ler-codigo', builder: (_, __) => const LeitorQrTela()),

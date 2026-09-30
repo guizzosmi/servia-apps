@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import 'arquivos.dart';
 import 'banco_local.dart';
 import 'cofre.dart';
+import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.1.0';
+const versaoApp = '0.2.0';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -44,10 +45,13 @@ class _PrecisaEntrar implements Exception {
 /// aberto, logo depois de cada ação (com 1 segundo de espera, para juntar
 /// várias) e pelo botão "Sincronizar agora".
 class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
-  Sincronizador(this.banco, this.conta);
+  Sincronizador(this.banco, this.conta, {this.aoMandarApagar});
 
   final BancoLocal banco;
   final ContaLocal conta;
+
+  /// O administrador mandou apagar os dados deste aparelho.
+  final Future<void> Function()? aoMandarApagar;
 
   SituacaoSync situacao = SituacaoSync.parado;
 
@@ -67,8 +71,17 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
 
   DateTime? get ultimaSync => DateTime.tryParse(banco.meta('ultima_sync') ?? '')?.toLocal();
 
-  /// Data de hoje segundo a plataforma (fuso da empresa); sem ela, a do aparelho.
-  String get hoje => banco.meta('hoje') ?? _hojeDoAparelho();
+  /// Data de hoje segundo a plataforma (fuso da empresa); sem ela, a do
+  /// aparelho. Se a meia-noite passou sem internet, anda os mesmos dias que
+  /// o calendário do aparelho andou desde a última sincronização.
+  String get hoje {
+    final plataforma = banco.meta('hoje');
+    final naqueleDia = banco.meta('hoje_aparelho');
+    final agora = _hojeDoAparelho();
+    if (plataforma == null || naqueleDia == null) return plataforma ?? agora;
+    final dias = DateTime.parse('${agora}T00:00:00Z').difference(DateTime.parse('${naqueleDia}T00:00:00Z')).inDays;
+    return dias <= 0 ? plataforma : somarDias(plataforma, dias);
+  }
 
   static String _hojeDoAparelho() {
     final a = DateTime.now();
@@ -143,12 +156,21 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       await _baixar();
       await banco.gravarMeta('ultima_sync', DateTime.now().toUtc().toIso8601String());
       _mudar(SituacaoSync.ok);
+      await _limparDeVezEmQuando();
     } on _SemConexao catch (e) {
       _mudar(SituacaoSync.semConexao, e.motivo);
     } on _PrecisaEntrar {
       _mudar(SituacaoSync.precisaEntrar, 'Sua sessão venceu. Entre de novo para sincronizar (nada se perde).');
     } on PostgrestException catch (e) {
-      if (e.hint == 'dispositivo_revogado' || e.hint == 'dispositivo_apagar') {
+      if (e.hint == 'dispositivo_apagar' && aoMandarApagar != null) {
+        // Mandado apagar: marca (se o app fechar agora, apaga ao abrir), para
+        // de sincronizar na hora e apaga tudo logo depois desta volta.
+        try {
+          await banco.gravarMeta('apagar', '1');
+        } catch (_) {}
+        parar();
+        unawaited(Future(aoMandarApagar!));
+      } else if (e.hint == 'dispositivo_revogado' || e.hint == 'dispositivo_apagar') {
         await banco.gravarMeta('revogado', e.hint);
         _mudar(SituacaoSync.revogado, e.message);
       } else {
@@ -246,7 +268,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       final fotoId = '${op.dados['foto_id']}';
       final local = op.dados['arquivo_local'] as String?;
       if (local == null || op.dados['excluir'] == true || banco.meta('foto_subiu:$fotoId') != null) continue;
-      final arquivo = File(local);
+      final arquivo = Arquivos.foto(local)!;
       if (!await arquivo.exists()) {
         await banco.marcarRecusada(op.opId, 'O arquivo desta foto não está mais no aparelho.');
         recusadas.add(op.opId);
@@ -324,6 +346,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
             ],
         });
         await banco.gravarMeta('hoje', dia['hoje'] as String?);
+        await banco.gravarMeta('hoje_aparelho', _hojeDoAparelho());
         await banco.gravarMeta('meu_checkin', dia['meu_checkin'] == null ? null : jsonEncode(dia['meu_checkin']));
       }
       querDia = false;
@@ -331,6 +354,19 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       if (r['mais'] != true || paginas > 200) break;
     }
     banco.avisar();
+  }
+
+  /// Limpeza das fotos que já não são usadas, no máximo a cada 6 horas.
+  Future<void> _limparDeVezEmQuando() async {
+    final ultima = DateTime.tryParse(banco.meta('limpeza_fotos') ?? '');
+    if (ultima != null && DateTime.now().toUtc().difference(ultima) < const Duration(hours: 6)) return;
+    try {
+      final n = await Arquivos.limparFotos(banco);
+      if (n > 0) debugPrint('Limpeza: $n foto(s) apagada(s) do aparelho.');
+      await banco.gravarMeta('limpeza_fotos', DateTime.now().toUtc().toIso8601String());
+    } catch (e) {
+      debugPrint('Limpeza das fotos: $e');
+    }
   }
 
   Map<String, dynamic>? _cursor(String tabela) {

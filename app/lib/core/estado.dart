@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import 'arquivos.dart';
 import 'banco_local.dart';
 import 'cofre.dart';
 import 'sincronizacao.dart';
@@ -28,10 +31,33 @@ class EstadoApp extends ChangeNotifier {
   bool get entrou => conta != null && banco != null && sync != null;
   bool get revogado => banco?.meta('revogado') != null || sync?.situacao == SituacaoSync.revogado;
 
+  /// O administrador mandou apagar: os dados já foram apagados e a tela
+  /// avisa a pessoa antes de voltar ao login.
+  bool apagadoPorOrdem = false;
+  bool _apagando = false;
+
   /// Na abertura do app: se já havia alguém usando, abre o banco e
   /// começa a sincronizar (funciona sem internet).
   Future<void> iniciar() async {
+    try {
+      await Arquivos.iniciar();
+    } catch (_) {
+      // Sem a pasta do app: as fotos usam o caminho gravado.
+    }
+    final pendente = _pendente(await Cofre.ler(Cofre.chaveApagado));
     final c = await ContaLocal.carregar();
+    if (pendente != null && (c == null || c.usuarioId == pendente.$2)) {
+      // Apagou mas a plataforma ainda não recebeu a confirmação. Garante
+      // que nada ficou (o app pode ter sido fechado no meio da limpeza).
+      await BancoLocal.apagarTudo();
+      await Arquivos.apagarFotos();
+      await Cofre.apagar(Cofre.chaveConta);
+      apagadoPorOrdem = true;
+      unawaited(_confirmarApagado());
+      return;
+    }
+    // Pendência de outra pessoa: a plataforma recusa e a marca sai.
+    if (pendente != null) unawaited(_confirmarApagado());
     if (c == null) return;
     await _abrir(c);
   }
@@ -39,8 +65,72 @@ class EstadoApp extends ChangeNotifier {
   Future<void> _abrir(ContaLocal c) async {
     conta = c;
     banco = await BancoLocal.abrir();
-    sync = Sincronizador(banco!, c)..addListener(notifyListeners);
+    // O app fechou logo depois da ordem de apagar: apaga agora.
+    if (banco!.meta('apagar') != null) {
+      await apagarPorOrdem(esperarConfirmacao: false);
+      return;
+    }
+    sync = Sincronizador(banco!, c, aoMandarApagar: apagarPorOrdem)..addListener(notifyListeners);
     sync!.iniciar();
+    notifyListeners();
+  }
+
+  /// "dispositivo|usuário" gravado no cofre -> (dispositivo, usuário).
+  static (String, String)? _pendente(String? valor) {
+    if (valor == null) return null;
+    final partes = valor.split('|');
+    return (partes.first, partes.length > 1 ? partes[1] : '');
+  }
+
+  /// O administrador mandou apagar os dados deste aparelho: apaga o banco,
+  /// a fila e as fotos na hora, sem perguntar, e avisa a plataforma.
+  Future<void> apagarPorOrdem({bool esperarConfirmacao = true}) async {
+    if (_apagando) return;
+    _apagando = true;
+    try {
+      sync?.parar();
+      final c = conta;
+      if (c != null) await Cofre.gravar(Cofre.chaveApagado, '${c.dispositivoId}|${c.usuarioId}');
+      await _fechar(apagarDados: true);
+      await Cofre.apagar(Cofre.chaveConta);
+      apagadoPorOrdem = true;
+      notifyListeners();
+    } finally {
+      _apagando = false;
+    }
+    if (esperarConfirmacao) {
+      await _confirmarApagado();
+    } else {
+      unawaited(_confirmarApagado());
+    }
+  }
+
+  /// Conta para a plataforma que os dados foram apagados (o painel mostra
+  /// "Dados apagados"). Sem internet, tenta de novo depois. Recusa
+  /// definitiva (ex.: outra pessoa entrou no aparelho): desiste.
+  Future<void> _confirmarApagado() async {
+    final pendente = _pendente(await Cofre.ler(Cofre.chaveApagado));
+    if (pendente == null) return;
+    try {
+      await Supabase.instance.client.functions.invoke('dispositivo-acao', body: {
+        'acao': 'confirmar_apagado',
+        'dispositivo_id': pendente.$1,
+      });
+      await Cofre.apagar(Cofre.chaveApagado);
+    } on FunctionException catch (e) {
+      if (const [400, 403, 404, 409].contains(e.status)) await Cofre.apagar(Cofre.chaveApagado);
+      debugPrint('Confirmar apagado: ${e.status} ${e.details}');
+    } catch (e) {
+      debugPrint('Confirmar apagado: $e');
+    }
+  }
+
+  /// Botão da tela de dados apagados: volta ao login. Se a confirmação
+  /// ainda não subiu, ela vai no próximo login desta pessoa.
+  Future<void> concluirApagado() async {
+    await _confirmarApagado();
+    if (await Cofre.ler(Cofre.chaveApagado) == null) await _sairSilencioso();
+    apagadoPorOrdem = false;
     notifyListeners();
   }
 
@@ -69,6 +159,17 @@ class EstadoApp extends ChangeNotifier {
     if (dispositivo == null) {
       dispositivo = const Uuid().v4();
       await Cofre.gravar(chaveDispositivo, dispositivo);
+    }
+
+    // Apagado por ordem sem confirmação (estava sem internet): a mesma
+    // pessoa confirma agora; outra pessoa não consegue, e a marca sai.
+    final pendente = _pendente(await Cofre.ler(Cofre.chaveApagado));
+    if (pendente != null) {
+      if (pendente.$2 == info.usuarioId) {
+        await _confirmarApagado();
+      } else {
+        await Cofre.apagar(Cofre.chaveApagado);
+      }
     }
 
     // Registra o aparelho (ou confere se ele foi revogado).
@@ -149,6 +250,9 @@ class EstadoApp extends ChangeNotifier {
     sync = null;
     banco = null;
     conta = null;
-    if (apagarDados) await BancoLocal.apagarTudo();
+    if (apagarDados) {
+      await BancoLocal.apagarTudo();
+      await Arquivos.apagarFotos();
+    }
   }
 }

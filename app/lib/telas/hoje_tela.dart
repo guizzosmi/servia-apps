@@ -99,6 +99,17 @@ class _HojeTelaState extends State<HojeTela> {
                     botao: 'Entrar',
                     aoTocar: () => context.push('/reentrar'),
                   ),
+                if (sync.situacao != SituacaoSync.ok &&
+                    sync.situacao != SituacaoSync.sincronizando &&
+                    sync.ultimaSync != null &&
+                    DateTime.now().difference(sync.ultimaSync!) > const Duration(hours: 12))
+                  _Aviso(
+                    icone: Icons.cloud_off_outlined,
+                    texto: 'Sem sincronizar desde ${haQuanto(sync.ultimaSync)}. A parte pode ter mudado; '
+                        'o que você fizer fica salvo e sobe quando houver internet.',
+                    botao: 'Tentar',
+                    aoTocar: sync.sincronizar,
+                  ),
                 if (partes.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 48),

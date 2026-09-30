@@ -15,6 +15,9 @@ class Cofre {
   static const chaveDispositivo = 'servia_dispositivo';
   static const chaveConta = 'servia_conta';
 
+  /// Aparelho mandado apagar: guarda o id até a plataforma receber a confirmação.
+  static const chaveApagado = 'servia_apagado_pendente';
+
   static Future<String?> ler(String chave) => _cofre.read(key: chave);
   static Future<void> gravar(String chave, String valor) => _cofre.write(key: chave, value: valor);
   static Future<void> apagar(String chave) => _cofre.delete(key: chave);

@@ -159,6 +159,9 @@ class BancoLocal extends ChangeNotifier {
 
   String? meta(String chave) => _meta[chave];
 
+  /// Chaves de controle que começam com [prefixo] (ex.: 'foto_subiu:').
+  List<String> chavesMeta(String prefixo) => _meta.keys.where((k) => k.startsWith(prefixo)).toList();
+
   List<Operacao> get fila => List.unmodifiable(_fila);
   int get pendentes => _fila.where((o) => o.situacao == 'pendente').length;
   List<Operacao> get recusadas => _fila.where((o) => o.situacao == 'recusada').toList();

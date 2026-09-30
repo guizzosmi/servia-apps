@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/arquivos.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 
@@ -619,7 +619,7 @@ class _AbaFotosState extends State<AbaFotos> {
       );
       if (foto == null) return;
       final id = AcoesAtendimento.novoId();
-      final pasta = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'fotos'));
+      final pasta = await Arquivos.pastaFotos();
       await pasta.create(recursive: true);
       final destino = p.join(pasta.path, '$id.jpg');
       final bytes = await foto.readAsBytes();
@@ -638,7 +638,7 @@ class _AbaFotosState extends State<AbaFotos> {
   }
 
   Future<void> _ver(Map<String, dynamic> f) async {
-    final arquivo = f['arquivo_local'] == null ? null : File('${f['arquivo_local']}');
+    final arquivo = Arquivos.foto(f['arquivo_local']);
     final apagar = await showDialog<bool>(
       context: context,
       builder: (ctx) => Dialog(
@@ -697,8 +697,8 @@ class _AbaFotosState extends State<AbaFotos> {
               onTap: () => _ver(f),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: f['arquivo_local'] != null && File('${f['arquivo_local']}').existsSync()
-                    ? Image.file(File('${f['arquivo_local']}'), fit: BoxFit.cover, cacheWidth: 300)
+                child: Arquivos.foto(f['arquivo_local'])?.existsSync() ?? false
+                    ? Image.file(Arquivos.foto(f['arquivo_local'])!, fit: BoxFit.cover, cacheWidth: 300)
                     : const ColoredBox(
                         color: Cores.indigo100,
                         child: Center(child: Icon(Icons.cloud_done_outlined, color: Cores.indigo500)),

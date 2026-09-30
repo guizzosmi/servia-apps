@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../core/arquivos.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../core/sincronizacao.dart';
@@ -101,6 +102,7 @@ class SincronizacaoTela extends StatelessWidget {
                         Text('${e.value}', style: const TextStyle(fontWeight: FontWeight.w600)),
                       ]),
                     const Divider(),
+                    const _ResumoFotos(),
                     const Row(children: [
                       Expanded(child: Text('Versão do app')),
                       Text(versaoApp, style: TextStyle(fontWeight: FontWeight.w600)),
@@ -129,5 +131,32 @@ class _Titulo extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
         child: Text(texto.toUpperCase(),
             style: const TextStyle(fontSize: 12, letterSpacing: .6, fontWeight: FontWeight.w700, color: Cores.neutro)),
+      );
+}
+
+/// Quantas fotos o app guarda no aparelho (as antigas, já enviadas, saem
+/// sozinhas depois que o atendimento sai do dia).
+class _ResumoFotos extends StatefulWidget {
+  const _ResumoFotos();
+
+  @override
+  State<_ResumoFotos> createState() => _ResumoFotosState();
+}
+
+class _ResumoFotosState extends State<_ResumoFotos> {
+  late final Future<(int, int)> _resumo = Arquivos.resumoFotos();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<(int, int)>(
+        future: _resumo,
+        builder: (context, r) {
+          final (n, bytes) = r.data ?? (0, 0);
+          final mb = (bytes / (1024 * 1024)).toStringAsFixed(1).replaceAll('.', ',');
+          return Row(children: [
+            const Expanded(child: Text('Fotos no aparelho')),
+            Text(r.hasError ? '?' : (r.hasData ? '$n ($mb MB)' : '...'),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ]);
+        },
       );
 }
