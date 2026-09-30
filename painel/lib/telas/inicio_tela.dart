@@ -20,6 +20,57 @@ class _InicioTelaState extends State<InicioTela> {
     for (final def in cadastrosDoMenu) def.tabela: _contar(def.tabela),
   };
 
+  // Números da operação: o que está na fila e as OS em aberto.
+  late final Future<int> _naFila = Supabase.instance.client
+      .from('agendamentos')
+      .select('id')
+      .eq('status', 'pendente')
+      .isFilter('excluido_em', null)
+      .limit(1)
+      .count(CountOption.exact)
+      .then((r) => r.count);
+  late final Future<int> _osAbertas = Supabase.instance.client
+      .from('ordens_servico')
+      .select('id')
+      .not('status', 'in', '(concluida,cancelada)')
+      .isFilter('excluido_em', null)
+      .limit(1)
+      .count(CountOption.exact)
+      .then((r) => r.count);
+
+  Widget _cartaoOperacao(IconData icone, String titulo, Future<int> valor, String destino) {
+    return SizedBox(
+      width: 220,
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: Cores.indigo700,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.go(destino),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              Icon(icone, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  FutureBuilder<int>(
+                    future: valor,
+                    builder: (_, s) => Text(
+                      s.hasData ? '${s.data}' : (s.hasError ? '–' : '…'),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ),
+                  Text(titulo, style: const TextStyle(color: Colors.white70)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<int> _contar(String tabela) async {
     final r = await Supabase.instance.client
         .from(tabela)
@@ -44,6 +95,11 @@ class _InicioTelaState extends State<InicioTela> {
           Text('${sessao?.email ?? ''} · ${sessao?.papeis.join(', ') ?? ''}',
               style: const TextStyle(color: Cores.neutro)),
           const SizedBox(height: 24),
+          Wrap(spacing: 16, runSpacing: 16, children: [
+            _cartaoOperacao(Icons.inbox_outlined, 'na fila', _naFila, '/fila'),
+            _cartaoOperacao(Icons.assignment_outlined, 'OS em aberto', _osAbertas, '/os'),
+          ]),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 16,
             runSpacing: 16,

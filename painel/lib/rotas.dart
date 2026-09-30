@@ -12,8 +12,12 @@ import 'telas/cadastro_lista_tela.dart';
 import 'telas/casca.dart';
 import 'telas/empresa_tela.dart';
 import 'telas/etiquetas_tela.dart';
+import 'telas/fila_tela.dart';
 import 'telas/inicio_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/os_lista_tela.dart';
+import 'telas/os_nova_tela.dart';
+import 'telas/os_tela.dart';
 import 'telas/usuario_tela.dart';
 import 'telas/usuarios_tela.dart';
 
@@ -63,6 +67,21 @@ final rotas = GoRouter(
       routes: [
         GoRoute(path: '/', builder: (_, __) => const InicioTela()),
         GoRoute(path: '/etiquetas', builder: (_, __) => const EtiquetasTela()),
+        GoRoute(path: '/fila', builder: (_, __) => const FilaTela()),
+        GoRoute(
+          path: '/os',
+          builder: (_, __) => const OsListaTela(),
+          routes: [
+            GoRoute(path: 'nova', builder: (_, __) => const OsNovaTela()),
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return OsTela(key: ValueKey('os-$id'), id: id);
+              },
+            ),
+          ],
+        ),
         GoRoute(path: '/aparelhos', builder: (_, __) => const AparelhosTela()),
         GoRoute(
           path: '/usuarios',
@@ -98,7 +117,16 @@ final rotas = GoRouter(
                   key: ValueKey('${def.chave}/novo/${state.uri.query}'),
                   def: def,
                   id: null,
-                  herdados: Map.of(state.uri.queryParameters),
+                  // ?cliente_id=... vem travado (herdado do pai);
+                  // ?sugerir_nome=... só preenche (dá para mudar).
+                  herdados: {
+                    for (final e in state.uri.queryParameters.entries)
+                      if (!e.key.startsWith('sugerir_')) e.key: e.value,
+                  },
+                  sugestoes: {
+                    for (final e in state.uri.queryParameters.entries)
+                      if (e.key.startsWith('sugerir_')) e.key.substring(8): e.value,
+                  },
                 );
               },
             ),

@@ -550,6 +550,10 @@ void _consentimentoWhatsapp(Map<String, dynamic> dados, Map<String, dynamic>? or
   }
 }
 
+/// Cadastro de uma tabela (usado no "Incluir novo" das buscas).
+CadastroDef? cadastroPorTabela(String tabela) =>
+    catalogo.where((d) => d.tabela == tabela).firstOrNull;
+
 CadastroDef? cadastroPorChave(String chave) =>
     catalogo.where((d) => d.chave == chave).firstOrNull;
 

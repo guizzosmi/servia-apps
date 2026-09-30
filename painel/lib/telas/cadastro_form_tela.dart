@@ -16,6 +16,7 @@ class CadastroFormTela extends StatefulWidget {
     required this.def,
     required this.id,
     required this.herdados,
+    this.sugestoes = const {},
   });
 
   final CadastroDef def;
@@ -23,6 +24,10 @@ class CadastroFormTela extends StatefulWidget {
 
   /// Valores vindos do pai (?cliente_id=...). Ficam travados.
   final Map<String, String> herdados;
+
+  /// Valores sugeridos para um registro novo (ex.: o nome digitado na busca).
+  /// Diferente dos herdados, estes podem ser alterados.
+  final Map<String, String> sugestoes;
 
   @override
   State<CadastroFormTela> createState() => _CadastroFormTelaState();
@@ -79,6 +84,7 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
         _preencher({
           for (final c in def.campos)
             if (c.padrao != null) c.nome: c.padrao,
+          ...widget.sugestoes,
           ...widget.herdados,
         });
       } else {
@@ -213,9 +219,13 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
     }
   }
 
+  /// Registro incluído nesta tela: o id volta para quem abriu (ex.: a busca
+  /// de cliente da Nova OS, que já deixa ele escolhido).
+  bool _criadoAqui = false;
+
   void _voltar() {
     if (context.canPop()) {
-      context.pop(true);
+      context.pop(_criadoAqui ? _id : null);
     } else {
       context.go('/c/${def.chave}');
     }
@@ -242,10 +252,15 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
         setState(() {
           _id = salvo['id'] as String;
           _registro = salvo;
+          _criadoAqui = true;
           _preencher(salvo);
         });
         _avisar('Salvo. Agora você pode incluir os itens abaixo.');
       } else {
+        if (eraNovo) {
+          _id = salvo['id'] as String;
+          _criadoAqui = true;
+        }
         _avisar('Salvo.');
         _voltar();
       }
@@ -279,6 +294,7 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
     if (ok != true) return;
     try {
       await _servico.excluir(_id!);
+      _criadoAqui = false;
       if (!mounted) return;
       _avisar('Excluído.');
       _voltar();

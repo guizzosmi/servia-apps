@@ -85,6 +85,9 @@ class _Menu extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       children: [
         item(Icons.home_outlined, 'Início', '/'),
+        grupo('Operação'),
+        item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
+        item(Icons.assignment_outlined, 'Ordens de serviço', '/os'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),
@@ -99,12 +102,6 @@ class _Menu extends StatelessWidget {
           enabled: false,
           leading: Icon(Icons.view_kanban_outlined, size: 20),
           title: Text('Quadro do dia'),
-        ),
-        const ListTile(
-          dense: true,
-          enabled: false,
-          leading: Icon(Icons.event_outlined, size: 20),
-          title: Text('Agendamentos'),
         ),
         const ListTile(
           dense: true,

@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:go_router/go_router.dart';
+
+import 'catalogo.dart';
 import 'definicoes.dart';
 import 'servico.dart';
 
@@ -91,18 +94,40 @@ class _CampoLookupState extends State<CampoLookup> {
           content: Text('Escolha primeiro: ${widget.rotuloPai ?? _lk.campoPai}.')));
       return;
     }
+    final def = cadastroPorTabela(_lk.tabela);
+    final podeEditar = Sessao.atual?.tem(Papel.gestor) ?? false;
     final escolhido = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => _DialogoLookup(
         titulo: widget.campo.rotulo,
         lookup: _lk,
         valorPai: widget.valorPai,
+        rotuloIncluir: (def != null && podeEditar) ? def.singular.toLowerCase() : null,
       ),
     );
-    if (escolhido == null) return;
+    if (escolhido == null || !mounted) return;
+    if (escolhido.containsKey('_incluir') && def != null) {
+      await _incluirNovo(def, (escolhido['_incluir'] ?? '').toString());
+      return;
+    }
     final id = escolhido['id'] as String;
     _idDoTexto = id;
     _texto.text = (escolhido[_lk.colunaRotulo] ?? '').toString();
+    widget.aoMudar(id);
+  }
+
+  /// Abre o cadastro para incluir um registro novo sem sair da tela.
+  /// O registro já vem ligado ao "pai" (ex.: local do cliente escolhido) e com
+  /// o nome que foi digitado na busca. Ao voltar, ele já fica escolhido aqui.
+  Future<void> _incluirNovo(CadastroDef def, String textoBuscado) async {
+    final params = <String, String>{
+      if (_lk.colunaFiltro != null && widget.valorPai != null) _lk.colunaFiltro!: widget.valorPai!,
+      if (textoBuscado.trim().isNotEmpty) 'sugerir_${_lk.colunaRotulo}': textoBuscado.trim(),
+    };
+    final destino = Uri(path: '/c/${def.chave}/novo', queryParameters: params.isEmpty ? null : params).toString();
+    final id = await context.push<String>(destino);
+    if (id == null || !mounted) return;
+    _idDoTexto = null; // força buscar o nome do registro novo
     widget.aoMudar(id);
   }
 
@@ -142,11 +167,15 @@ class _DialogoLookup extends StatefulWidget {
     required this.titulo,
     required this.lookup,
     required this.valorPai,
+    this.rotuloIncluir,
   });
 
   final String titulo;
   final Lookup lookup;
   final String? valorPai;
+
+  /// Se informado, mostra o botão "Incluir novo" seguido deste rótulo.
+  final String? rotuloIncluir;
 
   @override
   State<_DialogoLookup> createState() => _DialogoLookupState();
@@ -248,6 +277,14 @@ class _DialogoLookupState extends State<_DialogoLookup> {
         ),
       ),
       actions: [
+        if (widget.rotuloIncluir != null)
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pop({'_incluir': _busca.text}),
+            icon: const Icon(Icons.add),
+            label: Text(_busca.text.trim().isEmpty
+                ? 'Incluir novo ${widget.rotuloIncluir}'
+                : 'Incluir "${_busca.text.trim()}"'),
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
