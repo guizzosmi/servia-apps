@@ -6,6 +6,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cadastros/catalogo.dart';
+import 'quadro/quadro_tela.dart';
 import 'telas/aparelhos_tela.dart';
 import 'telas/cadastro_form_tela.dart';
 import 'telas/cadastro_lista_tela.dart';
@@ -68,6 +69,13 @@ final rotas = GoRouter(
         GoRoute(path: '/', builder: (_, __) => const InicioTela()),
         GoRoute(path: '/etiquetas', builder: (_, __) => const EtiquetasTela()),
         GoRoute(path: '/fila', builder: (_, __) => const FilaTela()),
+        GoRoute(
+          path: '/quadro',
+          builder: (_, state) {
+            final data = state.uri.queryParameters['data'];
+            return QuadroTela(key: ValueKey('quadro-$data'), data: data);
+          },
+        ),
         GoRoute(
           path: '/os',
           builder: (_, __) => const OsListaTela(),

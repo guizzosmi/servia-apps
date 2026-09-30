@@ -86,6 +86,7 @@ class _Menu extends StatelessWidget {
       children: [
         item(Icons.home_outlined, 'Início', '/'),
         grupo('Operação'),
+        item(Icons.view_kanban_outlined, 'Quadro do dia', '/quadro'),
         item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
         item(Icons.assignment_outlined, 'Ordens de serviço', '/os'),
         grupo('Cadastros'),
@@ -97,12 +98,6 @@ class _Menu extends StatelessWidget {
           item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
         ],
         grupo('Em breve'),
-        const ListTile(
-          dense: true,
-          enabled: false,
-          leading: Icon(Icons.view_kanban_outlined, size: 20),
-          title: Text('Quadro do dia'),
-        ),
         const ListTile(
           dense: true,
           enabled: false,
