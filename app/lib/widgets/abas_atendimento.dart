@@ -61,7 +61,8 @@ class AbaEquipamentos extends StatelessWidget {
       _aviso(context, achados.isEmpty ? 'Etiqueta não encontrada: $lido' : 'Esta etiqueta é de outro cliente.');
       return;
     }
-    final lidoEquip = doCliente.first;
+    // O mesmo texto pode bater em dois (QR de um, código de outro): prefere o esperado.
+    final lidoEquip = doCliente.firstWhere((e) => e['id'] == esperado?['id'], orElse: () => doCliente.first);
     if (esperado != null && lidoEquip['id'] != esperado['id']) {
       _aviso(context,
           'Esta etiqueta é do ${_rotuloEquipamento(lidoEquip)}, não do ${_rotuloEquipamento(esperado)}. '

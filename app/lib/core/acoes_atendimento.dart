@@ -306,7 +306,16 @@ class AcoesAtendimento {
     String? itemId,
   }) async {
     final id = itemId ?? novoId();
-    final preco = (produto?['preco_venda'] as num?) ?? 0;
+    // Como na plataforma: o preço e o desconto que o gestor deu ficam; item
+    // novo (ou outro produto) usa o preço de venda do cadastro.
+    final atual = _banco.um('os_itens', id);
+    final num preco;
+    if (atual != null && atual['produto_id'] == produto?['id']) {
+      preco = num.tryParse('${atual['preco_unitario']}') ?? 0;
+    } else {
+      preco = (produto?['preco_venda'] as num?) ?? 0;
+    }
+    final desconto = num.tryParse('${atual?['desconto'] ?? 0}') ?? 0;
     await _sync.registrar(
       'item_os_salvar',
       {
@@ -327,7 +336,8 @@ class AcoesAtendimento {
           'quantidade': quantidade,
           'unidade': produto?['unidade'] ?? 'un',
           'preco_unitario': preco,
-          'total': (quantidade * preco * 100).round() / 100,
+          'desconto': desconto,
+          'total': (quantidade * preco * 100).round() / 100 - desconto,
           'origem': 'manual',
           'confirmado': true,
         }
