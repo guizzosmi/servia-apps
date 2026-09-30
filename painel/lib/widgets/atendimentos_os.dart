@@ -3,6 +3,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/status.dart';
+import 'ajustes_atendimento.dart';
 import 'status_chip.dart';
 
 const statusAtendimento = {
@@ -43,14 +44,21 @@ String _num(Object? v) {
 String _ordemMedicao(Map m) =>
     '${(m['equipamentos'] as Map?)?['codigo']}:${'${(m['modelos_medicao'] as Map?)?['ordem'] ?? 0}'.padLeft(5, '0')}';
 
-String _dinheiro(Object? v) => 'R\$ ${(num.tryParse('${v ?? 0}') ?? 0).toStringAsFixed(2).replaceAll('.', ',')}';
-
 /// O que aconteceu no campo, por atendimento: quem esteve lá e quanto
-/// tempo, relato, equipamentos identificados, medições, fluido, itens e fotos.
+/// tempo, relato, equipamentos identificados, medições, fluido e fotos.
+/// Com [editavel], o gestor corrige (horas com motivo, relato, medições,
+/// fluido, fotos). As peças e serviços ficam na seção própria da OS.
 class AtendimentosDaOs extends StatefulWidget {
-  const AtendimentosDaOs({super.key, required this.osId});
+  const AtendimentosDaOs({super.key, required this.osId, this.editavel = false, this.versao = 0, this.aoMudar});
 
   final String osId;
+  final bool editavel;
+
+  /// Muda quando a tela da OS recarrega: recarrega sem piscar.
+  final int versao;
+
+  /// Chamado depois de cada ajuste (a tela da OS recarrega tudo).
+  final VoidCallback? aoMudar;
 
   @override
   State<AtendimentosDaOs> createState() => _AtendimentosDaOsState();
@@ -62,6 +70,7 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
   List<Map<String, dynamic>> _atendimentos = [];
   Map<String, List<Map<String, dynamic>>> _filhos = {};
   Map<String, String> _urls = {};
+  bool _ocupado = false;
 
   @override
   void initState() {
@@ -69,7 +78,17 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
     _carregar();
   }
 
+  @override
+  void didUpdateWidget(AtendimentosDaOs antigo) {
+    super.didUpdateWidget(antigo);
+    if (antigo.versao != widget.versao) _carregar();
+  }
+
+  /// Só a resposta do pedido mais recente vale (duas recargas seguidas).
+  int _pedido = 0;
+
   Future<void> _carregar() async {
+    final meu = ++_pedido;
     final db = Supabase.instance.client;
     try {
       final atds = await db
@@ -92,16 +111,14 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
               .inFilter('atendimento_id', ids).isFilter('excluido_em', null),
           db.from('atendimento_fluidos').select('*, equipamentos(codigo)').inFilter('atendimento_id', ids)
               .isFilter('excluido_em', null),
-          db.from('os_itens').select().eq('os_id', widget.osId).isFilter('excluido_em', null)
-              .order('criado_em', ascending: true),
           db.from('atendimento_fotos').select().inFilter('atendimento_id', ids).isFilter('excluido_em', null)
               .order('tirada_em', ascending: true),
         ]);
-        const nomes = ['participantes', 'equipamentos', 'medicoes', 'fluidos', 'itens', 'fotos'];
+        const nomes = ['participantes', 'equipamentos', 'medicoes', 'fluidos', 'fotos'];
         for (var i = 0; i < nomes.length; i++) {
           filhos[nomes[i]] = r[i];
         }
-        final caminhos = r[5].map((f) => f['caminho'] as String).toList();
+        final caminhos = r[4].map((f) => f['caminho'] as String).toList();
         if (caminhos.isNotEmpty) {
           try {
             final assinadas = await db.storage.from('fotos').createSignedUrlsResult(caminhos, 600);
@@ -114,8 +131,9 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
           }
         }
       }
-      if (!mounted) return;
+      if (!mounted || meu != _pedido) return;
       setState(() {
+        _erro = null;
         _atendimentos = atds;
         _filhos = filhos;
         _urls = urls;
@@ -129,6 +147,104 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
 
   List<Map<String, dynamic>> _de(String tabela, Object? atdId) =>
       (_filhos[tabela] ?? const []).where((r) => r['atendimento_id'] == atdId).toList();
+
+  void _avisar(String texto, {bool erro = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(texto), backgroundColor: erro ? Cores.erro : null));
+  }
+
+  /// Executa os ajustes em ordem; para no primeiro erro.
+  Future<void> _executar(List<Map<String, dynamic>> acoes, String sucesso) async {
+    if (acoes.isEmpty || !mounted) return;
+    setState(() => _ocupado = true);
+    var feitas = 0;
+    try {
+      for (final a in acoes) {
+        await acaoAtendimento(a);
+        feitas++;
+      }
+      _avisar(sucesso);
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+      if (feitas > 0) widget.aoMudar?.call();
+    }
+  }
+
+  Future<void> _periodo(Map<String, dynamic> atd, [Map<String, dynamic>? periodo]) async {
+    var pessoas = <Map<String, dynamic>>[];
+    if (periodo == null) {
+      try {
+        pessoas = await Supabase.instance.client
+            .from('colaboradores')
+            .select('id, nome')
+            .eq('ativo', true)
+            .isFilter('excluido_em', null)
+            .order('nome');
+      } catch (e) {
+        _avisar(mensagemDeErro(e), erro: true);
+        return;
+      }
+    }
+    if (!mounted) return;
+    final r = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => DialogoPeriodo(atendimentoId: atd['id'] as String, periodo: periodo, pessoas: pessoas),
+    );
+    if (r == null) return;
+    await _executar([r], r['acao'] == 'participante_excluir' ? 'Período excluído.' : 'Horas salvas.');
+  }
+
+  Future<void> _relato(Map<String, dynamic> atd) async {
+    final r = await showDialog<Map<String, dynamic>>(context: context, builder: (_) => DialogoRelato(atendimento: atd));
+    if (r != null) await _executar([r], 'Relato salvo.');
+  }
+
+  Future<void> _medicoes(Map<String, dynamic> atd) async {
+    final r = await showDialog<List<Map<String, dynamic>>>(
+      context: context,
+      builder: (_) => DialogoMedicoes(
+        atendimentoId: atd['id'] as String,
+        osId: widget.osId,
+        medicoes: _de('medicoes', atd['id']),
+        fluidos: _de('fluidos', atd['id']),
+      ),
+    );
+    if (r == null) return;
+    if (r.isEmpty) return _avisar('Nada mudou.');
+    await _executar(r, 'Medições salvas.');
+  }
+
+  Future<void> _excluirFoto(Map<String, dynamic> foto) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir foto'),
+        content: const Text('A foto sai do atendimento e do relatório.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Cores.erro),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await _executar([{'acao': 'foto_excluir', 'foto_id': foto['id']}], 'Foto excluída.');
+  }
+
+  /// Botão pequeno ao lado do título de um bloco.
+  Widget? _botao(String texto, IconData icone, VoidCallback aoTocar) => widget.editavel
+      ? TextButton.icon(
+          onPressed: _ocupado ? null : aoTocar,
+          icon: Icon(icone, size: 18),
+          label: Text(texto),
+          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+        )
+      : null;
 
   void _verFoto(String url) {
     showDialog<void>(
@@ -167,7 +283,6 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
     }
     final medicoes = _de('medicoes', a['id'])
       ..sort((x, y) => _ordemMedicao(x).compareTo(_ordemMedicao(y)));
-    final itens = _de('itens', a['id']);
     final fotos = _de('fotos', a['id']);
     final relato = _camposRelato.entries.where((e) => '${a[e.key] ?? ''}'.isNotEmpty).toList();
 
@@ -191,20 +306,34 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
               '${a['resultado_observacao'] != null ? ' · ${a['resultado_observacao']}' : ''}',
               style: const TextStyle(color: Cores.erro)),
         const SizedBox(height: 8),
-        const _Titulo('Pessoas e horas'),
+        _Titulo('Pessoas e horas', acao: _botao('Incluir horas', Icons.person_add_alt, () => _periodo(a))),
         for (final p in pessoas)
-          Text(
-            '${(p['colaboradores'] as Map?)?['nome'] ?? '?'}: ${_hora(p['entrada_em'])}–'
-            '${p['saida_em'] == null ? 'agora' : _hora(p['saida_em'])} '
-            '(${_duracao((DateTime.tryParse('${p['saida_em'] ?? ''}') ?? agora).difference(DateTime.parse('${p['entrada_em']}')))})'
-            '${p['origem'] == 'auto_lider' ? ' · entrou com o líder' : ''}',
-          ),
+          Row(children: [
+            Flexible(
+              child: Text(
+                '${(p['colaboradores'] as Map?)?['nome'] ?? '?'}: ${_hora(p['entrada_em'])}–'
+                '${p['saida_em'] == null ? 'agora' : _hora(p['saida_em'])} '
+                '(${_duracao((DateTime.tryParse('${p['saida_em'] ?? ''}') ?? agora).difference(DateTime.parse('${p['entrada_em']}')))})'
+                '${p['origem'] == 'auto_lider' ? ' · entrou com o líder' : ''}'
+                '${p['origem'] == 'correcao' ? ' · incluído pelo gestor' : ''}',
+              ),
+            ),
+            if (widget.editavel)
+              IconButton(
+                tooltip: 'Corrigir horas',
+                visualDensity: VisualDensity.compact,
+                onPressed: _ocupado ? null : () => _periodo(a, p),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+              ),
+          ]),
         if (pessoas.isNotEmpty)
           Text('Total: ${_duracao(total)} de trabalho', style: const TextStyle(fontWeight: FontWeight.w700)),
-        if (relato.isNotEmpty) ...[
-          const _Titulo('Relato'),
+        if (relato.isNotEmpty || a['contato_cliente_nome'] != null || widget.editavel) ...[
+          _Titulo('Relato', acao: _botao('Editar', Icons.edit_outlined, () => _relato(a))),
           for (final e in relato) Text('${e.value}: ${a[e.key]}'),
           if (a['contato_cliente_nome'] != null) Text('Acompanhou: ${a['contato_cliente_nome']}'),
+          if (relato.isEmpty && a['contato_cliente_nome'] == null)
+            const Text('Sem relato.', style: TextStyle(color: Cores.neutro)),
         ],
         if (_de('equipamentos', a['id']).isNotEmpty) ...[
           const _Titulo('Equipamentos identificados'),
@@ -212,8 +341,9 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
               .map((e) => '${(e['equipamentos'] as Map?)?['codigo'] ?? ''} (${e['leitura']})')
               .join(', ')),
         ],
-        if (medicoes.isNotEmpty) ...[
-          const _Titulo('Medições'),
+        if (medicoes.isNotEmpty || widget.editavel) ...[
+          _Titulo('Medições', acao: _botao('Editar medições e fluido', Icons.edit_outlined, () => _medicoes(a))),
+          if (medicoes.isEmpty) const Text('Sem medições.', style: TextStyle(color: Cores.neutro)),
           for (final m in medicoes)
             Builder(builder: (_) {
               final mod = m['modelos_medicao'] as Map? ?? const {};
@@ -232,30 +362,42 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
             Text('${(f['equipamentos'] as Map?)?['codigo'] ?? ''} · ${f['fluido']}: '
                 '+${_num(f['adicionado_kg'])} kg / recolhido ${_num(f['recolhido_kg'])} kg'),
         ],
-        if (itens.isNotEmpty) ...[
-          const _Titulo('Itens usados'),
-          for (final i in itens)
-            Text('${i['descricao']}: ${_num(i['quantidade'])} ${i['unidade'] ?? ''} · ${_dinheiro(i['total'])}'
-                '${i['produto_id'] == null ? ' (sem cadastro)' : ''}'),
-        ],
         if (fotos.isNotEmpty) ...[
           _Titulo('Fotos (${fotos.length})'),
           Wrap(spacing: 6, runSpacing: 6, children: [
             for (final f in fotos)
-              if (_urls[f['caminho']] case final String url)
-                InkWell(
-                  onTap: () => _verFoto(url),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(url, width: 96, height: 96, fit: BoxFit.cover),
+              Stack(children: [
+                if (_urls[f['caminho']] case final String url)
+                  InkWell(
+                    onTap: () => _verFoto(url),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(url, width: 96, height: 96, fit: BoxFit.cover),
+                    ),
+                  )
+                else
+                  const SizedBox(
+                    width: 96,
+                    height: 96,
+                    child: ColoredBox(color: Cores.fundo, child: Icon(Icons.image_not_supported_outlined)),
                   ),
-                )
-              else
-                const SizedBox(
-                  width: 96,
-                  height: 96,
-                  child: ColoredBox(color: Cores.fundo, child: Icon(Icons.image_not_supported_outlined)),
-                ),
+                if (widget.editavel)
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: .85),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: 'Excluir foto',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 18,
+                        onPressed: _ocupado ? null : () => _excluirFoto(f),
+                        icon: const Icon(Icons.delete_outline, color: Cores.erro),
+                      ),
+                    ),
+                  ),
+              ]),
           ]),
         ],
       ]),
@@ -264,13 +406,17 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
 }
 
 class _Titulo extends StatelessWidget {
-  const _Titulo(this.texto);
+  const _Titulo(this.texto, {this.acao});
   final String texto;
+  final Widget? acao;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 2),
-        child: Text(texto.toUpperCase(),
-            style: const TextStyle(fontSize: 11, letterSpacing: .6, fontWeight: FontWeight.w700, color: Cores.neutro)),
+        child: Row(children: [
+          Text(texto.toUpperCase(),
+              style: const TextStyle(fontSize: 11, letterSpacing: .6, fontWeight: FontWeight.w700, color: Cores.neutro)),
+          if (acao != null) ...[const SizedBox(width: 8), acao!],
+        ]),
       );
 }

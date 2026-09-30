@@ -132,6 +132,7 @@ String dataIso(DateTime d) => '${d.year}-${_dd(d.month)}-${_dd(d.day)}';
 /// Erros de regra chegam como PostgrestException com a frase em português.
 Future<Map<String, dynamic>> acaoOs(Map<String, dynamic> p) => _rpc('os_acao', p);
 Future<Map<String, dynamic>> acaoParte(Map<String, dynamic> p) => _rpc('parte_acao', p);
+Future<Map<String, dynamic>> acaoAtendimento(Map<String, dynamic> p) => _rpc('atendimento_acao', p);
 
 Future<Map<String, dynamic>> _rpc(String funcao, Map<String, dynamic> p) async {
   final r = await Supabase.instance.client.rpc(funcao, params: {'p': p});

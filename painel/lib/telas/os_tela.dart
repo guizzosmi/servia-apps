@@ -8,6 +8,7 @@ import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/atendimentos_os.dart';
 import '../widgets/escolha_equipamentos.dart';
+import '../widgets/itens_os.dart';
 import '../widgets/status_chip.dart';
 
 /// Detalhe da OS: dados, garantia, equipamentos, agendamentos (com as
@@ -328,6 +329,8 @@ class _OsTelaState extends State<OsTela> {
     }
     final os = _os!;
     final editar = podeEditarCadastros() && !_ocupado;
+    // Ajustes do que veio do campo: até a OS ser faturada (cancelada, nunca).
+    final ajustar = podeEditarCadastros() && os['status'] != 'cancelada' && os['cobranca_status'] != 'faturada';
     final cliente = os['clientes'] as Map? ?? const {};
     final local = os['locais'] as Map? ?? const {};
     final contato = os['contatos'] as Map?;
@@ -470,7 +473,23 @@ class _OsTelaState extends State<OsTela> {
                 // ---------- atendimentos (o que aconteceu no campo) ----------
                 _Secao(
                   titulo: 'Atendimentos',
-                  children: [AtendimentosDaOs(key: ValueKey('atd-$_versao'), osId: widget.id)],
+                  children: [
+                    AtendimentosDaOs(osId: widget.id, editavel: ajustar, versao: _versao, aoMudar: _carregar),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ---------- peças e serviços ----------
+                _Secao(
+                  titulo: 'Peças e serviços',
+                  children: [
+                    if (os['cobranca_status'] == 'faturada')
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('OS faturada: os itens não mudam mais.', style: TextStyle(color: Cores.neutro)),
+                      ),
+                    ItensDaOs(osId: widget.id, editavel: ajustar, versao: _versao, aoMudar: _carregar),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
@@ -630,8 +649,21 @@ String descreverEvento(Map<String, dynamic> l) {
     'parte_item:mover': 'Trocado de equipe',
     'parte_item:designar': 'Pessoas designadas',
     'parte_item:status': 'Andamento do serviço',
+    'os:equipamento_incluido_no_local': 'Equipamento incluído no local',
+    'os:item_incluido': 'Item incluído',
+    'os:item_alterado': 'Item alterado',
+    'os:item_excluido': 'Item excluído',
+    'os:atendimento_alterado': 'Relato do atendimento corrigido',
+    'os:horas_corrigidas': 'Horas corrigidas',
+    'os:horas_incluidas': 'Horas incluídas',
+    'os:horas_excluidas': 'Horas excluídas',
+    'os:medicao_alterada': 'Medição corrigida',
+    'os:fluido_alterado': 'Fluido corrigido',
+    'os:foto_excluida': 'Foto excluída',
   };
   var texto = nomes['$entidade:$acao'] ?? '$entidade: $acao';
+  if (dados['descricao'] != null) texto += ': ${dados['descricao']}';
+  if (dados['medicao'] != null) texto += ': ${dados['medicao']}';
   if (dados['motivo'] != null && '${dados['motivo']}'.isNotEmpty) {
     texto += ' (${motivosNaoRealizado[dados['motivo']] ?? motivosSuspensao[dados['motivo']] ?? dados['motivo']})';
   }
