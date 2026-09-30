@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -155,6 +156,14 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       }
     } on AuthException catch (e) {
       _mudar(SituacaoSync.erro, e.message);
+    } on StorageException catch (e) {
+      if (int.tryParse(e.statusCode ?? '') == null) {
+        // Sem resposta do servidor: é falta de conexão.
+        _mudar(SituacaoSync.semConexao, 'Sem conexão com a plataforma.');
+      } else {
+        // O servidor recusou a foto (ex.: permissão do bucket).
+        _mudar(SituacaoSync.erro, 'Foto não enviada: ${e.message}');
+      }
     } catch (e) {
       // Sem internet, servidor fora do ar, tempo esgotado...
       _mudar(SituacaoSync.semConexao, 'Sem conexão com a plataforma.');
@@ -198,7 +207,12 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
     while (true) {
       final lote = banco.proximas(50);
       if (lote.isEmpty) return;
-      final r = await _rpc('sync_enviar', {..._base(), 'operacoes': lote.map((o) => o.paraEnvio()).toList()});
+      // Os arquivos sobem antes das operações que os registram. A foto
+      // cujo arquivo sumiu já ficou recusada aqui e não vai no lote.
+      final semArquivo = await _subirFotos(lote);
+      final envio = lote.where((o) => !semArquivo.contains(o.opId)).toList();
+      if (envio.isEmpty) continue;
+      final r = await _rpc('sync_enviar', {..._base(), 'operacoes': envio.map((o) => o.paraEnvio()).toList()});
       final aceitas = <String>[];
       final respondidas = <String>{};
       var parar = false;
@@ -218,8 +232,41 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       await banco.removerDaFila(aceitas);
       // Alguma operação do lote ficou sem resposta: tenta na próxima
       // sincronização (sem isso, o mesmo lote seria reenviado sem parar).
-      if (parar || lote.any((o) => !respondidas.contains(o.opId))) return;
+      if (parar || envio.any((o) => !respondidas.contains(o.opId))) return;
     }
+  }
+
+  /// Sobe para o bucket "fotos" os arquivos das fotos do lote que ainda
+  /// não subiram. Sem internet, a falha interrompe a sincronização (tenta
+  /// de novo depois); arquivo que sumiu do aparelho recusa a operação
+  /// (devolve os op_id recusados, que não devem ser enviados).
+  Future<Set<String>> _subirFotos(List<Operacao> lote) async {
+    final recusadas = <String>{};
+    for (final op in lote.where((o) => o.tipo == 'foto_registrada')) {
+      final fotoId = '${op.dados['foto_id']}';
+      final local = op.dados['arquivo_local'] as String?;
+      if (local == null || op.dados['excluir'] == true || banco.meta('foto_subiu:$fotoId') != null) continue;
+      final arquivo = File(local);
+      if (!await arquivo.exists()) {
+        await banco.marcarRecusada(op.opId, 'O arquivo desta foto não está mais no aparelho.');
+        recusadas.add(op.opId);
+        continue;
+      }
+      try {
+        await _db.storage.from('fotos').uploadBinary(
+              '${op.dados['caminho']}',
+              await arquivo.readAsBytes(),
+              fileOptions: const FileOptions(contentType: 'image/jpeg'),
+            );
+      } on StorageException catch (e) {
+        // Já estava lá (subiu antes e a resposta se perdeu): segue.
+        final jaExiste = e.statusCode == '409' || e.message.toLowerCase().contains('exist') ||
+            e.message.toLowerCase().contains('duplicate');
+        if (!jaExiste) rethrow;
+      }
+      await banco.gravarMeta('foto_subiu:$fotoId', '1');
+    }
+    return recusadas;
   }
 
   /// Baixa os cadastros (por cursor, em páginas) e o dia.
@@ -261,8 +308,20 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       // Confere de novo: uma ação feita durante o download não pode ser
       // desfeita na tela pelo dia que acabou de chegar.
       if (dia is Map && banco.pendentes == 0) {
+        // A foto que está no celular continua apontando para o arquivo local.
+        final arquivos = {
+          for (final f in banco.todos('atendimento_fotos'))
+            if (f['arquivo_local'] != null) '${f['id']}': f['arquivo_local'],
+        };
         await banco.substituir({
-          for (final t in tabelasDoDia) t: ((dia[t] as List?) ?? const []).cast<Map<String, dynamic>>(),
+          for (final t in tabelasDoDia)
+            t: [
+              for (final l in ((dia[t] as List?) ?? const []).cast<Map<String, dynamic>>())
+                if (t == 'atendimento_fotos' && arquivos.containsKey('${l['id']}'))
+                  {...l, 'arquivo_local': arquivos['${l['id']}']}
+                else
+                  l,
+            ],
         });
         await banco.gravarMeta('hoje', dia['hoje'] as String?);
         await banco.gravarMeta('meu_checkin', dia['meu_checkin'] == null ? null : jsonEncode(dia['meu_checkin']));

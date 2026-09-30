@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>A câmera é usada para ler a etiqueta dos equipamentos e tirar as fotos do atendimento.</string>
 </dict>
 </plist>

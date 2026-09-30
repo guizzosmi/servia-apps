@@ -21,6 +21,11 @@ dependencies:
   # Cofre do aparelho (Keystore no Android, Keychain no iOS): sessão e chave do banco.
   flutter_secure_storage: ^10.0.0
   uuid: ^4.5.0
+  # Atendimento: leitor de QR, fotos pela câmera, SHA-256 das fotos, pasta do app.
+  mobile_scanner: ^7.0.0
+  image_picker: ^1.1.2
+  crypto: ^3.0.6
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

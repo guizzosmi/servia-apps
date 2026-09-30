@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/estado.dart';
+import 'telas/atendimento_tela.dart';
 import 'telas/hoje_tela.dart';
+import 'telas/leitor_qr_tela.dart';
 import 'telas/login_tela.dart';
 import 'telas/revogado_tela.dart';
 import 'telas/servico_tela.dart';
@@ -26,6 +28,14 @@ final rotas = GoRouter(
     GoRoute(path: '/revogado', builder: (_, __) => const RevogadoTela()),
     GoRoute(path: '/hoje', builder: (_, __) => const HojeTela()),
     GoRoute(path: '/sincronizacao', builder: (_, __) => const SincronizacaoTela()),
+    GoRoute(path: '/ler-codigo', builder: (_, __) => const LeitorQrTela()),
+    GoRoute(
+      path: '/atendimento/:id',
+      builder: (_, state) {
+        final id = state.pathParameters['id']!;
+        return AtendimentoTela(key: ValueKey('atendimento-$id'), atendimentoId: id);
+      },
+    ),
     GoRoute(
       path: '/servico/:id',
       builder: (_, state) {

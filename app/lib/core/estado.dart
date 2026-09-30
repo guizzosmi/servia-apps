@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -78,7 +76,7 @@ class EstadoApp extends ChangeNotifier {
       final r = await db.functions.invoke('dispositivo-acao', body: {
         'acao': 'registrar',
         'dispositivo_id': dispositivo,
-        'plataforma': Platform.operatingSystem,
+        'plataforma': defaultTargetPlatform.name,
         'versao_app': versaoApp,
       });
       final status = ((r.data as Map?)?['dispositivo'] as Map?)?['status'];

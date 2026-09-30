@@ -275,6 +275,9 @@ class _CartaoServico extends StatelessWidget {
     final designados = ((item['designados'] as List?) ?? const []).cast<String>();
     final paraOutros = designados.isNotEmpty && !designados.contains(eu);
     final finalizado = item['status'] == 'concluido' || item['status'] == 'nao_realizado';
+    final atd = banco.atendimentoDoItem(item['id']);
+    final noServico = atd == null ? const <Map<String, dynamic>>[] : banco.participantes(atd['id'], soAbertos: true);
+    final estouAqui = noServico.any((p) => p['colaborador_id'] == eu);
     final quando = [
       tiposAgendamento[ag['tipo']] ?? '',
       janela(ag['janela_inicio'], ag['janela_fim']),
@@ -307,6 +310,12 @@ class _CartaoServico extends StatelessWidget {
                 Text([local?['nome'], local?['cidade']].where((x) => x != null && '$x'.isNotEmpty).join(' · '),
                     style: const TextStyle(color: Cores.neutro)),
                 if (quando.isNotEmpty) Text(quando, style: const TextStyle(color: Cores.indigo500)),
+                if (noServico.isNotEmpty)
+                  Text(
+                    '${estouAqui ? 'Você está aqui · ' : ''}No serviço: '
+                    '${noServico.map((p) => banco.nomeColaborador(p['colaborador_id'])).join(', ')}',
+                    style: const TextStyle(color: Cores.andamento, fontWeight: FontWeight.w600),
+                  ),
                 const SizedBox(height: 6),
                 Wrap(spacing: 6, runSpacing: 4, children: [
                   if (ag['prioridade'] == 'urgente' || ag['prioridade'] == 'alta')

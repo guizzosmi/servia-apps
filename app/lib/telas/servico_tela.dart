@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../core/acoes_atendimento.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../widgets/entrar_no_servico.dart';
 import '../widgets/indicador_sync.dart';
 import '../widgets/status_chip.dart';
 
 /// Um serviço da parte: cliente, local, o que fazer, equipamentos e o
-/// andamento (a caminho, não realizado). O atendimento em si (check-in,
-/// relato, medições...) entra no guia 10.
+/// andamento (a caminho, estou neste serviço, não realizado).
 class ServicoTela extends StatelessWidget {
   const ServicoTela({super.key, required this.itemId});
 
@@ -159,35 +161,57 @@ class _Acoes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final banco = EstadoApp.instancia.banco!;
     final status = item['status'];
     final aberta = parte['status'] == 'publicada' || parte['status'] == 'em_andamento';
-    if (!aberta) {
-      return const Text('Parte encerrada: nada a fazer aqui.', style: TextStyle(color: Cores.neutro));
-    }
+    final atd = banco.atendimentoDoItem(item['id']);
+    final eu = AcoesAtendimento.eu;
+    final noServico = atd == null ? const <Map<String, dynamic>>[] : banco.participantes(atd['id'], soAbertos: true);
+    final estouNele = noServico.any((p) => p['colaborador_id'] == eu);
+    final encerrado = status == 'concluido' || status == 'nao_realizado' || status == 'removido';
+    final atdAberto = atd != null && (atd['status'] == 'em_andamento' || atd['status'] == 'pausado');
+
+    Widget botao(Widget b) => Padding(padding: const EdgeInsets.only(bottom: 8), child: SizedBox(height: 52, child: b));
+
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (status == 'programado')
-        SizedBox(
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: () => _mudar('em_deslocamento'),
-            icon: const Icon(Icons.directions_car_outlined),
-            label: const Text('Estou a caminho'),
+      if (noServico.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'No serviço agora: ${noServico.map((p) => '${banco.nomeColaborador(p['colaborador_id'])} (${horaDe(p['entrada_em'])})').join(', ')}',
+            style: const TextStyle(color: Cores.andamento, fontWeight: FontWeight.w600),
           ),
         ),
-      if (status == 'em_deslocamento')
-        SizedBox(
-          height: 52,
-          child: OutlinedButton.icon(
-            onPressed: () => _mudar('programado'),
-            icon: const Icon(Icons.undo),
-            label: const Text('Voltar para programado'),
-          ),
+      if (!aberta)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Parte encerrada: só consulta.', style: TextStyle(color: Cores.neutro)),
         ),
-      if (status == 'em_atendimento' || status == 'pausado')
-        const Text('Atendimento em andamento. As telas do atendimento chegam no próximo passo.',
-            style: TextStyle(color: Cores.neutro)),
-      if (status == 'programado' || status == 'em_deslocamento') ...[
-        const SizedBox(height: 8),
+      if (atd != null)
+        botao(FilledButton.icon(
+          onPressed: () => context.push('/atendimento/${atd['id']}'),
+          icon: const Icon(Icons.assignment_outlined),
+          label: Text(atdAberto ? 'Abrir atendimento' : 'Ver atendimento'),
+        )),
+      if (aberta && !encerrado && !estouNele)
+        botao(FilledButton.icon(
+          onPressed: () => entrarNoServico(context, item),
+          icon: const Icon(Icons.login),
+          label: const Text('Estou neste serviço'),
+        )),
+      if (aberta && status == 'programado')
+        botao(OutlinedButton.icon(
+          onPressed: () => _mudar('em_deslocamento'),
+          icon: const Icon(Icons.directions_car_outlined),
+          label: const Text('Estou a caminho'),
+        )),
+      if (aberta && status == 'em_deslocamento')
+        botao(OutlinedButton.icon(
+          onPressed: () => _mudar('programado'),
+          icon: const Icon(Icons.undo),
+          label: const Text('Voltar para programado'),
+        )),
+      if (aberta && (status == 'programado' || status == 'em_deslocamento') && !atdAberto)
         SizedBox(
           height: 48,
           child: TextButton.icon(
@@ -196,7 +220,6 @@ class _Acoes extends StatelessWidget {
             label: const Text('Não foi possível fazer', style: TextStyle(color: Cores.erro)),
           ),
         ),
-      ],
     ]);
   }
 }
