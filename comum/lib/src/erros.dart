@@ -14,6 +14,9 @@ const _duplicados = {
 
 /// Transforma qualquer erro em uma frase que o usuário entenda.
 String mensagemDeErro(Object e) {
+  if (_semConexao(e)) {
+    return 'Sem conexão com a internet. Confira o Wi-Fi ou os dados móveis e tente de novo.';
+  }
   if (e is AuthException) {
     final m = e.message.toLowerCase();
     if (m.contains('invalid login')) return 'E-mail ou senha incorretos.';
@@ -52,4 +55,15 @@ String mensagemDeErro(Object e) {
     return 'Erro no servidor (${e.status}).';
   }
   return e.toString();
+}
+
+/// Falha de rede (sem internet, DNS, servidor inalcançável).
+bool _semConexao(Object e) {
+  if (e is AuthRetryableFetchException) return true;
+  final t = e.toString();
+  return t.contains('SocketException') ||
+      t.contains('Failed host lookup') ||
+      t.contains('ClientException') ||
+      t.contains('Connection refused') ||
+      t.contains('Network is unreachable');
 }

@@ -1,0 +1,31 @@
+name: servia_app
+description: "ServIA - app do técnico (parte do dia, atendimento, offline)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  servia_comum:
+    path: ../comum
+  supabase_flutter: ^2.14.0
+  go_router: ^14.8.0
+  # Banco local criptografado (SQLCipher). A chave fica no cofre do aparelho.
+  sqflite_sqlcipher: ^3.4.0
+  path: ^1.9.0
+  # Cofre do aparelho (Keystore no Android, Keychain no iOS): sessão e chave do banco.
+  flutter_secure_storage: ^10.0.0
+  uuid: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
