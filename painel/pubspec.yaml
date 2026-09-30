@@ -13,7 +13,8 @@ dependencies:
     sdk: flutter
   servia_comum:
     path: ../comum
-  supabase_flutter: ^2.14.0
+  # 2.15+: links assinados das fotos (createSignedUrlsResult).
+  supabase_flutter: ^2.15.0
   go_router: ^14.8.0
   # PDF das etiquetas QR e impressão/download no navegador.
   pdf: ^3.11.0

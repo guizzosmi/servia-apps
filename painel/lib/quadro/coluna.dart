@@ -443,6 +443,11 @@ class CartaoItem extends StatelessWidget {
               Text(onde, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Cores.neutro)),
             if (quando.isNotEmpty)
               Text(quando, style: const TextStyle(fontSize: 12, color: Cores.indigo500)),
+            if ((item['no_servico'] as List?)?.isNotEmpty ?? false)
+              Text(
+                'No serviço: ${(item['no_servico'] as List).map((p) => '${acoes.nomeColaborador((p as Map)['colaborador_id'] as String?)} ${horaDe(p['entrada_em'])}').join(', ')}',
+                style: const TextStyle(fontSize: 12, color: Cores.andamento, fontWeight: FontWeight.w700),
+              ),
             const SizedBox(height: 4),
             Wrap(spacing: 4, runSpacing: 4, children: [
               if (ag['prioridade'] == 'urgente' || ag['prioridade'] == 'alta')

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/lista.dart';
 import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
+import '../widgets/atendimentos_os.dart';
 import '../widgets/escolha_equipamentos.dart';
 import '../widgets/status_chip.dart';
 
@@ -32,6 +33,7 @@ class _OsTelaState extends State<OsTela> {
   List<Map<String, dynamic>> _agendamentos = [];
   List<Map<String, dynamic>> _tentativas = [];
   List<Map<String, dynamic>> _log = [];
+  int _versao = 0; // muda a cada recarga (recarrega os atendimentos também)
 
   bool get _encerrada => ['concluida', 'cancelada'].contains(_os?['status']);
 
@@ -93,6 +95,7 @@ class _OsTelaState extends State<OsTela> {
         _agendamentos = agendamentos;
         _tentativas = tentativas;
         _log = log;
+        _versao++;
       });
     } catch (e) {
       if (mounted) setState(() => _erro = mensagemDeErro(e));
@@ -461,6 +464,13 @@ class _OsTelaState extends State<OsTela> {
                       const Text('Nenhum agendamento.', style: TextStyle(color: Cores.neutro)),
                     for (final a in _agendamentos) _linhaAgendamento(a, editar && !_encerrada),
                   ],
+                ),
+                const SizedBox(height: 16),
+
+                // ---------- atendimentos (o que aconteceu no campo) ----------
+                _Secao(
+                  titulo: 'Atendimentos',
+                  children: [AtendimentosDaOs(key: ValueKey('atd-$_versao'), osId: widget.id)],
                 ),
                 const SizedBox(height: 16),
 

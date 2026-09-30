@@ -43,6 +43,9 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
   List<Map<String, dynamic>> _fila = [];
   List<Map<String, dynamic>> _eventos = [];
 
+  /// parte_item_id -> check-ins abertos (quem está no serviço agora)
+  Map<String, List<Map<String, dynamic>>> _noServico = {};
+
   // Filtros da fila
   final _busca = TextEditingController();
   String? _prioridade;
@@ -121,6 +124,11 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
             .lt('criado_em', fim)
             .order('criado_em', ascending: false)
             .limit(300),
+        // Quem está em cada serviço agora (check-ins abertos).
+        db.from('atendimento_participantes')
+            .select('colaborador_id, entrada_em, atendimentos(parte_item_id)')
+            .isFilter('saida_em', null)
+            .isFilter('excluido_em', null),
       ]);
       if (!mounted || geracao != _geracao) return;
       setState(() {
@@ -132,6 +140,11 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
         _nomes = {for (final c in r[4]) c['id'] as String: (c['nome'] ?? '') as String};
         _fila = r[5];
         _eventos = r[6];
+        _noServico = {};
+        for (final pa in r[7]) {
+          final item = (pa['atendimentos'] as Map?)?['parte_item_id'] as String?;
+          if (item != null) _noServico.putIfAbsent(item, () => []).add(pa);
+        }
       });
     } catch (e) {
       if (mounted && geracao == _geracao) setState(() => _erro = mensagemDeErro(e));
@@ -146,7 +159,15 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     if (empresa == null) return;
     final filtro = PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'empresa_id', value: empresa);
     var canal = Supabase.instance.client.channel('quadro-$empresa-${DateTime.now().millisecondsSinceEpoch}');
-    for (final tabela in ['partes_diarias', 'partes_itens', 'partes_composicao', 'agendamentos', 'eventos_log']) {
+    for (final tabela in [
+      'partes_diarias',
+      'partes_itens',
+      'partes_composicao',
+      'agendamentos',
+      'eventos_log',
+      'atendimentos',
+      'atendimento_participantes',
+    ]) {
       canal = canal.onPostgresChanges(
         event: PostgresChangeEvent.all,
         schema: 'public',
@@ -198,8 +219,10 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     Map<String, List<Map<String, dynamic>>> compPorParte,
   ) {
     final parte = _partePorEquipe[equipe['id']];
-    final itens = [...?itensPorParte[parte?['id']]]
-      ..sort((a, b) => ((a['ordem'] ?? 0) as int).compareTo((b['ordem'] ?? 0) as int));
+    final itens = [
+      for (final i in [...?itensPorParte[parte?['id']]])
+        {...i, 'no_servico': _noServico[i['id']] ?? const <Map<String, dynamic>>[]},
+    ]..sort((a, b) => ((a['ordem'] ?? 0) as int).compareTo((b['ordem'] ?? 0) as int));
     final comp = [...?compPorParte[parte?['id']]]
       ..sort((a, b) {
         if (a['papel'] != b['papel']) return a['papel'] == 'lider' ? -1 : 1;
