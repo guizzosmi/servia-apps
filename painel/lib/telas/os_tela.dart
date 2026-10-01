@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/lista.dart';
+import '../servicos/documentos.dart';
 import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/atendimentos_os.dart';
@@ -370,6 +371,8 @@ class _OsTelaState extends State<OsTela> {
                   StatusChip(os['prioridade'] as String?, prioridades),
                   const Spacer(),
                   if (_ocupado) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  BotaoPdf(tipo: 'os', id: widget.id, nomeArquivo: '${os['codigo']}', rotulo: 'Relatório (PDF)'),
+                  const SizedBox(width: 8),
                   IconButton(tooltip: 'Atualizar', onPressed: _carregar, icon: const Icon(Icons.refresh)),
                 ]),
                 Padding(

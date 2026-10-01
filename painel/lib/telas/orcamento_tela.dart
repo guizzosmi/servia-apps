@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/lista.dart';
+import '../servicos/documentos.dart';
 import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/itens_os.dart';
@@ -235,12 +238,18 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       'O orçamento fica congelado: para mudar depois, só com uma nova versão.\n\n'
           'Enquanto o cliente não responde, o serviço sai da fila (fica suspenso, aguardando orçamento) '
           'e a OS fica "Aguardando aprovação".\n\n'
-          'O PDF e o link para o cliente aprovar sozinho chegam nos próximos passos. Por enquanto, '
-          'mande pelo seu canal de sempre e registre aqui a resposta.',
+          'O PDF fica pronto no botão PDF (no alto): baixe e mande ao cliente pelo seu canal de sempre. '
+          'O link para ele aprovar sozinho chega no próximo passo.',
       botao: 'Marcar como enviado',
     );
     if (ok != true) return;
-    await _acao({'acao': 'enviar'}, 'Orçamento enviado: aguardando o cliente.');
+    final r = await _acao({'acao': 'enviar'}, 'Orçamento enviado: o PDF está pronto no botão PDF.');
+    if (r != null) _congelarPdf();
+  }
+
+  /// Saiu do rascunho: o PDF definitivo é gerado e guardado já (nunca mais muda).
+  void _congelarPdf() {
+    unawaited(pdfDoServidor('orcamento', _id).then((_) {}, onError: (Object e) => debugPrint('PDF do orçamento: $e')));
   }
 
   Future<void> _aprovar() async {
@@ -257,6 +266,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
     );
     if (r == null) return;
     final resp = await _acao({'acao': 'aprovar', ...r}, 'Aprovação registrada: itens na OS e serviço na fila.');
+    if (resp != null) _congelarPdf();
     if (resp != null && resp['agendamento_criado'] != null) {
       _avisar('Aprovação registrada. A OS não tinha agendamento: um novo (reparo) foi para a fila.');
     }
@@ -275,8 +285,9 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       ),
     );
     if (r == null) return;
-    await _acao({'acao': 'reprovar', ...r},
+    final resp = await _acao({'acao': 'reprovar', ...r},
         'Reprovação registrada. Na OS: conclua só com o diagnóstico ou cancele.');
+    if (resp != null) _congelarPdf();
   }
 
   Future<void> _novaVersao() async {
@@ -404,6 +415,14 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
                 StatusChip(visivel, statusOrcamento),
                 const Spacer(),
                 if (_ocupado) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                BotaoPdf(
+                  key: ValueKey('pdf-$_id-$status'),
+                  tipo: 'orcamento',
+                  id: _id,
+                  nomeArquivo: '${o['codigo']}-v${o['versao_orcamento']}',
+                  rotulo: status == 'rascunho' ? 'Prévia do PDF' : 'PDF',
+                ),
+                const SizedBox(width: 8),
                 IconButton(tooltip: 'Atualizar', onPressed: _carregar, icon: const Icon(Icons.refresh)),
               ]),
               Padding(
