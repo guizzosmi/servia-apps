@@ -108,7 +108,7 @@ class _ItensDaOsState extends State<ItensDaOs> {
   Future<void> _editar([Map<String, dynamic>? item]) async {
     final r = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _DialogoItem(item: item, equipamentos: _equipamentos),
+      builder: (_) => DialogoItem(item: item, equipamentos: _equipamentos),
     );
     if (r == null) return;
     await _executar({
@@ -151,6 +151,7 @@ class _ItensDaOsState extends State<ItensDaOs> {
   }
 
   String _origem(Map<String, dynamic> i) {
+    if (i['origem'] == 'orcamento') return 'Orçamento';
     final item = (i['atendimentos'] as Map?)?['partes_itens'] as Map?;
     if (item == null) return 'Painel';
     final equipe = ((item['partes_diarias'] as Map?)?['equipes'] as Map?)?['nome'];
@@ -253,18 +254,25 @@ class _ItensDaOsState extends State<ItensDaOs> {
   }
 }
 
-/// Incluir ou editar um item. Devolve os campos para item_salvar.
-class _DialogoItem extends StatefulWidget {
-  const _DialogoItem({this.item, required this.equipamentos});
+/// Incluir ou editar um item (da OS ou do orçamento). Devolve os campos
+/// para item_salvar.
+class DialogoItem extends StatefulWidget {
+  const DialogoItem({super.key, this.item, required this.equipamentos, this.tipos = tiposItemOs});
 
   final Map<String, dynamic>? item;
   final List<Map<String, dynamic>> equipamentos;
 
+  /// Tipos que o item pode ter (código -> nome).
+  final Map<String, String> tipos;
+
   @override
-  State<_DialogoItem> createState() => _DialogoItemState();
+  State<DialogoItem> createState() => _DialogoItemState();
 }
 
-class _DialogoItemState extends State<_DialogoItem> {
+/// Tipos do item da OS.
+const tiposItemOs = {'produto': 'Peça / produto', 'servico': 'Serviço'};
+
+class _DialogoItemState extends State<DialogoItem> {
   final _chave = GlobalKey<FormState>();
   late final _descricao = TextEditingController(text: '${widget.item?['descricao'] ?? ''}');
   late final _quantidade = TextEditingController(text: numeroBr(widget.item?['quantidade'] ?? 1));
@@ -275,7 +283,7 @@ class _DialogoItemState extends State<_DialogoItem> {
       text: (num.tryParse('${widget.item?['desconto'] ?? 0}') ?? 0) == 0
           ? ''
           : (num.tryParse('${widget.item!['desconto']}') ?? 0).toStringAsFixed(2).replaceAll('.', ','));
-  late String _tipo = '${widget.item?['tipo'] ?? 'produto'}';
+  late String _tipo = widget.tipos.containsKey(widget.item?['tipo']) ? '${widget.item!['tipo']}' : widget.tipos.keys.first;
   // Equipamento que saiu da OS: o item fica sem (é o que a tela mostra).
   late String? _equipamento = _equipamentoInicial();
 
@@ -416,9 +424,8 @@ class _DialogoItemState extends State<_DialogoItem> {
                         value: _tipo,
                         isDense: true,
                         isExpanded: true,
-                        items: const [
-                          DropdownMenuItem(value: 'produto', child: Text('Peça / produto')),
-                          DropdownMenuItem(value: 'servico', child: Text('Serviço')),
+                        items: [
+                          for (final t in widget.tipos.entries) DropdownMenuItem(value: t.key, child: Text(t.value)),
                         ],
                         onChanged: _produto != null ? null : (v) => setState(() => _tipo = v ?? _tipo),
                       ),

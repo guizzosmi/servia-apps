@@ -38,6 +38,15 @@ class _InicioTelaState extends State<InicioTela> {
       .count(CountOption.exact)
       .then((r) => r.count);
 
+  late final Future<int> _orcamentosEmAberto = Supabase.instance.client
+      .from('orcamentos')
+      .select('id')
+      .inFilter('status', ['rascunho', 'enviado'])
+      .isFilter('excluido_em', null)
+      .limit(1)
+      .count(CountOption.exact)
+      .then((r) => r.count);
+
   Widget _cartaoOperacao(IconData icone, String titulo, Future<int> valor, String destino) {
     return SizedBox(
       width: 220,
@@ -98,6 +107,7 @@ class _InicioTelaState extends State<InicioTela> {
           Wrap(spacing: 16, runSpacing: 16, children: [
             _cartaoOperacao(Icons.inbox_outlined, 'na fila', _naFila, '/fila'),
             _cartaoOperacao(Icons.assignment_outlined, 'OS em aberto', _osAbertas, '/os'),
+            _cartaoOperacao(Icons.request_quote_outlined, 'Orçamentos em Aberto', _orcamentosEmAberto, '/orcamentos'),
           ]),
           const SizedBox(height: 16),
           Wrap(

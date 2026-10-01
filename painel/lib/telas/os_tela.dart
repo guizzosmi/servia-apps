@@ -9,7 +9,9 @@ import '../widgets/campos_data_hora.dart';
 import '../widgets/atendimentos_os.dart';
 import '../widgets/escolha_equipamentos.dart';
 import '../widgets/itens_os.dart';
+import '../widgets/orcamentos_os.dart';
 import '../widgets/status_chip.dart';
+import 'orcamento_tela.dart' show descreverEventoOrcamento;
 
 /// Detalhe da OS: dados, garantia, equipamentos, agendamentos (com as
 /// tentativas de cada um) e histórico. Toda mudança passa por os_acao.
@@ -73,6 +75,7 @@ class _OsTelaState extends State<OsTela> {
           .eq('os_id', widget.id)
           .isFilter('excluido_em', null)
           .order('criado_em', ascending: true);
+      final orcamentos = await _db.from('orcamentos').select('id').eq('os_id', widget.id);
       final ids = [widget.id, ...agendamentos.map((a) => a['id'] as String)];
       final tentativas = agendamentos.isEmpty
           ? <Map<String, dynamic>>[]
@@ -85,7 +88,7 @@ class _OsTelaState extends State<OsTela> {
       final log = await _db
           .from('eventos_log')
           .select('id, entidade, acao, dados, ator_nome, origem, criado_em')
-          .inFilter('entidade_id', ids)
+          .inFilter('entidade_id', [...ids, ...orcamentos.map((o) => o['id'] as String)])
           .order('criado_em', ascending: false)
           .limit(100);
       if (!mounted) return;
@@ -479,6 +482,20 @@ class _OsTelaState extends State<OsTela> {
                 ),
                 const SizedBox(height: 16),
 
+                // ---------- orçamentos ----------
+                _Secao(
+                  titulo: 'Orçamentos',
+                  children: [
+                    OrcamentosDaOs(
+                      osId: widget.id,
+                      podeCriar: editar && !_encerrada && os['cobranca_status'] != 'faturada',
+                      versao: _versao,
+                      aoMudar: _carregar,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // ---------- peças e serviços ----------
                 _Secao(
                   titulo: 'Peças e serviços',
@@ -629,6 +646,7 @@ String descreverEvento(Map<String, dynamic> l) {
   final acao = l['acao'] as String? ?? '';
   final dados = (l['dados'] as Map?) ?? const {};
   final entidade = l['entidade'] as String? ?? '';
+  if (entidade == 'orcamento') return '${dados['codigo'] ?? 'Orçamento'} · ${descreverEventoOrcamento(l)}';
   const nomes = {
     'os:abrir': 'OS aberta',
     'os:alterar': 'Dados da OS alterados',

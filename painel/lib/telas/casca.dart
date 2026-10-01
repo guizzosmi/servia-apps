@@ -89,6 +89,7 @@ class _Menu extends StatelessWidget {
         item(Icons.view_kanban_outlined, 'Quadro do dia', '/quadro'),
         item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
         item(Icons.assignment_outlined, 'Ordens de serviço', '/os'),
+        item(Icons.request_quote_outlined, 'Orçamentos', '/orcamentos'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),

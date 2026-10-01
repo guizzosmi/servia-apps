@@ -48,6 +48,42 @@ const statusParte = {
   'encerrada': Rotulo('Encerrada', Cores.sucesso),
 };
 
+const statusOrcamento = {
+  'rascunho': Rotulo('Rascunho', Cores.neutro),
+  'enviado': Rotulo('Aguardando o cliente', Cores.info),
+  'vencido': Rotulo('Vencido', Cores.alerta),
+  'aprovado': Rotulo('Aprovado', Cores.sucesso),
+  'reprovado': Rotulo('Reprovado', Cores.erro),
+  'expirado': Rotulo('Vencido', Cores.alerta),
+  'substituido': Rotulo('Substituído', Cores.neutro),
+  'cancelado': Rotulo('Cancelado', Cores.neutro),
+};
+
+/// Status para mostrar: o enviado que passou da validade aparece "Vencido".
+String? statusOrcamentoVisivel(Map<String, dynamic> o) {
+  final status = o['status'] as String?;
+  final validade = DateTime.tryParse('${o['validade_ate'] ?? ''}');
+  if (status == 'enviado' && validade != null) {
+    final hoje = DateTime.now();
+    if (validade.isBefore(DateTime(hoje.year, hoje.month, hoje.day))) return 'vencido';
+  }
+  return status;
+}
+
+const tiposItemOrcamento = {
+  'produto': 'Peça / produto',
+  'servico': 'Serviço',
+  'mao_de_obra': 'Mão de obra',
+  'deslocamento': 'Deslocamento',
+};
+
+const formasAceite = {
+  'telefone': 'Por telefone',
+  'presencial': 'Pessoalmente',
+  'link': 'Pelo link',
+  'contrato': 'Pelo contrato',
+};
+
 const prioridades = {
   'urgente': Rotulo('Urgente', Cores.erro),
   'alta': Rotulo('Alta', Cores.alerta),
@@ -152,6 +188,7 @@ Future<void> avisarEquipe() async {
     debugPrint('Avisos para os celulares: $e');
   }
 }
+Future<Map<String, dynamic>> acaoOrcamento(Map<String, dynamic> p) => _rpc('orcamento_acao', p);
 Future<Map<String, dynamic>> acaoAtendimento(Map<String, dynamic> p) => _rpc('atendimento_acao', p);
 
 Future<Map<String, dynamic>> _rpc(String funcao, Map<String, dynamic> p) async {

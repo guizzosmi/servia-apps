@@ -16,6 +16,8 @@ import 'telas/etiquetas_tela.dart';
 import 'telas/fila_tela.dart';
 import 'telas/inicio_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/orcamento_tela.dart';
+import 'telas/orcamentos_tela.dart';
 import 'telas/os_lista_tela.dart';
 import 'telas/os_nova_tela.dart';
 import 'telas/os_tela.dart';
@@ -86,6 +88,19 @@ final rotas = GoRouter(
               builder: (_, state) {
                 final id = state.pathParameters['id']!;
                 return OsTela(key: ValueKey('os-$id'), id: id);
+              },
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/orcamentos',
+          builder: (_, __) => const OrcamentosTela(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return OrcamentoTela(key: ValueKey('orcamento-$id'), id: id);
               },
             ),
           ],
