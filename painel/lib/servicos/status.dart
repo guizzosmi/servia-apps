@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -131,7 +133,25 @@ String dataIso(DateTime d) => '${d.year}-${_dd(d.month)}-${_dd(d.day)}';
 /// Chama as regras do banco (os_acao / parte_acao) e devolve a resposta.
 /// Erros de regra chegam como PostgrestException com a frase em português.
 Future<Map<String, dynamic>> acaoOs(Map<String, dynamic> p) => _rpc('os_acao', p);
-Future<Map<String, dynamic>> acaoParte(Map<String, dynamic> p) => _rpc('parte_acao', p);
+Future<Map<String, dynamic>> acaoParte(Map<String, dynamic> p) async {
+  final r = await _rpc('parte_acao', p);
+  // Mudanças que a equipe precisa saber: envia os avisos para os celulares.
+  if (const {'publicar', 'programar', 'encaixar', 'remover', 'mover'}.contains(p['acao'])) {
+    unawaited(avisarEquipe());
+  }
+  return r;
+}
+
+/// Envia os avisos pendentes para os celulares (função "notificar").
+/// Sem configuração ou sem internet, não atrapalha o painel: os avisos
+/// ficam na fila e vão na próxima chamada.
+Future<void> avisarEquipe() async {
+  try {
+    await Supabase.instance.client.functions.invoke('notificar');
+  } catch (e) {
+    debugPrint('Avisos para os celulares: $e');
+  }
+}
 Future<Map<String, dynamic>> acaoAtendimento(Map<String, dynamic> p) => _rpc('atendimento_acao', p);
 
 Future<Map<String, dynamic>> _rpc(String funcao, Map<String, dynamic> p) async {

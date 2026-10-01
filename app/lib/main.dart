@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/cofre.dart';
 import 'core/estado.dart';
+import 'core/notificacoes.dart';
 import 'rotas.dart';
 
 Future<void> main() async {
@@ -21,6 +22,8 @@ Future<void> main() async {
     // A sessão fica no cofre do aparelho, não nas preferências comuns.
     authOptions: const FlutterAuthClientOptions(localStorage: ArmazenamentoSessao()),
   );
+  // Notificações: com o aviso chegando, o app sincroniza para trazer a mudança.
+  await Notificacoes.iniciar(aoChegar: () => EstadoApp.instancia.sync?.pedir());
   try {
     await EstadoApp.instancia.iniciar();
   } catch (e) {
@@ -40,6 +43,7 @@ class ServiaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: temaServia(),
       routerConfig: rotas,
+      scaffoldMessengerKey: Notificacoes.mensageiro,
       locale: const Locale('pt', 'BR'),
       supportedLocales: const [Locale('pt', 'BR')],
       localizationsDelegates: const [

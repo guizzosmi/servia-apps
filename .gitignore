@@ -9,3 +9,6 @@ build/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Chave privada do Firebase (conta de serviço): SEGREDO, nunca no Git
+*firebase-adminsdk*.json

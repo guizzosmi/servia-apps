@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'arquivos.dart';
 import 'banco_local.dart';
 import 'cofre.dart';
+import 'notificacoes.dart';
 import 'sincronizacao.dart';
 
 /// Erro de login com frase pronta para a tela.
@@ -35,6 +36,11 @@ class EstadoApp extends ChangeNotifier {
   /// avisa a pessoa antes de voltar ao login.
   bool apagadoPorOrdem = false;
   bool _apagando = false;
+  bool _registrandoAvisos = false;
+
+  /// Notificações conferidas nesta abertura do app (uma vez por sessão:
+  /// confere o endereço e passa a ouvir as trocas dele).
+  bool _avisosConferidos = false;
 
   /// Na abertura do app: se já havia alguém usando, abre o banco e
   /// começa a sincronizar (funciona sem internet).
@@ -70,9 +76,47 @@ class EstadoApp extends ChangeNotifier {
       await apagarPorOrdem(esperarConfirmacao: false);
       return;
     }
-    sync = Sincronizador(banco!, c, aoMandarApagar: apagarPorOrdem)..addListener(notifyListeners);
+    sync = Sincronizador(banco!, c, aoMandarApagar: apagarPorOrdem)
+      ..addListener(notifyListeners)
+      ..addListener(_aoMudarSync);
     sync!.iniciar();
     notifyListeners();
+  }
+
+  /// Depois de uma sincronização que deu certo, registra este aparelho
+  /// para as notificações (se ainda não registrou).
+  void _aoMudarSync() {
+    if (sync?.situacao == SituacaoSync.ok && !_avisosConferidos) {
+      unawaited(_registrarAvisos());
+    }
+  }
+
+  Future<void> _registrarAvisos() async {
+    final c = conta, b = banco;
+    if (c == null || b == null || !Notificacoes.ligado || _registrandoAvisos) return;
+    _registrandoAvisos = true;
+    try {
+      final token = await Notificacoes.token();
+      if (token == null || !identical(banco, b)) return;
+      if (token != b.meta('fcm_token')) {
+        await Notificacoes.enviarToken(c.dispositivoId, token);
+        if (!identical(banco, b)) return;
+        await b.gravarMeta('fcm_token', token);
+      }
+      _avisosConferidos = true;
+      Notificacoes.aoRenovar((novo) async {
+        try {
+          await Notificacoes.enviarToken(c.dispositivoId, novo);
+          if (identical(banco, b)) await b.gravarMeta('fcm_token', novo);
+        } catch (e) {
+          debugPrint('Token novo das notificações: $e');
+        }
+      });
+    } catch (e) {
+      debugPrint('Registrar notificações: $e');
+    } finally {
+      _registrandoAvisos = false;
+    }
   }
 
   /// "dispositivo|usuário" gravado no cofre -> (dispositivo, usuário).
@@ -246,6 +290,8 @@ class EstadoApp extends ChangeNotifier {
 
   Future<void> _fechar({required bool apagarDados}) async {
     sync?.removeListener(notifyListeners);
+    sync?.removeListener(_aoMudarSync);
+    _avisosConferidos = false;
     sync?.parar();
     sync = null;
     banco = null;
@@ -253,6 +299,7 @@ class EstadoApp extends ChangeNotifier {
     if (apagarDados) {
       await BancoLocal.apagarTudo();
       await Arquivos.apagarFotos();
+      await Notificacoes.desligar();
     }
   }
 }

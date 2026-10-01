@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "904603233185",
+    "project_id": "servia-ccdda",
+    "storage_bucket": "servia-ccdda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:904603233185:android:1e443f19037100b1ad39e0",
+        "android_client_info": {
+          "package_name": "app.servia.servia_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLDq5Iu4889sKMCN2jvaIKWszdimXbKXo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

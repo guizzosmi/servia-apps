@@ -22,7 +22,13 @@ painel/lib/
     lista.dart, campos.dart lista com busca e campos especiais (busca de registro, múltipla escolha, cor)
   servicos/
     funcoes.dart            chamada das Edge Functions
+    status.dart             rótulos e as portas os_acao, parte_acao e atendimento_acao
     etiquetas_pdf.dart      PDF A4 das etiquetas QR
+  quadro/                   quadro da parte diária (ao vivo)
+  widgets/
+    atendimentos_os.dart    o que aconteceu no campo, com os ajustes do gestor
+    ajustes_atendimento.dart diálogos de horas, relato, medições e fluido
+    itens_os.dart           peças e serviços da OS (preço e desconto)
 ```
 
 Telas fora do motor de cadastros: usuários e aparelhos (só o admin, gravam pelas funções
