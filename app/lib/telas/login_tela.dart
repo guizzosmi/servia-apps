@@ -75,12 +75,7 @@ class _LoginTelaState extends State<LoginTela> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const Icon(Icons.handyman_outlined, size: 56, color: Cores.indigo700),
-                const SizedBox(height: 8),
-                Text('ServPilot',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800, color: Cores.indigo700)),
+                const Center(child: Marca(layout: MarcaLayout.vertical, altura: 150)),
                 const SizedBox(height: 24),
                 SegmentedButton<bool>(
                   segments: const [

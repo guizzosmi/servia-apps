@@ -11,6 +11,7 @@ import 'telas/aparelhos_tela.dart';
 import 'telas/cadastro_form_tela.dart';
 import 'telas/cadastro_lista_tela.dart';
 import 'telas/casca.dart';
+import 'telas/configuracoes_tela.dart';
 import 'telas/empresa_tela.dart';
 import 'telas/etiquetas_tela.dart';
 import 'telas/fila_tela.dart';
@@ -55,8 +56,9 @@ final rotas = GoRouter(
     if (!sessao.temEmpresa || !sessao.temAlgum(papeisDoPainel)) {
       return '/empresa';
     }
-    // Usuários e aparelhos: só o admin (o servidor confere de novo).
-    final soAdmin = local.startsWith('/usuarios') || local.startsWith('/aparelhos');
+    // Usuários, aparelhos e configurações: só o admin (o servidor confere de novo).
+    final soAdmin = local.startsWith('/usuarios') || local.startsWith('/aparelhos') ||
+        local.startsWith('/configuracoes');
     if (soAdmin && !sessao.tem(Papel.admin)) return '/';
     return null;
   },
@@ -106,6 +108,7 @@ final rotas = GoRouter(
           ],
         ),
         GoRoute(path: '/aparelhos', builder: (_, __) => const AparelhosTela()),
+        GoRoute(path: '/configuracoes', builder: (_, __) => const ConfiguracoesTela()),
         GoRoute(
           path: '/usuarios',
           builder: (_, __) => const UsuariosTela(),

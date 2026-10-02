@@ -6,6 +6,7 @@ import 'telas/atendimento_tela.dart';
 import 'telas/hoje_tela.dart';
 import 'telas/leitor_qr_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/orcamento_tela.dart';
 import 'telas/revogado_tela.dart';
 import 'telas/servico_tela.dart';
 import 'telas/sincronizacao_tela.dart';
@@ -36,6 +37,13 @@ final rotas = GoRouter(
       builder: (_, state) {
         final id = state.pathParameters['id']!;
         return AtendimentoTela(key: ValueKey('atendimento-$id'), atendimentoId: id);
+      },
+    ),
+    GoRoute(
+      path: '/orcamento/:id',
+      builder: (_, state) {
+        final id = state.pathParameters['id']!;
+        return OrcamentoTela(key: ValueKey('orcamento-$id'), atendimentoId: id);
       },
     ),
     GoRoute(

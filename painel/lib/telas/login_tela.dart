@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
-import '../widgets/marca.dart';
 
 class LoginTela extends StatefulWidget {
   const LoginTela({super.key});
@@ -58,9 +57,11 @@ class _LoginTelaState extends State<LoginTela> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Marca(tamanho: 28),
+                        const Center(child: Marca(layout: MarcaLayout.horizontal, altura: 72)),
+                        const SizedBox(height: 8),
                         const SizedBox(height: 4),
                         Text('Painel de gestão',
+                            textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Cores.neutro)),
                         const SizedBox(height: 24),

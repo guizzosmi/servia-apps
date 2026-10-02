@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../widgets/marca.dart';
 
 /// Escolha (ou troca) da empresa em que o usuário vai trabalhar.
 /// Mostra todas as empresas em que ele tem vínculo ativo.
@@ -87,7 +86,7 @@ class _EmpresaTelaState extends State<EmpresaTela> {
                   future: _carga,
                   builder: (context, snap) {
                     final filhos = <Widget>[
-                      const Marca(tamanho: 24),
+                      const Marca(altura: 30),
                       const SizedBox(height: 8),
                       Text('Escolha a empresa',
                           style: Theme.of(context).textTheme.titleMedium),

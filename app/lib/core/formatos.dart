@@ -65,7 +65,39 @@ const nomesOperacoes = {
   'item_os_salvar': 'Item usado',
   'atendimento_concluir': 'Concluir atendimento',
   'atendimento_nao_realizado': 'Não realizado',
+  'orcamento_app': 'Orçamento',
+  'orcamento_assinar': 'Assinatura do orçamento',
+  'aceite_conclusao': 'Assinatura da conclusão',
 };
+
+const statusOrcamento = {
+  'rascunho': Rotulo('Rascunho (gestor)', Cores.neutro),
+  'enviado': Rotulo('Aguardando o cliente', Cores.alerta),
+  'aprovado': Rotulo('Aprovado', Cores.sucesso),
+  'reprovado': Rotulo('Recusado', Cores.erro),
+  'expirado': Rotulo('Vencido', Cores.neutro),
+  'substituido': Rotulo('Substituído', Cores.neutro),
+  'cancelado': Rotulo('Cancelado', Cores.neutro),
+};
+
+/// 1234.5 -> 'R\$ 1.234,50'
+String dinheiro(Object? v) {
+  final n = (v is num ? v : num.tryParse('${v ?? ''}')) ?? 0;
+  final negativo = n < 0;
+  final partes = n.abs().toStringAsFixed(2).split('.');
+  final inteiro = partes[0].replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
+  return '${negativo ? '- ' : ''}R\$ $inteiro,${partes[1]}';
+}
+
+/// Número com vírgula, sem casas à toa: 2 -> '2', 1.5 -> '1,5'.
+String numeroBr(Object? v) {
+  final n = v is num ? v : num.tryParse('${v ?? ''}');
+  if (n == null) return '${v ?? ''}';
+  return (n == n.roundToDouble() ? n.toInt().toString() : n.toString()).replaceAll('.', ',');
+}
+
+/// Arredonda em centavos (como o banco).
+num centavos(num v) => (v * 100).round() / 100;
 
 String _dd(int n) => n.toString().padLeft(2, '0');
 

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/status.dart';
 import 'ajustes_atendimento.dart';
+import 'assinatura_cliente.dart';
 import 'status_chip.dart';
 
 const statusAtendimento = {
@@ -113,11 +114,15 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
               .isFilter('excluido_em', null),
           db.from('atendimento_fotos').select().inFilter('atendimento_id', ids).isFilter('excluido_em', null)
               .order('tirada_em', ascending: true),
+          // Assinatura do cliente na conclusão (colhida no app).
+          db.from('aceites').select().eq('entidade', 'os_conclusao').inFilter('entidade_id', ids)
+              .isFilter('excluido_em', null).order('criado_em', ascending: true),
         ]);
         const nomes = ['participantes', 'equipamentos', 'medicoes', 'fluidos', 'fotos'];
         for (var i = 0; i < nomes.length; i++) {
           filhos[nomes[i]] = r[i];
         }
+        filhos['aceites'] = [for (final a in r[5]) {...a, 'atendimento_id': a['entidade_id']}];
         final caminhos = r[4].map((f) => f['caminho'] as String).toList();
         if (caminhos.isNotEmpty) {
           try {
@@ -361,6 +366,14 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
           for (final f in _de('fluidos', a['id']))
             Text('${(f['equipamentos'] as Map?)?['codigo'] ?? ''} · ${f['fluido']}: '
                 '+${_num(f['adicionado_kg'])} kg / recolhido ${_num(f['recolhido_kg'])} kg'),
+        ],
+        if (_de('aceites', a['id']).isNotEmpty) ...[
+          const _Titulo('Assinatura do cliente'),
+          for (final ac in _de('aceites', a['id']))
+            AssinaturaCliente(aceite: ac, titulo: 'Recebido por ${ac['nome'] ?? '?'} (assinatura na tela)'),
+        ] else if (a['status'] == 'concluido' && a['cliente_presente'] == true) ...[
+          const _Titulo('Assinatura do cliente'),
+          const Text('O cliente acompanhou, mas não assinou na tela.', style: TextStyle(color: Cores.neutro)),
         ],
         if (fotos.isNotEmpty) ...[
           _Titulo('Fotos (${fotos.length})'),

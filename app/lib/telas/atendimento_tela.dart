@@ -3,14 +3,18 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_orcamento.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
+import '../core/conteudos.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../widgets/aba_orcamento.dart';
 import '../widgets/abas_atendimento.dart';
 import '../widgets/entrar_no_servico.dart';
 import '../widgets/indicador_sync.dart';
 import '../widgets/status_chip.dart';
+import 'assinatura_tela.dart';
 
 const _statusAtendimento = {
   'em_andamento': Rotulo('Em andamento', Cores.andamento),
@@ -122,12 +126,100 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
     // Sem dispose aqui: o diálogo ainda anima a saída usando o campo (o
     // controle sem ouvintes é liberado pelo coletor de lixo).
     final contato = nome.text;
+    if (!mounted) return;
     if (ok != true) return;
     await _salvarRelato(avisar: false);
-    await AcoesAtendimento.concluir(atd, clientePresente: presente, contatoNome: presente ? contato : null);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Atendimento concluído.')));
+
+    // Assinatura do cliente na conclusão (conforme a empresa).
+    String? semAssinatura;
+    var assinou = false;
+    final modo = AcoesOrcamento.config.aceiteConclusao;
+    try {
+      if (presente && modo != 'desligado') {
+        final atual = EstadoApp.instancia.banco?.um('atendimentos', atd['id']) ?? atd;
+        final colher = modo == 'obrigatorio' ? true : await _perguntarAssinatura();
+        if (!mounted) return;
+        if (colher == null) return;
+        if (colher) {
+          // O mesmo conteúdo na tela e no PDF.
+          final conteudo = Conteudos.conclusao(atual);
+          final decisao = await AssinaturaTela.abrir(
+            context,
+            AssinaturaTela(
+              conteudo: conteudo,
+              nomeInicial: contato.trim().isEmpty ? null : contato.trim(),
+              decisaoAoAssinar: 'ciente',
+              botaoAssinar: 'Assinar',
+            ),
+          );
+          if (!mounted) return;
+          if (decisao != null) {
+            await AcoesOrcamento.registrarConclusao(atd: atual, conteudo: conteudo, decisao: decisao);
+            assinou = true;
+          } else if (modo == 'obrigatorio') {
+            semAssinatura = await _motivoSemAssinatura();
+            if (semAssinatura == null) return;
+          } else {
+            return; // voltou da assinatura: o atendimento continua aberto
+          }
+        }
+      }
+      await AcoesAtendimento.concluir(atd,
+          clientePresente: presente, contatoNome: presente ? contato : null, semAssinaturaMotivo: semAssinatura);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Não foi possível concluir: $e'), backgroundColor: Cores.erro));
+      }
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(assinou ? 'Atendimento concluído, com a assinatura do cliente.' : 'Atendimento concluído.')));
     context.go('/hoje');
+  }
+
+  /// Assinatura opcional: colher agora? (null = voltar sem concluir)
+  Future<bool?> _perguntarAssinatura() => showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Assinatura do cliente'),
+          content: const Text('Quer que o cliente assine na tela o recebimento do serviço?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Concluir sem assinatura')),
+            FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Colher assinatura')),
+          ],
+        ),
+      );
+
+  /// Assinatura obrigatória e o cliente não assinou: o motivo vai para o histórico.
+  Future<String?> _motivoSemAssinatura() async {
+    final motivo = TextEditingController();
+    final r = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Concluir sem a assinatura?'),
+        content: TextField(
+          controller: motivo,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Por quê? (ex.: o cliente não quis assinar)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+          FilledButton(
+            onPressed: () {
+              if (motivo.text.trim().isNotEmpty) Navigator.of(ctx).pop(motivo.text.trim());
+            },
+            child: const Text('Concluir'),
+          ),
+        ],
+      ),
+    );
+    // Sem dispose: o diálogo ainda anima a saída usando o campo.
+    return r;
   }
 
   Future<void> _naoRealizado(Map<String, dynamic> atd) async {
@@ -183,7 +275,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
             if (didPop) _salvarRelato(avisar: false);
           },
           child: DefaultTabController(
-            length: 5,
+            length: 6,
             child: Scaffold(
               appBar: AppBar(
                 title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -200,6 +292,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
                     Tab(text: 'Medições'),
                     Tab(text: 'Itens'),
                     Tab(text: 'Fotos'),
+                    Tab(text: 'Orçamento'),
                   ],
                 ),
               ),
@@ -218,6 +311,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
                     AbaMedicoes(atd: atd, habilitado: aberto),
                     AbaItens(atd: atd, habilitado: aberto),
                     AbaFotos(atd: atd, habilitado: aberto),
+                    AbaOrcamento(atd: atd, habilitado: aberto),
                   ]),
                 ),
               ]),

@@ -404,13 +404,18 @@ class AcoesAtendimento {
   // Encerrar o atendimento
   // ------------------------------------------------------------------
 
-  static Future<void> concluir(Map<String, dynamic> atd, {bool? clientePresente, String? contatoNome}) async {
+  /// [semAssinaturaMotivo]: o cliente acompanhou, mas não assinou na tela
+  /// (assinatura obrigatória na empresa): o motivo fica no histórico.
+  static Future<void> concluir(Map<String, dynamic> atd,
+      {bool? clientePresente, String? contatoNome, String? semAssinaturaMotivo}) async {
     await _sync.registrar(
       'atendimento_concluir',
       {
         'atendimento_id': atd['id'],
         if (clientePresente != null) 'cliente_presente': clientePresente,
         if (contatoNome != null && contatoNome.trim().isNotEmpty) 'contato_cliente_nome': contatoNome.trim(),
+        if (semAssinaturaMotivo != null && semAssinaturaMotivo.trim().isNotEmpty)
+          'sem_assinatura_motivo': semAssinaturaMotivo.trim(),
       },
       aplicarLocal: () => _encerrarLocal(atd, 'concluido', 'concluido'),
     );

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cores da marca ServPilot (kit em imagens/ServPilot-vetores) -->
+    <color name="ic_launcher_background">#121A2B</color>
+    <color name="abertura_fundo">#121A2B</color>
+    <color name="notificacao_cor">#F0643A</color>
+</resources>

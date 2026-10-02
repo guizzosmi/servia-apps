@@ -22,6 +22,9 @@ const tabelasDoDia = [
   'atendimento_fluidos',
   'atendimento_fotos',
   'os_itens',
+  'orcamentos',
+  'orcamento_itens',
+  'aceites',
 ];
 
 /// Uma ação feita no app, esperando para subir para a plataforma.

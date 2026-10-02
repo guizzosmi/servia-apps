@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.2.0';
+const versaoApp = '0.3.0';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -183,8 +183,8 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
         // Sem resposta do servidor: é falta de conexão.
         _mudar(SituacaoSync.semConexao, 'Sem conexão com a plataforma.');
       } else {
-        // O servidor recusou a foto (ex.: permissão do bucket).
-        _mudar(SituacaoSync.erro, 'Foto não enviada: ${e.message}');
+        // O servidor recusou o arquivo (ex.: permissão do bucket).
+        _mudar(SituacaoSync.erro, 'Arquivo não enviado: ${e.message}');
       }
     } catch (e) {
       // Sem internet, servidor fora do ar, tempo esgotado...
@@ -231,7 +231,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       if (lote.isEmpty) return;
       // Os arquivos sobem antes das operações que os registram. A foto
       // cujo arquivo sumiu já ficou recusada aqui e não vai no lote.
-      final semArquivo = await _subirFotos(lote);
+      final semArquivo = {...await _subirFotos(lote), ...await _subirAnexos(lote)};
       final envio = lote.where((o) => !semArquivo.contains(o.opId)).toList();
       if (envio.isEmpty) continue;
       final r = await _rpc('sync_enviar', {..._base(), 'operacoes': envio.map((o) => o.paraEnvio()).toList()});
@@ -291,6 +291,40 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
     return recusadas;
   }
 
+  /// Sobe os arquivos anexados a uma operação (assinatura e resumo em PDF):
+  /// dados['arquivos'] = [{bucket, caminho, local, tipo}]. Como nas fotos:
+  /// sem internet, tenta depois; arquivo que sumiu recusa a operação.
+  Future<Set<String>> _subirAnexos(List<Operacao> lote) async {
+    final recusadas = <String>{};
+    for (final op in lote) {
+      final anexos = op.dados['arquivos'];
+      if (anexos is! List) continue;
+      for (final a in anexos.cast<Map>()) {
+        final caminho = '${a['caminho']}';
+        if (banco.meta('arquivo_subiu:$caminho') != null) continue;
+        final arquivo = Arquivos.assinatura(a['local']);
+        if (arquivo == null || !await arquivo.exists()) {
+          await banco.marcarRecusada(op.opId, 'O arquivo da assinatura não está mais no aparelho.');
+          recusadas.add(op.opId);
+          break;
+        }
+        try {
+          await _db.storage.from('${a['bucket']}').uploadBinary(
+                caminho,
+                await arquivo.readAsBytes(),
+                fileOptions: FileOptions(contentType: '${a['tipo']}'),
+              );
+        } on StorageException catch (e) {
+          final jaExiste = e.statusCode == '409' || e.message.toLowerCase().contains('exist') ||
+              e.message.toLowerCase().contains('duplicate');
+          if (!jaExiste) rethrow;
+        }
+        await banco.gravarMeta('arquivo_subiu:$caminho', '1');
+      }
+    }
+    return recusadas;
+  }
+
   /// Baixa os cadastros (por cursor, em páginas) e o dia.
   Future<void> _baixar() async {
     // Começa 1 minuto antes do último cursor: gravações que terminaram
@@ -312,6 +346,10 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
     var paginas = 0;
     while (true) {
       final r = await _rpc('sync_baixar', {..._base(), 'cursores': cursores, 'dia': querDia});
+      // Configuração da empresa (orçamento, assinatura) e dados do cabeçalho
+      // do resumo que o cliente assina.
+      if (r['config'] is Map) await banco.gravarMeta('config', jsonEncode(r['config']));
+      if (r['empresa'] is Map) await banco.gravarMeta('empresa', jsonEncode(r['empresa']));
       final cadastros = (r['cadastros'] as Map?) ?? const {};
       for (final e in cadastros.entries) {
         final tabela = e.key as String;

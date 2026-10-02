@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/lista.dart';
 import '../servicos/documentos.dart';
 import '../servicos/status.dart';
+import '../widgets/assinatura_cliente.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/itens_os.dart';
 import '../widgets/status_chip.dart';
@@ -967,10 +968,13 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
             Text(
               [
                 forca[a['forca_evidencia']] ?? '',
-                if (hash.length >= 12) 'conteúdo ${hash.substring(0, 12)}…',
+                if (a['assinatura_caminho'] != null) 'assinatura na tela do app'
+                else if (hash.length >= 12) 'conteúdo ${hash.substring(0, 12)}…',
               ].join(' · '),
               style: const TextStyle(fontSize: 12, color: Cores.neutro),
             ),
+            if (a['assinatura_caminho'] != null)
+              Padding(padding: const EdgeInsets.only(top: 8), child: AssinaturaCliente(aceite: a)),
           ]),
         ),
       ]),
@@ -983,7 +987,8 @@ String descreverEventoOrcamento(Map<String, dynamic> l) {
   final dados = (l['dados'] as Map?) ?? const {};
   final v = dados['versao'] != null ? ' v${dados['versao']}' : '';
   final texto = switch (l['acao']) {
-    'criar' => 'Orçamento criado$v',
+    'criar' => 'Orçamento criado$v${dados['origem'] == 'app' ? ' no app, no local' : ''}'
+        '${dados['precos_divergentes'] != null ? ' (preço diferente do catálogo atual)' : ''}',
     'enviar' => 'Marcado como enviado$v',
     'substituir' => 'Substituído pela v${dados['nova_versao'] ?? '?'}',
     'aprovar' => 'Aprovado$v ${(formasAceite[dados['forma']] ?? '').toLowerCase()}'

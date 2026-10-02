@@ -4,7 +4,6 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
-import '../widgets/marca.dart';
 
 /// Moldura do painel: menu lateral + barra superior com a empresa e "Sair".
 /// Em telas estreitas o menu vira uma gaveta (ícone ☰).
@@ -20,7 +19,7 @@ class Casca extends StatelessWidget {
     final menu = _Menu(local: local, fecharAoEscolher: !largo);
     return Scaffold(
       appBar: AppBar(
-        title: largo ? const Marca() : const Marca(tamanho: 20),
+        title: Marca(altura: largo ? 30 : 26),
         automaticallyImplyLeading: !largo,
         shape: const Border(bottom: BorderSide(color: Cores.linha)),
         actions: const [_EmpresaAtual(), SizedBox(width: 8)],
@@ -97,6 +96,7 @@ class _Menu extends StatelessWidget {
           grupo('Administração'),
           item(Icons.manage_accounts_outlined, 'Usuários', '/usuarios'),
           item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
+          item(Icons.tune_outlined, 'Configurações', '/configuracoes'),
         ],
         grupo('Em breve'),
         const ListTile(

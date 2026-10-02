@@ -29,6 +29,8 @@ dependencies:
   # Notificações no celular (Firebase Cloud Messaging).
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
+  # Resumo que o cliente assina (PDF gerado no aparelho, sem internet).
+  pdf: ^3.11.0
 
 dev_dependencies:
   flutter_test:

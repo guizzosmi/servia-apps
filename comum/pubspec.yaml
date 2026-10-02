@@ -13,3 +13,8 @@ dependencies:
 
 dev_dependencies:
   flutter_lints: ^5.0.0
+
+flutter:
+  # Logos do ServPilot (Marca). As versões 2.0x ficam em assets/marca/2.0x/.
+  assets:
+    - assets/marca/
