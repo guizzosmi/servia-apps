@@ -1,11 +1,11 @@
 {
-    "name": "servia_painel",
-    "short_name": "servia_painel",
+    "name": "ServPilot · Painel",
+    "short_name": "ServPilot",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "ServPilot - painel do gestor",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

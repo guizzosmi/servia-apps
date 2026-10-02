@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Orçamento</title>
+<style>
+  :root {
+    --indigo: #1E2A5A; --indigo-medio: #3A4FA8; --indigo-claro: #E6E9F6;
+    --tinta: #121A2B; --neutro: #5B6474; --linha: #DCE1EA; --fundo: #F5F6FA;
+    --sucesso: #1E8E5A; --erro: #C8372D; --alerta: #B96A00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { background: var(--indigo); color: #fff; padding: 18px 16px 16px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .cartao { background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .cartao h2 { margin: 0 0 10px; font-size: 15px; color: var(--indigo); text-transform: uppercase; letter-spacing: .4px; }
+  .rotulo { color: var(--neutro); font-size: 13px; }
+  .grande { font-size: 28px; font-weight: 800; color: var(--indigo); font-variant-numeric: tabular-nums; }
+  .item { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--linha); }
+  .item:first-of-type { border-top: 0; }
+  .item small { display: block; color: var(--neutro); }
+  .valor { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .totais div { display: flex; justify-content: space-between; padding: 3px 0; font-variant-numeric: tabular-nums; }
+  .totais .total { border-top: 2px solid var(--indigo); margin-top: 6px; padding-top: 8px; font-weight: 800; font-size: 18px; color: var(--indigo); }
+  .texto { white-space: pre-wrap; }
+  .termo { font-size: 13px; color: var(--neutro); white-space: pre-wrap; }
+  label { display: block; font-size: 14px; margin: 12px 0 4px; }
+  input[type=text], textarea { width: 100%; font: inherit; padding: 12px; border: 1px solid var(--linha); border-radius: 10px; background: #fff; }
+  input[type=text]:focus, textarea:focus { outline: 2px solid var(--indigo-medio); border-color: transparent; }
+  .marcar { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 4px; font-size: 15px; }
+  .marcar input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; }
+  button, .botao { display: block; width: 100%; min-height: 50px; border-radius: 12px; font: inherit; font-weight: 700;
+                   cursor: pointer; text-align: center; text-decoration: none; padding: 13px; margin-top: 10px; }
+  .primario { background: var(--indigo); color: #fff; border: 0; }
+  .primario:disabled { background: #9aa2b8; cursor: default; }
+  .secundario { background: #fff; color: var(--indigo); border: 1px solid var(--indigo); }
+  .perigo { background: #fff; color: var(--erro); border: 1px solid var(--erro); }
+  .aviso { border-radius: 12px; padding: 14px; margin-bottom: 14px; font-size: 15px; }
+  .aviso.ok { background: #E3F3EB; color: #155F3D; }
+  .aviso.erro { background: #FBE7E5; color: #8E241C; }
+  .aviso.neutro { background: var(--indigo-claro); color: var(--indigo); }
+  .centro { text-align: center; padding: 40px 8px; }
+  .centro .icone { font-size: 46px; line-height: 1; }
+  .escondido { display: none; }
+  footer { text-align: center; color: var(--neutro); font-size: 12px; padding: 8px 16px 28px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="empresa">Orçamento</h1>
+  <p id="empresa-info"></p>
+</header>
+<main id="tela">
+  <div class="centro"><p class="rotulo">Carregando o orçamento…</p></div>
+</main>
+<footer id="rodape"></footer>
+
+<script>
+// Página pública de aceite. Fala só com a função aceite-publico.
+// O token vem no endereço: /a/<token>.
+const API = 'https://srtokvosnwtyewiempyw.supabase.co/functions/v1/aceite-publico';
+const CHAVE = 'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH'; // chave pública (não é segredo)
+const token = (location.pathname.match(/\/a\/([A-Za-z0-9_-]{43})/) || [])[1];
+const tela = document.getElementById('tela');
+let doc = null; // resposta do GET
+
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const moeda = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+const dataBr = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso)) ? iso.slice(0, 10).split('-').reverse().join('/') : '';
+const dataHoraBr = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const fone = (t) => { const s = String(t || '').replace(/\D/g, ''); return s.length === 11 ? `(${s.slice(0, 2)}) ${s.slice(2, 7)}-${s.slice(7)}` : s.length === 10 ? `(${s.slice(0, 2)}) ${s.slice(2, 6)}-${s.slice(6)}` : (t || ''); };
+const tipos = { produto: 'Peça / produto', servico: 'Serviço', mao_de_obra: 'Mão de obra', deslocamento: 'Deslocamento' };
+
+const TERMO_PADRAO = 'Ao aprovar este orçamento, o cliente autoriza a execução dos serviços e o fornecimento dos itens descritos, ' +
+  'nos valores, prazos e condições acima. A aprovação pode ser feita por assinatura, pelo link enviado pela empresa ou por outro meio ' +
+  'registrado por ela, e fica guardada com a data, o nome de quem aprovou e a identificação deste documento. ' +
+  'Valores válidos até a data de validade indicada.';
+
+function mensagem(icone, titulo, texto, classe) {
+  tela.innerHTML = `<div class="centro"><div class="icone">${icone}</div><h2>${esc(titulo)}</h2>
+    <p class="${classe || ''}">${texto}</p>${contatoEmpresa()}</div>`;
+}
+
+function contatoEmpresa() {
+  const e = (doc && doc.empresa) || {};
+  const partes = [e.telefone ? fone(e.telefone) : '', e.email || ''].filter(Boolean);
+  return partes.length ? `<p class="rotulo">Dúvidas: ${esc(e.nome || 'empresa')} · ${esc(partes.join(' · '))}</p>` : '';
+}
+
+function cabecalho() {
+  const e = doc.empresa || {};
+  document.getElementById('empresa').textContent = e.nome || 'Orçamento';
+  document.getElementById('empresa-info').textContent = [e.telefone ? fone(e.telefone) : '', e.email || ''].filter(Boolean).join(' · ');
+  document.title = `${doc.documento.codigo || 'Orçamento'} · ${e.nome || ''}`;
+  document.getElementById('rodape').textContent = [e.razao_social, e.endereco].filter(Boolean).join(' · ');
+}
+
+async function carregar() {
+  if (!token) return mensagem('🔗', 'Link inválido', 'Confira se o endereço chegou inteiro ou peça um novo link à empresa.');
+  try {
+    // O token vai no corpo (não no endereço), para não ficar em registros de acesso.
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CHAVE },
+      body: JSON.stringify({ acao: 'ler', t: token }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (j.code === 'link_invalido') return mensagem('🔗', 'Link inválido', 'Confira se o endereço chegou inteiro ou peça um novo link à empresa.');
+      return mensagem('⚠️', 'Não deu para abrir agora', esc(j.message || 'Tente de novo em instantes.'));
+    }
+    doc = j;
+    // Só links https da plataforma viram botão de PDF.
+    if (doc.documento && !/^https:\/\//.test(doc.documento.pdf_url || '')) doc.documento.pdf_url = null;
+    cabecalho();
+    mostrar();
+  } catch (e) {
+    mensagem('📶', 'Sem conexão', 'Confira a internet do celular e abra o link de novo.');
+  }
+}
+
+function mostrar() {
+  const d = doc.documento;
+  switch (doc.estado) {
+    case 'aguardando': return formulario();
+    case 'respondido': {
+      const r = doc.resposta || {};
+      const aprovado = r.decisao === 'aprovado';
+      return mensagem(aprovado ? '✅' : '✖️', aprovado ? 'Orçamento aprovado' : 'Orçamento recusado',
+        `${esc(d.codigo)} versão ${esc(d.versao)} · ${aprovado ? 'aprovado' : 'recusado'}${r.nome ? ' por ' + esc(r.nome) : ''}` +
+        `${r.em ? ' em ' + esc(dataHoraBr(r.em)) : ''}.` +
+        (d.pdf_url ? `<br><br><a class="botao secundario" href="${esc(d.pdf_url)}" target="_blank" rel="noopener">Ver o orçamento (PDF)</a>` : ''));
+    }
+    case 'atualizado':
+      return mensagem('🔄', 'Orçamento atualizado', `A empresa fez uma versão nova do ${esc(d.codigo)}. Este link não vale mais: peça o link da versão nova.`);
+    case 'cancelado':
+      return mensagem('🚫', 'Orçamento cancelado', `A empresa cancelou o ${esc(d.codigo)}.`);
+    case 'vencido':
+      return mensagem('⏳', 'Orçamento vencido', `O ${esc(d.codigo)} valia até ${esc(dataBr(d.validade_ate))}. Peça um orçamento atualizado à empresa.`);
+    case 'link_revogado':
+      return mensagem('🔗', 'Link substituído', 'A empresa enviou um link novo para este orçamento. Use o mais recente.');
+    default:
+      return mensagem('⚠️', 'Orçamento indisponível', 'Fale com a empresa.');
+  }
+}
+
+function formulario() {
+  const d = doc.documento;
+  const itens = (d.itens || []).map((i) => `
+    <div class="item"><div>${esc(i.descricao)}<small>${esc(num(i.quantidade))} ${esc(i.unidade || '')}${tipos[i.tipo] && tipos[i.tipo] !== i.descricao ? ' · ' + esc(tipos[i.tipo]) : ''}${Number(i.desconto) ? ' · desconto ' + esc(moeda(i.desconto)) : ''}</small></div>
+    <div class="valor">${esc(moeda(i.total))}</div></div>`).join('');
+  const linhaTotal = (rot, v, neg) => Number(v) ? `<div><span>${rot}</span><span>${neg ? '- ' : ''}${esc(moeda(v))}</span></div>` : '';
+  tela.innerHTML = `
+    <div class="cartao">
+      <div class="rotulo">Orçamento ${esc(d.codigo)} · versão ${esc(d.versao)}</div>
+      <div class="grande">${esc(moeda(d.total))}</div>
+      <div class="rotulo">Válido até ${esc(dataBr(d.validade_ate))}${d.prazo_execucao_dias ? ' · execução em ' + esc(d.prazo_execucao_dias) + ' dia(s)' : ''}</div>
+      <p style="margin:12px 0 0">${esc(doc.cliente?.nome || '')}${doc.local?.nome ? ' · ' + esc(doc.local.nome) : ''}</p>
+    </div>
+    ${d.diagnostico ? `<div class="cartao"><h2>Diagnóstico</h2><div class="texto">${esc(d.diagnostico)}</div></div>` : ''}
+    <div class="cartao"><h2>Itens</h2>${itens}
+      <div class="totais" style="margin-top:10px">
+        ${linhaTotal('Peças e produtos', d.subtotal_produtos)}${linhaTotal('Serviços e mão de obra', d.subtotal_servicos)}
+        ${linhaTotal('Deslocamento', d.deslocamento)}${linhaTotal('Descontos', d.desconto, true)}
+        <div class="total"><span>Total</span><span>${esc(moeda(d.total))}</span></div>
+      </div>
+    </div>
+    ${d.condicoes_pagamento || d.observacoes ? `<div class="cartao"><h2>Condições</h2>
+      ${d.condicoes_pagamento ? `<div class="rotulo">Pagamento</div><div class="texto">${esc(d.condicoes_pagamento)}</div>` : ''}
+      ${d.observacoes ? `<div class="rotulo" style="margin-top:8px">Observações</div><div class="texto">${esc(d.observacoes)}</div>` : ''}</div>` : ''}
+    ${d.pdf_url ? `<a class="botao secundario" href="${esc(d.pdf_url)}" target="_blank" rel="noopener">Ver o orçamento completo (PDF)</a>` : ''}
+    <div class="cartao" style="margin-top:14px"><h2>Sua resposta</h2>
+      <p class="termo">${esc(d.termo_aceite || TERMO_PADRAO)}</p>
+      <label for="nome">Seu nome</label>
+      <input type="text" id="nome" autocomplete="name" value="${esc(doc.contato?.nome || '')}">
+      <label for="documento">CPF (opcional)</label>
+      <input type="text" id="documento" inputmode="numeric" autocomplete="off">
+      <label class="marcar"><input type="checkbox" id="concordo"><span>Li e concordo com o orçamento ${esc(d.codigo)} versão ${esc(d.versao)} e com o termo acima.</span></label>
+      <div id="erro" class="aviso erro escondido"></div>
+      <button class="primario" id="aprovar">Aprovar orçamento</button>
+      <button class="perigo" id="reprovar">Recusar</button>
+      <div id="caixa-recusa" class="escondido">
+        <label for="motivo">Quer contar o motivo? (opcional)</label>
+        <textarea id="motivo" rows="3"></textarea>
+        <button class="perigo" id="confirmar-recusa">Confirmar recusa</button>
+      </div>
+    </div>`;
+
+  const aprovar = document.getElementById('aprovar');
+  const concordo = document.getElementById('concordo');
+  const atualizar = () => { aprovar.disabled = !concordo.checked; };
+  concordo.addEventListener('change', atualizar);
+  atualizar();
+  aprovar.addEventListener('click', () => decidir('aprovado'));
+  document.getElementById('reprovar').addEventListener('click', () => {
+    document.getElementById('caixa-recusa').classList.remove('escondido');
+    document.getElementById('motivo').focus();
+  });
+  document.getElementById('confirmar-recusa').addEventListener('click', () => decidir('reprovado'));
+}
+
+function erro(texto) {
+  const e = document.getElementById('erro');
+  e.textContent = texto;
+  e.classList.remove('escondido');
+  e.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function decidir(decisao) {
+  const nome = document.getElementById('nome').value.trim();
+  if (!nome) return erro('Informe o seu nome.');
+  if (decisao === 'aprovado' && !document.getElementById('concordo').checked) return erro('Marque "Li e concordo" para aprovar.');
+  document.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CHAVE },
+      body: JSON.stringify({
+        acao: 'decidir', t: token, decisao, nome,
+        documento_pessoa: document.getElementById('documento').value.trim(),
+        li_e_concordo: document.getElementById('concordo').checked,
+        sha256_visto: doc.documento.sha256,
+        motivo: decisao === 'reprovado' ? document.getElementById('motivo').value.trim() : null,
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (j.code === 'documento_mudou' || j.code === 'orcamento_atualizado') {
+        return mensagem('🔄', 'O orçamento mudou', esc(j.message) + '<br><br><button class="primario" onclick="location.reload()">Abrir de novo</button>');
+      }
+      document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+      document.getElementById('aprovar').disabled = !document.getElementById('concordo').checked;
+      return erro(j.message || 'Não deu para registrar agora. Tente de novo.');
+    }
+    const d = doc.documento;
+    if (decisao === 'aprovado') {
+      mensagem('✅', 'Orçamento aprovado!', `Obrigado, ${esc(nome)}. A sua aprovação do ${esc(d.codigo)} (${esc(moeda(d.total))}) ficou registrada. A ${esc(doc.empresa?.nome || 'empresa')} vai entrar em contato para agendar o serviço.`);
+    } else {
+      mensagem('✖️', 'Recusa registrada', `Obrigado por responder, ${esc(nome)}. A sua resposta ficou registrada.`);
+    }
+  } catch (e) {
+    document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+    erro('Sem conexão. Confira a internet e tente de novo.');
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>

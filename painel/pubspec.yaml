@@ -1,5 +1,5 @@
 name: servia_painel
-description: "ServIA - painel web do gestor (cadastros, planejamento, financeiro)."
+description: "ServPilot - painel web do gestor (cadastros, planejamento, financeiro)."
 publish_to: 'none'
 version: 0.1.0
 

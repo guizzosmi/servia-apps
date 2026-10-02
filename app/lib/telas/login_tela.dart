@@ -77,7 +77,7 @@ class _LoginTelaState extends State<LoginTela> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const Icon(Icons.handyman_outlined, size: 56, color: Cores.indigo700),
                 const SizedBox(height: 8),
-                Text('ServIA',
+                Text('ServPilot',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800, color: Cores.indigo700)),

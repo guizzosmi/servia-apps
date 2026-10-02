@@ -12,3 +12,6 @@ Thumbs.db
 
 # Chave privada do Firebase (conta de serviço): SEGREDO, nunca no Git
 *firebase-adminsdk*.json
+
+# Cache do Firebase Hosting (página de aceite)
+aceite/.firebase/

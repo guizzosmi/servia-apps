@@ -20,7 +20,7 @@ class PainelApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'ServIA · Painel',
+      title: 'ServPilot · Painel',
       debugShowCheckedModeBanner: false,
       theme: temaServia(),
       routerConfig: rotas,

@@ -1,5 +1,5 @@
 name: servia_comum
-description: "ServIA - tema, configuração e sessão compartilhados entre o painel e o app."
+description: "ServPilot - tema, configuração e sessão compartilhados entre o painel e o app."
 publish_to: 'none'
 version: 0.1.0
 

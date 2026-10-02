@@ -74,7 +74,7 @@ Future<Uint8List> gerarPdfEtiquetas({
   bool contorno = false,
 }) async {
   const mm = PdfPageFormat.mm;
-  final doc = pw.Document(title: 'Etiquetas QR', author: 'ServIA');
+  final doc = pw.Document(title: 'Etiquetas QR', author: 'ServPilot');
 
   // Posições: primeiro as puladas (null), depois as etiquetas.
   final vazias = pular < 0 ? 0 : (pular >= modelo.porFolha ? modelo.porFolha - 1 : pular);

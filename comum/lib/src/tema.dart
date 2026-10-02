@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Cores da identidade visual do ServIA (ver "Identidade visual" na especificação).
+/// Cores da identidade visual do ServPilot (ver "Identidade visual" na especificação).
 class Cores {
   static const indigo700 = Color(0xFF1E2A5A); // primária
   static const indigo500 = Color(0xFF3A4FA8); // links, foco, seleção

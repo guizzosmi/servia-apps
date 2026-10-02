@@ -39,7 +39,7 @@ class ServiaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'ServIA',
+      title: 'ServPilot',
       debugShowCheckedModeBanner: false,
       theme: temaServia(),
       routerConfig: rotas,

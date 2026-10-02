@@ -189,6 +189,7 @@ Future<void> avisarEquipe() async {
   }
 }
 Future<Map<String, dynamic>> acaoOrcamento(Map<String, dynamic> p) => _rpc('orcamento_acao', p);
+Future<Map<String, dynamic>> acaoLink(Map<String, dynamic> p) => _rpc('link_acao', p);
 Future<Map<String, dynamic>> acaoAtendimento(Map<String, dynamic> p) => _rpc('atendimento_acao', p);
 
 Future<Map<String, dynamic>> _rpc(String funcao, Map<String, dynamic> p) async {

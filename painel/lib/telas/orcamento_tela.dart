@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -41,6 +42,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   List<Map<String, dynamic>> _contatos = [];
   List<Map<String, dynamic>> _equipamentos = [];
   List<Map<String, dynamic>> _log = [];
+  List<Map<String, dynamic>> _links = [];
 
   // Dados do rascunho (editados na tela e salvos de uma vez).
   final _diagnostico = TextEditingController();
@@ -116,6 +118,12 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
             .eq('entidade_id', _id)
             .order('criado_em', ascending: false)
             .limit(50),
+        _db
+            .from('links_publicos')
+            .select('id, destino, expira_em, usado_em, revogado_em, acessos, ultimo_acesso_em, criado_em, contatos(nome)')
+            .eq('entidade', 'orcamento')
+            .eq('entidade_id', _id)
+            .order('criado_em', ascending: false),
       ]);
       if (!mounted || id != _id) return;
       setState(() {
@@ -126,6 +134,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
         _contatos = r[3];
         _equipamentos = r[4];
         _log = r[5];
+        _links = r[6];
         if (!manterEdicao || !_alterado) _preencherDados(orc);
       });
     } catch (e) {
@@ -570,6 +579,31 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
                 ]),
               const SizedBox(height: 24),
 
+              // ---------- link para o cliente ----------
+              if (status != 'rascunho' || _links.isNotEmpty) ...[
+                _Secao(
+                  titulo: 'Link para o cliente aprovar',
+                  acao: gestor && status == 'enviado' && visivel != 'vencido'
+                      ? FilledButton.icon(
+                          onPressed: _gerarLink,
+                          icon: const Icon(Icons.link),
+                          label: Text(_links.any(_linkAtivo) ? 'Gerar novo link' : 'Gerar link'),
+                        )
+                      : null,
+                  children: [
+                    if (_links.isEmpty)
+                      Text(
+                        status == 'enviado'
+                            ? 'O cliente abre o link no celular, vê o orçamento e aprova ou recusa sozinho.'
+                            : 'Nenhum link foi gerado.',
+                        style: const TextStyle(color: Cores.neutro),
+                      ),
+                    for (final l in _links) _linhaLink(l, gestor),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // ---------- respostas do cliente ----------
               if (_aceites.isNotEmpty) ...[
                 _Secao(titulo: 'Resposta do cliente', children: [for (final a in _aceites) _linhaAceite(a)]),
@@ -814,6 +848,93 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
     ]);
   }
 
+  // ---------------- link ----------------
+
+  bool _linkAtivo(Map<String, dynamic> l) =>
+      l['usado_em'] == null &&
+      l['revogado_em'] == null &&
+      (DateTime.tryParse('${l['expira_em']}')?.isAfter(DateTime.now()) ?? false);
+
+  Future<void> _gerarLink() async {
+    final o = _orc!;
+    if (_links.any(_linkAtivo)) {
+      final ok = await _confirmar('Gerar novo link',
+          'O link enviado antes deixa de valer (quem abrir verá "link substituído"). Continuar?',
+          botao: 'Gerar novo link');
+      if (ok != true) return;
+    }
+    final r = await _acaoLink({'acao': 'gerar', 'orcamento_id': _id}, 'Link gerado.');
+    if (r == null || !mounted) return;
+    final url = '${Config.linkAceite}/a/${r['token']}';
+    final contato = '${r['contato'] ?? ''}'.trim();
+    final primeiro = contato.split(' ').first;
+    final msg = '${primeiro.isEmpty ? 'Olá!' : 'Olá, $primeiro!'} Segue o orçamento ${o['codigo']} '
+        '(${dinheiro(o['total'])}, válido até ${dataBr(o['validade_ate'])}). '
+        'Para ver e aprovar: $url';
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => _DialogoLink(url: url, mensagem: msg, contato: contato, telefone: '${r['telefone'] ?? ''}'),
+    );
+  }
+
+  Future<void> _revogarLink(Map<String, dynamic> l) async {
+    final ok = await _confirmar('Cancelar link', 'Quem abrir este link verá que ele foi substituído e não conseguirá aprovar.',
+        botao: 'Cancelar link', perigo: true);
+    if (ok != true) return;
+    await _acaoLink({'acao': 'revogar', 'link_id': l['id']}, 'Link cancelado.');
+  }
+
+  Future<Map<String, dynamic>?> _acaoLink(Map<String, dynamic> p, String sucesso) async {
+    if (!mounted) return null;
+    setState(() => _ocupado = true);
+    try {
+      final r = await acaoLink(p);
+      _avisar(sucesso);
+      await _carregar(manterEdicao: true);
+      return r;
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+      return null;
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Widget _linhaLink(Map<String, dynamic> l, bool gestor) {
+    final ativo = _linkAtivo(l);
+    final contato = (l['contatos'] as Map?)?['nome'];
+    final String situacao;
+    final Color cor;
+    if (l['usado_em'] != null) {
+      situacao = 'Respondido em ${dataHoraBr(l['usado_em'])}';
+      cor = Cores.sucesso;
+    } else if (l['revogado_em'] != null) {
+      situacao = 'Cancelado (substituído)';
+      cor = Cores.neutro;
+    } else if (!ativo) {
+      situacao = 'Vencido';
+      cor = Cores.alerta;
+    } else {
+      situacao = 'Ativo até ${dataHoraBr(l['expira_em'])}';
+      cor = Cores.info;
+    }
+    final acessos = (l['acessos'] as int?) ?? 0;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(Icons.link, color: cor),
+      title: Text('Gerado em ${dataHoraBr(l['criado_em'])}${contato != null ? ' para $contato' : ''}'),
+      subtitle: Text([
+        situacao,
+        acessos == 0
+            ? 'ainda não foi aberto'
+            : 'aberto $acessos vez(es), a última em ${dataHoraBr(l['ultimo_acesso_em'])}',
+      ].join(' · ')),
+      trailing: gestor && ativo
+          ? TextButton(onPressed: () => _revogarLink(l), child: const Text('Cancelar link'))
+          : null,
+    );
+  }
+
   Widget _linhaAceite(Map<String, dynamic> a) {
     final aprovado = a['decisao'] == 'aprovado';
     const forca = {'forte': 'evidência forte', 'media': 'evidência média', 'fraca': 'evidência fraca'};
@@ -834,6 +955,15 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             if (a['observacao'] != null) Text('${a['observacao']}'),
+            if (a['forma'] == 'link')
+              Text(
+                [
+                  if (a['documento_pessoa'] != null) 'documento ${a['documento_pessoa']}',
+                  if (a['ip'] != null) 'IP ${a['ip']}',
+                  if (a['user_agent'] != null) _navegador('${a['user_agent']}'),
+                ].join(' · '),
+                style: const TextStyle(fontSize: 12, color: Cores.neutro),
+              ),
             Text(
               [
                 forca[a['forca_evidencia']] ?? '',
@@ -860,6 +990,8 @@ String descreverEventoOrcamento(Map<String, dynamic> l) {
         '${dados['nome'] != null ? ' por ${dados['nome']}' : ''}',
     'reprovar' => 'Reprovado$v${dados['nome'] != null ? ' por ${dados['nome']}' : ''}',
     'cancelar' => 'Cancelado$v',
+    'link_gerado' => 'Link para o cliente gerado${dados['contato'] != null ? ' (para ${dados['contato']})' : ''}',
+    'link_revogado' => 'Link para o cliente cancelado',
     _ => 'Orçamento: ${l['acao']}',
   };
   final motivo = dados['motivo'];
@@ -1072,6 +1204,87 @@ class _Faixa extends StatelessWidget {
         Expanded(child: Text(texto)),
         ...acoes.expand((a) => [const SizedBox(width: 8), a]),
       ]),
+    );
+  }
+}
+
+/// "Chrome no Android" a partir do user-agent (só para leitura do gestor).
+String _navegador(String ua) {
+  final so = ua.contains('Android')
+      ? 'Android'
+      : (ua.contains('iPhone') || ua.contains('iPad'))
+          ? 'iPhone'
+          : ua.contains('Windows')
+              ? 'Windows'
+              : ua.contains('Mac OS')
+                  ? 'Mac'
+                  : null;
+  final nav = ua.contains('SamsungBrowser')
+      ? 'Samsung Internet'
+      : ua.contains('Edg/')
+          ? 'Edge'
+          : ua.contains('Firefox')
+              ? 'Firefox'
+              : (ua.contains('Chrome') || ua.contains('CriOS'))
+                  ? 'Chrome'
+                  : ua.contains('Safari')
+                      ? 'Safari'
+                      : null;
+  if (nav == null && so == null) return 'navegador não identificado';
+  return [nav ?? 'navegador', if (so != null) 'no $so'].join(' ');
+}
+
+/// O link gerado: aparece só agora (o banco guarda só o "carimbo" dele).
+class _DialogoLink extends StatelessWidget {
+  const _DialogoLink({required this.url, required this.mensagem, required this.contato, required this.telefone});
+
+  final String url;
+  final String mensagem;
+  final String contato;
+  final String telefone;
+
+  void _copiar(BuildContext context, String texto, String aviso) {
+    Clipboard.setData(ClipboardData(text: texto));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aviso)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Link para o cliente'),
+      content: SizedBox(
+        width: 520,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(contato.isEmpty
+              ? 'Mande para quem vai aprovar, pelo WhatsApp ou e-mail.'
+              : 'Mande para $contato${telefone.isEmpty ? '' : ' ($telefone)'}, pelo WhatsApp ou e-mail.'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Cores.fundo, borderRadius: BorderRadius.circular(10)),
+            child: SelectableText(mensagem),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Guarde agora: por segurança, o link aparece só nesta tela. Se perder, gere outro '
+            '(o anterior deixa de valer).',
+            style: TextStyle(fontSize: 12, color: Cores.neutro),
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton.icon(
+          onPressed: () => _copiar(context, url, 'Link copiado.'),
+          icon: const Icon(Icons.link),
+          label: const Text('Copiar só o link'),
+        ),
+        FilledButton.icon(
+          onPressed: () => _copiar(context, mensagem, 'Mensagem copiada: é só colar no WhatsApp.'),
+          icon: const Icon(Icons.copy),
+          label: const Text('Copiar mensagem'),
+        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Fechar')),
+      ],
     );
   }
 }

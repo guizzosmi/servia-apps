@@ -11,4 +11,8 @@ class Config {
   /// (`<matricula>@<codigo-da-conta>.<dominio>`). Igual ao segredo
   /// DOMINIO_EMAIL_APP das funções (padrão servia.app).
   static const dominioEmailApp = 'servia.app';
+
+  /// Endereço da página de aceite do cliente (Firebase Hosting do projeto
+  /// servia-ccdda). Com domínio próprio, troque aqui (ex.: https://aceite.servia.com.br).
+  static const linkAceite = 'https://servia-ccdda.web.app';
 }

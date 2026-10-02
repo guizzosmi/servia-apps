@@ -1,6 +1,6 @@
 # servia-apps
 
-Código Flutter do ServIA.
+Código Flutter do ServPilot.
 
 | Pasta | O que é | Como rodar |
 | --- | --- | --- |

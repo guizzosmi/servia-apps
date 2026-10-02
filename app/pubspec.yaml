@@ -1,5 +1,5 @@
 name: servia_app
-description: "ServIA - app do técnico (parte do dia, atendimento, offline)."
+description: "ServPilot - app do técnico (parte do dia, atendimento, offline)."
 publish_to: 'none'
 version: 0.1.0+1
 
