@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../cadastros/definicoes.dart';
 import '../servicos/status.dart';
 import 'modelo.dart';
 
@@ -186,9 +187,18 @@ Future<Map<String, dynamic>?> pedirEncerramento(
   );
 }
 
-/// Escolhe uma equipe entre as colunas informadas.
+/// Escolhe uma equipe entre as colunas informadas (com a situação de cada
+/// uma no dia: sem parte, rascunho ou já publicada).
 Future<ColunaQuadro?> escolherEquipe(BuildContext context,
     {required String titulo, required List<ColunaQuadro> colunas}) {
+  String situacao(ColunaQuadro c) {
+    if (c.parte == null) return 'Sem parte: abre agora, em rascunho';
+    final n = c.itens.length;
+    final servicos = n == 0 ? 'sem serviços' : '$n serviço(s)';
+    if (c.rascunho) return 'Rascunho · $servicos';
+    return '${statusParte[c.status]?.texto ?? c.status} · $servicos · entra como encaixe';
+  }
+
   return showDialog<ColunaQuadro>(
     context: context,
     builder: (ctx) => SimpleDialog(
@@ -200,9 +210,12 @@ Future<ColunaQuadro?> escolherEquipe(BuildContext context,
             child: Text('Nenhuma outra equipe disponível neste dia.'),
           ),
         for (final c in colunas)
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(ctx).pop(c),
-            child: Text(c.parte == null ? '${c.nome} (abre a parte)' : c.nome),
+          ListTile(
+            leading: Icon(Icons.circle, size: 14, color: corDeTexto(c.equipe['cor'])),
+            minLeadingWidth: 14,
+            title: Text(c.nome, style: const TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(situacao(c), style: const TextStyle(fontSize: 12)),
+            onTap: () => Navigator.of(ctx).pop(c),
           ),
       ],
     ),

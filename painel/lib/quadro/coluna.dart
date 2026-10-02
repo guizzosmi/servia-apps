@@ -17,7 +17,7 @@ abstract interface class AcoesQuadro {
   /// abrir, publicar, encerrar, reabrir, nova_os, incluir_pessoa
   Future<void> acaoEquipe(String acao, ColunaQuadro coluna);
 
-  /// abrir_os, designar, apoio, remover, `status:<novo>`
+  /// abrir_os, designar, apoio, mover, subir, descer, remover, `status:<novo>`
   Future<void> acaoItem(String acao, Map<String, dynamic> item, ColunaQuadro coluna);
 
   /// lider, sair
@@ -290,7 +290,7 @@ class _Servicos extends StatelessWidget {
             const SizedBox(height: 8),
             OutlinedButton(onPressed: () => acoes.acaoEquipe('abrir', coluna), child: const Text('Abrir parte')),
             const SizedBox(height: 8),
-            const Text('Ou arraste um serviço da fila para cá.',
+            const Text('Ou mande um serviço da fila para cá.',
                 textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Cores.neutro)),
           ],
         ]),
@@ -300,7 +300,7 @@ class _Servicos extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Arraste serviços da fila para cá.',
+          child: Text('Mande serviços da fila para cá.',
               textAlign: TextAlign.center, style: TextStyle(color: Cores.neutro)),
         ),
       );
@@ -427,6 +427,13 @@ class CartaoItem extends StatelessWidget {
           const PopupMenuDivider(),
           const PopupMenuItem(value: 'designar', child: Text('Designar pessoas')),
           if (!apoio) const PopupMenuItem(value: 'apoio', child: Text('Pedir apoio de outra equipe')),
+        ],
+        // O mesmo que o arrasto faz (no celular é o único jeito).
+        if (status == 'programado') ...[
+          const PopupMenuDivider(),
+          const PopupMenuItem(value: 'mover', child: Text('Mandar para outra equipe')),
+          if (posicao > 1) const PopupMenuItem(value: 'subir', child: Text('Subir na ordem')),
+          if (posicao < coluna.itens.length) const PopupMenuItem(value: 'descer', child: Text('Descer na ordem')),
         ],
         if (status == 'programado' || status == 'em_deslocamento')
           const PopupMenuItem(value: 'remover', child: Text('Tirar da parte (volta para a fila)')),

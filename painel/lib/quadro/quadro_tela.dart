@@ -413,6 +413,29 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     );
   }
 
+  /// Fila -> equipe sem arrastar (no celular é o único jeito; no computador é
+  /// um atalho). Entra no fim da lista da equipe.
+  Future<void> _mandarParaEquipe(Map<String, dynamic> ag) async {
+    final os = '${(ag['ordens_servico'] as Map?)?['codigo'] ?? 'O serviço'}';
+    final destino = await escolherEquipe(
+      context,
+      titulo: 'Mandar $os para qual equipe?',
+      colunas: _colunas.where((c) => c.aceitaMudancas).toList(),
+    );
+    if (destino == null || !mounted) return;
+    final parteId = await _garantirParte(destino);
+    if (parteId == null) return;
+    final rascunho = destino.parte == null || destino.rascunho;
+    await _executar(
+      () => acaoParte({
+        'acao': rascunho ? 'programar' : 'encaixar',
+        'parte_id': parteId,
+        'agendamento_id': ag['id'],
+      }),
+      sucesso: rascunho ? '$os programada na ${destino.nome}.' : '$os encaixada na ${destino.nome}.',
+    );
+  }
+
   /// Soltar um serviço de volta na fila = tirar da parte.
   Future<void> _devolverParaFila(ArrastoItem a) async {
     arrastando(false);
@@ -576,6 +599,25 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           }),
           sucesso: '${destino.nome} vai de apoio em $os.',
         );
+      case 'mover':
+        final outras = _colunas.where((c) => c.equipeId != coluna.equipeId && c.aceitaMudancas).toList();
+        final destino = await escolherEquipe(context, titulo: 'Mandar $os para qual equipe?', colunas: outras);
+        if (destino == null) return;
+        final parteId = await _garantirParte(destino);
+        if (parteId == null) return;
+        await _executar(
+          () => acaoParte({'acao': 'mover', 'parte_item_id': item['id'], 'destino_parte_id': parteId}),
+          sucesso: '$os foi para a ${destino.nome}.',
+        );
+      case 'subir' || 'descer':
+        // Troca de lugar com o vizinho (no celular não dá para arrastar).
+        final ids = coluna.itens.map((i) => i['id'] as String).toList();
+        final de = ids.indexOf(item['id'] as String);
+        final para = acao == 'subir' ? de - 1 : de + 1;
+        if (de < 0 || para < 0 || para >= ids.length) return;
+        ids[de] = ids[para];
+        ids[para] = item['id'] as String;
+        await _executar(() => acaoParte({'acao': 'reordenar', 'parte_id': coluna.parteId, 'itens': ids}));
       case 'remover':
         final obs = await confirmarComObservacao(
           context,
@@ -820,7 +862,8 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
         );
 
   /// A fila de pendentes. No celular ([estreito]) ocupa a tela sozinha: tudo
-  /// rola junto (cabe com o teclado aberto) e não há arrasto (não há onde soltar).
+  /// rola junto (cabe com o teclado aberto) e não há arrasto (não há onde
+  /// soltar); o botão de mandar para uma equipe faz o papel do arrasto.
   Widget _painelFila({bool estreito = false}) {
     final itens = _filaFiltrada;
     final arrastar = podeEditar && !estreito;
@@ -833,6 +876,16 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           await context.push('/os/${ag['os_id']}');
           if (mounted) _carregar();
         },
+        acoes: podeEditar
+            ? IconButton(
+                tooltip: 'Mandar para uma equipe',
+                visualDensity: VisualDensity.compact,
+                iconSize: 20,
+                color: Cores.indigo500,
+                onPressed: () => _mandarParaEquipe(ag),
+                icon: const Icon(Icons.send_outlined),
+              )
+            : null,
       );
       if (!arrastar) return cartao;
       return arrastavel(
@@ -916,8 +969,8 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           if (podeEditar)
             const Padding(
               padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: Text('No celular, a fila é para consultar. Para mandar um serviço a uma equipe, '
-                  'use o quadro no computador ou no tablet deitado.',
+              child: Text('Toque na setinha de um serviço para mandar para uma equipe. '
+                  'Em Equipes, os 3 pontinhos de cada serviço trocam de equipe e de ordem.',
                   style: TextStyle(fontSize: 11, color: Cores.neutro)),
             ),
         ]),
@@ -948,8 +1001,8 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           if (podeEditar)
             const Padding(
               padding: EdgeInsets.fromLTRB(12, 6, 12, 10),
-              child: Text('Arraste para uma equipe. Segure Alt ao soltar um serviço de outra equipe para '
-                  'mandar como apoio.',
+              child: Text('Arraste para uma equipe (ou use a setinha do cartão). Segure Alt ao soltar um '
+                  'serviço de outra equipe para mandar como apoio.',
                   style: TextStyle(fontSize: 11, color: Cores.neutro)),
             ),
         ]),
