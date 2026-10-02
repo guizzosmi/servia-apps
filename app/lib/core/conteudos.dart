@@ -19,7 +19,7 @@ class Conteudos {
   }
 
   /// Cliente, local, contato e OS (comuns aos dois documentos).
-  static List<(String, String)> _cabecalho(Map<String, dynamic> atd, {Object? contatoId}) {
+  static List<(String, String)> _cabecalho(Map<String, dynamic> atd, {Object? contatoId, String? aprovadorNome}) {
     final banco = EstadoApp.instancia.banco!;
     final os = _um('ordens_servico', atd['os_id']) ?? const {};
     final contato = _um('contatos', contatoId);
@@ -28,6 +28,7 @@ class Conteudos {
       ('Cliente', '${_um('clientes', os['cliente_id'])?['nome'] ?? ''}'),
       ('Local', _endereco(_um('locais', os['local_id']))),
       if (contato != null) ('Contato', '${contato['nome']}'),
+      if (contato == null && (aprovadorNome ?? '').trim().isNotEmpty) ('Quem aprova', aprovadorNome!.trim()),
       ('Ordem de serviço', '${os['codigo'] ?? ''}'),
       if (equipamentos.isNotEmpty)
         ('Equipamentos', equipamentos.map((e) => [e['codigo'], e['descricao']].where((x) => x != null).join(' ')).join('; ')),
@@ -50,6 +51,7 @@ class Conteudos {
     required Map<String, dynamic> atd,
     required String diagnostico,
     required Object? contatoId,
+    String? aprovadorNome,
     required List<ItemOrcamento> itens,
     required num descontoPct,
   }) {
@@ -57,8 +59,8 @@ class Conteudos {
     final linhas = [
       for (final i in itens)
         LinhaResumo(
-          descricao: '${i.produto['descricao']}',
-          quantidade: '${numeroBr(i.quantidade)} ${i.produto['unidade'] ?? 'un'}',
+          descricao: i.descricao,
+          quantidade: '${numeroBr(i.quantidade)} ${i.unidade}',
           unitario: i.preco,
           desconto: i.desconto(descontoPct),
           total: i.total(descontoPct),
@@ -70,7 +72,7 @@ class Conteudos {
       subtitulo: 'feito no local · ${dataBr(hoje)}',
       empresa: AcoesOrcamento.empresa,
       campos: [
-        ..._cabecalho(atd, contatoId: contatoId),
+        ..._cabecalho(atd, contatoId: contatoId, aprovadorNome: aprovadorNome),
         ('Validade', 'até ${dataBr(somarDias(hoje, cfg.validadeDias))}'),
       ],
       blocos: [('Diagnóstico', diagnostico)],

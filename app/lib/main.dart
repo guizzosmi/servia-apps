@@ -68,7 +68,7 @@ class _SoNoCelular extends StatelessWidget {
               padding: EdgeInsets.all(24),
               child: Text(
                 'Este é o app do técnico: ele roda no celular ou tablet.\n'
-                'No navegador, use o painel (pasta servia-apps\\painel).',
+                'No navegador, use o painel: ${Config.linkPainel}',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18),
               ),

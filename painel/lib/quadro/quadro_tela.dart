@@ -53,6 +53,7 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
   bool _ateODia = false;
 
   bool? _mostrarLog;
+  bool _verFila = false; // celular: fila ou equipes (não cabem lado a lado)
   final _rolagem = ScrollController();
 
   // Ao vivo
@@ -670,12 +671,13 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     final ehHoje = _dia.year == hoje.year && _dia.month == hoje.month && _dia.day == hoje.day;
     final semParte = colunas.where((c) => c.parte == null && c.equipe['ativa'] == true).length;
     final paraPublicar = colunas.where((c) => c.rascunho && c.itens.isNotEmpty).toList();
+    final estreito = largura < 760; // celular: uma coisa de cada vez
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       // Barra do topo
       Container(
         color: Colors.white,
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: EdgeInsets.fromLTRB(estreito ? 4 : 16, 10, estreito ? 4 : 16, 10),
         child: Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -683,27 +685,31 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           alignment: WrapAlignment.spaceBetween,
           children: [
             Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('Quadro do dia',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(width: 16),
+              if (!estreito) ...[
+                Text('Quadro do dia',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(width: 16),
+              ],
               IconButton(
                 tooltip: 'Dia anterior',
                 onPressed: () => _irPara(_dia.subtract(const Duration(days: 1))),
                 icon: const Icon(Icons.chevron_left),
               ),
-              TextButton.icon(
-                icon: const Icon(Icons.calendar_today, size: 16),
-                label: Text('${_diasDaSemana[_dia.weekday - 1]}, ${dataBr(dataIso(_dia))}',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                onPressed: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _dia,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                  );
-                  if (d != null && mounted) _irPara(d);
-                },
+              Flexible(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text('${_diasDaSemana[_dia.weekday - 1]}, ${dataBr(dataIso(_dia))}',
+                      overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  onPressed: () async {
+                    final d = await showDatePicker(
+                      context: context,
+                      initialDate: _dia,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (d != null && mounted) _irPara(d);
+                  },
+                ),
               ),
               IconButton(
                 tooltip: 'Próximo dia',
@@ -712,7 +718,20 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
               ),
               if (!ehHoje) TextButton(onPressed: () => _irPara(hoje), child: const Text('Hoje')),
             ]),
-            Row(mainAxisSize: MainAxisSize.min, children: [
+            Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              if (estreito)
+                SegmentedButton<bool>(
+                  showSelectedIcon: false,
+                  segments: [
+                    const ButtonSegment(value: false, label: Text('Equipes')),
+                    ButtonSegment(value: true, label: Text('Fila (${_filaFiltrada.length})')),
+                  ],
+                  selected: {_verFila},
+                  onSelectionChanged: (v) => setState(() {
+                    _verFila = v.first;
+                    _mostrarLog = false;
+                  }),
+                ),
               Tooltip(
                 message: _aoVivo
                     ? 'Mudanças de outras pessoas e do app aparecem sozinhas.'
@@ -724,28 +743,23 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
                       style: TextStyle(fontSize: 12, color: _aoVivo ? Cores.sucesso : Cores.neutro)),
                 ]),
               ),
-              const SizedBox(width: 8),
               IconButton(
                 tooltip: 'Atualizar',
                 onPressed: _carregando ? null : _carregar,
                 icon: const Icon(Icons.refresh),
               ),
-              if (podeEditar && semParte > 0) ...[
+              if (podeEditar && semParte > 0)
                 OutlinedButton.icon(
                   onPressed: _abrirODia,
                   icon: const Icon(Icons.playlist_add, size: 18),
                   label: Text('Abrir o dia ($semParte)'),
                 ),
-                const SizedBox(width: 8),
-              ],
-              if (podeEditar && paraPublicar.isNotEmpty) ...[
+              if (podeEditar && paraPublicar.isNotEmpty)
                 FilledButton.icon(
                   onPressed: () => _publicarTodas(paraPublicar),
                   icon: const Icon(Icons.send, size: 18),
                   label: Text('Publicar todas (${paraPublicar.length})'),
                 ),
-                const SizedBox(width: 8),
-              ],
               IconButton(
                 tooltip: mostrarLog ? 'Esconder log do dia' : 'Mostrar log do dia',
                 isSelected: mostrarLog,
@@ -764,51 +778,77 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           child: Text(_erro!, style: const TextStyle(color: Cores.erro)),
         ),
       Expanded(
-        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _painelFila(),
-          Expanded(
-            child: colunas.isEmpty && !_carregando
-                ? const Center(
-                    child: Text('Nenhuma equipe ativa. Cadastre em Cadastros > Equipes.',
-                        style: TextStyle(color: Cores.neutro)),
-                  )
-                : Scrollbar(
-                    controller: _rolagem,
-                    thumbVisibility: true,
-                    child: ListView(
-                      controller: _rolagem,
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.fromLTRB(12, 12, 0, 16),
-                      children: [
-                        for (final c in colunas)
-                          ColunaEquipe(key: ValueKey(c.equipeId), coluna: c, acoes: this, agora: _agora),
-                      ],
-                    ),
-                  ),
-          ),
-          if (mostrarLog)
-            LogDoDia(
-              eventos: _eventos,
-              contexto: _contextoLog,
-              aoFechar: () => setState(() => _mostrarLog = false),
-            ),
-        ]),
+        child: estreito
+            // Celular: a fila, as equipes ou o log ocupam a tela toda.
+            ? (mostrarLog
+                ? _log()
+                : _verFila
+                    ? _painelFila(estreito: true)
+                    : _quadroEquipes(colunas))
+            : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _painelFila(),
+                Expanded(child: _quadroEquipes(colunas)),
+                if (mostrarLog) _log(),
+              ]),
       ),
     ]);
   }
 
-  Widget _painelFila() {
+  Widget _log() => LogDoDia(
+        eventos: _eventos,
+        contexto: _contextoLog,
+        aoFechar: () => setState(() => _mostrarLog = false),
+      );
+
+  Widget _quadroEquipes(List<ColunaQuadro> colunas) => colunas.isEmpty && !_carregando
+      ? const Center(
+          child: Text('Nenhuma equipe ativa. Cadastre em Cadastros > Equipes.',
+              textAlign: TextAlign.center, style: TextStyle(color: Cores.neutro)),
+        )
+      : Scrollbar(
+          controller: _rolagem,
+          thumbVisibility: true,
+          child: ListView(
+            controller: _rolagem,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(12, 12, 0, 16),
+            children: [
+              for (final c in colunas)
+                ColunaEquipe(key: ValueKey(c.equipeId), coluna: c, acoes: this, agora: _agora),
+            ],
+          ),
+        );
+
+  /// A fila de pendentes. No celular ([estreito]) ocupa a tela sozinha: tudo
+  /// rola junto (cabe com o teclado aberto) e não há arrasto (não há onde soltar).
+  Widget _painelFila({bool estreito = false}) {
     final itens = _filaFiltrada;
-    return DragTarget<Arrasto>(
-      onWillAcceptWithDetails: (d) => podeEditar && d.data is ArrastoItem,
-      onAcceptWithDetails: (d) => _devolverParaFila(d.data as ArrastoItem),
-      builder: (context, candidatos, _) => Container(
-        width: 310,
-        decoration: BoxDecoration(
-          color: candidatos.isNotEmpty ? Cores.indigo100 : Colors.white,
-          border: const Border(right: BorderSide(color: Cores.linha)),
+    final arrastar = podeEditar && !estreito;
+
+    Widget cartaoDe(Map<String, dynamic> ag) {
+      final cartao = CartaoFila(
+        ag: ag,
+        compacto: true,
+        aoTocar: () async {
+          await context.push('/os/${ag['os_id']}');
+          if (mounted) _carregar();
+        },
+      );
+      if (!arrastar) return cartao;
+      return arrastavel(
+        data: ArrastoFila(ag),
+        onDragStarted: () => arrastando(true),
+        onDragEnd: (_) => arrastando(false),
+        feedback: Material(
+          color: Colors.transparent,
+          child: SizedBox(width: 280, child: Opacity(opacity: .9, child: cartao)),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        childWhenDragging: Opacity(opacity: .35, child: cartao),
+        child: cartao,
+      );
+    }
+
+    List<Widget> cabecalho(bool soltando) => [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Row(children: [
@@ -851,43 +891,58 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
             onChanged: (v) => setState(() => _ateODia = v ?? false),
             title: Text('Só desejados até ${dataBr(dataIso(_dia))}'),
           ),
-          if (candidatos.isNotEmpty)
+          if (soltando)
             const Padding(
               padding: EdgeInsets.all(12),
               child: Text('Solte aqui para tirar da parte e devolver para a fila.',
                   style: TextStyle(color: Cores.indigo700, fontWeight: FontWeight.w600)),
             ),
           const Divider(height: 1),
+        ];
+
+    const vazia = Padding(
+      padding: EdgeInsets.all(24),
+      child: Center(child: Text('Fila vazia.', style: TextStyle(color: Cores.neutro))),
+    );
+
+    if (estreito) {
+      return ColoredBox(
+        color: Colors.white,
+        child: ListView(padding: const EdgeInsets.only(bottom: 16), children: [
+          ...cabecalho(false),
+          if (itens.isEmpty) vazia,
+          for (final ag in itens)
+            Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 0), child: cartaoDe(ag)),
+          if (podeEditar)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: Text('No celular, a fila é para consultar. Para mandar um serviço a uma equipe, '
+                  'use o quadro no computador ou no tablet deitado.',
+                  style: TextStyle(fontSize: 11, color: Cores.neutro)),
+            ),
+        ]),
+      );
+    }
+
+    return DragTarget<Arrasto>(
+      onWillAcceptWithDetails: (d) => podeEditar && d.data is ArrastoItem,
+      onAcceptWithDetails: (d) => _devolverParaFila(d.data as ArrastoItem),
+      builder: (context, candidatos, _) => Container(
+        width: 310,
+        decoration: BoxDecoration(
+          color: candidatos.isNotEmpty ? Cores.indigo100 : Colors.white,
+          border: const Border(right: BorderSide(color: Cores.linha)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          ...cabecalho(candidatos.isNotEmpty),
           Expanded(
             child: itens.isEmpty
-                ? const Center(child: Text('Fila vazia.', style: TextStyle(color: Cores.neutro)))
+                ? vazia
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: itens.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) {
-                      final ag = itens[i];
-                      final cartao = CartaoFila(
-                        ag: ag,
-                        compacto: true,
-                        aoTocar: () async {
-                          await context.push('/os/${ag['os_id']}');
-                          if (mounted) _carregar();
-                        },
-                      );
-                      if (!podeEditar) return cartao;
-                      return Draggable<Arrasto>(
-                        data: ArrastoFila(ag),
-                        onDragStarted: () => arrastando(true),
-                        onDragEnd: (_) => arrastando(false),
-                        feedback: Material(
-                          color: Colors.transparent,
-                          child: SizedBox(width: 280, child: Opacity(opacity: .9, child: cartao)),
-                        ),
-                        childWhenDragging: Opacity(opacity: .35, child: cartao),
-                        child: cartao,
-                      );
-                    },
+                    itemBuilder: (_, i) => cartaoDe(itens[i]),
                   ),
           ),
           if (podeEditar)

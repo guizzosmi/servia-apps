@@ -15,11 +15,15 @@ class Casca extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final largo = MediaQuery.sizeOf(context).width >= 1000;
+    final largura = MediaQuery.sizeOf(context).width;
+    final largo = largura >= 1000;
+    final celular = largura < 600;
     final menu = _Menu(local: local, fecharAoEscolher: !largo);
     return Scaffold(
       appBar: AppBar(
-        title: Marca(altura: largo ? 30 : 26),
+        // No celular, só o símbolo: o nome da empresa precisa do espaço.
+        title: celular ? const Marca(altura: 30, layout: MarcaLayout.simbolo) : Marca(altura: largo ? 30 : 26),
+        titleSpacing: celular ? 0 : null,
         automaticallyImplyLeading: !largo,
         shape: const Border(bottom: BorderSide(color: Cores.linha)),
         actions: const [_EmpresaAtual(), SizedBox(width: 8)],
@@ -173,7 +177,7 @@ class _EmpresaAtualState extends State<_EmpresaAtual> {
                 const Icon(Icons.business, size: 18, color: Cores.indigo500),
                 const SizedBox(width: 6),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
+                  constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width < 600 ? 150 : 220),
                   child: Text(
                     snap.data ?? '…',
                     overflow: TextOverflow.ellipsis,

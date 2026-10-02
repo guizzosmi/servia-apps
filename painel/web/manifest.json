@@ -1,12 +1,14 @@
 {
     "name": "ServPilot · Painel",
     "short_name": "ServPilot",
-    "start_url": ".",
+    "start_url": "/",
+    "scope": "/",
+    "id": "/",
     "display": "standalone",
     "background_color": "#F5F6FA",
     "theme_color": "#1E2A5A",
     "description": "ServPilot - painel do gestor",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

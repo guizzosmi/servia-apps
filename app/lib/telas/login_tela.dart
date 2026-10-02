@@ -33,7 +33,7 @@ class _LoginTelaState extends State<LoginTela> {
     super.dispose();
   }
 
-  /// Mesma regra da função usuarios-admin: `<matricula>@<codigo>.servia.app`
+  /// Mesma regra da função usuarios-admin: `<matricula>@<codigo>.app.servpilot.com.br`
   String _emailDoPin() {
     final codigo = _codigo.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     final matricula = _matricula.text.trim().toLowerCase();

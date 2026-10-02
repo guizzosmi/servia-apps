@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/funcoes.dart';
+import '../widgets/margem.dart';
 
 /// Inclusão e manutenção de um usuário (só o admin).
 /// Toda gravação passa pela função usuarios-admin.
@@ -348,7 +349,7 @@ class _UsuarioTelaState extends State<UsuarioTela> {
     final ehVoce = widget.id != null && widget.id == Sessao.atual?.usuarioId;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(

@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../servicos/status.dart';
 import '../widgets/fila.dart';
+import '../widgets/margem.dart';
 
 /// Fila de pendentes: tudo o que precisa ir para a parte de alguma equipe.
 /// (No guia 07 esta mesma fila vira a coluna da esquerda do quadro.)
@@ -94,7 +95,7 @@ class _FilaTelaState extends State<FilaTela> {
       onRefresh: _carregar,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: margemDaTela(context),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Expanded(

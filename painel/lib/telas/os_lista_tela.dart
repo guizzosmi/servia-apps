@@ -10,6 +10,7 @@ import '../cadastros/definicoes.dart';
 import '../cadastros/lista.dart';
 import '../cadastros/servico.dart';
 import '../servicos/status.dart';
+import '../widgets/margem.dart';
 import '../widgets/status_chip.dart';
 
 /// Lista das ordens de serviço, com filtro por situação, cliente e busca.
@@ -119,7 +120,7 @@ class _OsListaTelaState extends State<OsListaTela> {
   Widget build(BuildContext context) {
     final largo = MediaQuery.sizeOf(context).width >= 900;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

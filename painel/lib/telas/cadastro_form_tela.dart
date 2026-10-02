@@ -7,6 +7,7 @@ import '../cadastros/catalogo.dart';
 import '../cadastros/definicoes.dart';
 import '../cadastros/lista.dart';
 import '../cadastros/servico.dart';
+import '../widgets/margem.dart';
 
 /// Formulário genérico de cadastro (incluir, alterar, excluir) com as
 /// listas filhas embaixo (ex.: locais e contatos do cliente).
@@ -467,7 +468,7 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
     final campos = def.campos.where((c) => !(c.somenteNaEdicao && _novo)).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(

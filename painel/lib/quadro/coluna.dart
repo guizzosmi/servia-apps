@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
@@ -24,6 +25,39 @@ abstract interface class AcoesQuadro {
 }
 
 const larguraColuna = 300.0;
+
+/// No toque (celular, tablet) o arrasto começa com um toque longo, para a
+/// rolagem continuar funcionando; com mouse, começa na hora.
+Widget arrastavel({
+  required Arrasto data,
+  VoidCallback? onDragStarted,
+  DragEndCallback? onDragEnd,
+  required Widget feedback,
+  Widget? childWhenDragging,
+  required Widget child,
+}) {
+  final toque = defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+  if (toque) {
+    return LongPressDraggable<Arrasto>(
+      // Um pouco antes do "segurar" padrão, para ganhar da dica (tooltip).
+      delay: const Duration(milliseconds: 300),
+      data: data,
+      onDragStarted: onDragStarted,
+      onDragEnd: onDragEnd,
+      feedback: feedback,
+      childWhenDragging: childWhenDragging,
+      child: child,
+    );
+  }
+  return Draggable<Arrasto>(
+    data: data,
+    onDragStarted: onDragStarted,
+    onDragEnd: onDragEnd,
+    feedback: feedback,
+    childWhenDragging: childWhenDragging,
+    child: child,
+  );
+}
 
 /// Coluna de uma equipe: cabeçalho, composição do dia e serviços em ordem.
 class ColunaEquipe extends StatelessWidget {
@@ -226,7 +260,7 @@ class _Composicao extends StatelessWidget {
       ],
       child: chip,
     );
-    return Draggable<Arrasto>(
+    return arrastavel(
       data: ArrastoPessoa(colaboradorId: c['colaborador_id'] as String, parteId: coluna.parteId!, nome: nome),
       onDragStarted: () => acoes.arrastando(true),
       onDragEnd: (_) => acoes.arrastando(false),
@@ -304,7 +338,7 @@ class _ItemComAlvo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartao = CartaoItem(coluna: coluna, item: item, posicao: posicao, acoes: acoes, agora: agora);
-    final arrastavel = acoes.podeEditar && coluna.aceitaMudancas && item['status'] == 'programado';
+    final podeArrastar = acoes.podeEditar && coluna.aceitaMudancas && item['status'] == 'programado';
 
     return DragTarget<Arrasto>(
       onWillAcceptWithDetails: (d) {
@@ -327,10 +361,10 @@ class _ItemComAlvo extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 6),
               decoration: BoxDecoration(color: Cores.indigo500, borderRadius: BorderRadius.circular(2)),
             ),
-          if (!arrastavel)
+          if (!podeArrastar)
             cartao
           else
-            Draggable<Arrasto>(
+            arrastavel(
               data: ArrastoItem(item),
               onDragStarted: () => acoes.arrastando(true),
               onDragEnd: (_) => acoes.arrastando(false),

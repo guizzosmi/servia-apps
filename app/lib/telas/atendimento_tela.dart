@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_mensagens.dart';
 import '../core/acoes_orcamento.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
@@ -177,7 +178,28 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(assinou ? 'Atendimento concluído, com a assinatura do cliente.' : 'Atendimento concluído.')));
+    await _avisarConclusao(atd);
+    if (!mounted) return;
     context.go('/hoje');
+  }
+
+  /// Serviço concluído: oferece a mensagem ao cliente, com o link do relatório.
+  Future<void> _avisarConclusao(Map<String, dynamic> atd) async {
+    final banco = EstadoApp.instancia.banco!;
+    final atual = banco.um('atendimentos', atd['id']) ?? atd;
+    final os = banco.um('ordens_servico', atual['os_id']);
+    if (os == null) return;
+    final solucao = '${atual['solucao'] ?? ''}'.trim();
+    await AcoesMensagens.mandar(
+      context,
+      modelo: 'concluido',
+      titulo: 'Avisar o cliente',
+      os: os,
+      valores: {'resumo': solucao.length > 300 ? '${solucao.substring(0, 297)}...' : solucao},
+      link: LinkPreparado.novo(entidade: 'os_relatorio', osId: '${os['id']}'),
+      entidade: 'atendimento',
+      entidadeId: '${atd['id']}',
+    );
   }
 
   /// Assinatura opcional: colher agora? (null = voltar sem concluir)

@@ -3,6 +3,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/funcoes.dart';
+import '../widgets/margem.dart';
 
 /// Aparelhos (celulares) que já entraram no app nesta empresa (só o admin).
 /// Revogar: o aparelho não sincroniza mais. Apagar: além disso, o app apaga
@@ -130,7 +131,7 @@ class _AparelhosTelaState extends State<AparelhosTela> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

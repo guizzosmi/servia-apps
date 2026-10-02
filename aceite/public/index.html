@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Orçamento</title>
+<title>ServPilot</title>
 <style>
   :root {
     --indigo: #1E2A5A; --indigo-medio: #3A4FA8; --indigo-claro: #E6E9F6;
@@ -54,20 +54,23 @@
 </head>
 <body>
 <header>
-  <h1 id="empresa">Orçamento</h1>
+  <h1 id="empresa">&nbsp;</h1>
   <p id="empresa-info"></p>
 </header>
 <main id="tela">
-  <div class="centro"><p class="rotulo">Carregando o orçamento…</p></div>
+  <div class="centro"><p class="rotulo">Carregando…</p></div>
 </main>
 <footer id="rodape"></footer>
 
 <script>
-// Página pública de aceite. Fala só com a função aceite-publico.
-// O token vem no endereço: /a/<token>.
+// Página pública do cliente. Fala só com a função aceite-publico.
+// O token vem no endereço: /a/<token> (aprovar orçamento) ou /r/<token>
+// (relatório da OS, para ver e imprimir).
 const API = 'https://srtokvosnwtyewiempyw.supabase.co/functions/v1/aceite-publico';
 const CHAVE = 'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH'; // chave pública (não é segredo)
-const token = (location.pathname.match(/\/a\/([A-Za-z0-9_-]{43})/) || [])[1];
+const rota = location.pathname.match(/\/(a|r)\/([A-Za-z0-9_-]{43})/) || [];
+const relatorio = rota[1] === 'r';
+const token = rota[2];
 const tela = document.getElementById('tela');
 let doc = null; // resposta do GET
 
@@ -97,9 +100,9 @@ function contatoEmpresa() {
 
 function cabecalho() {
   const e = doc.empresa || {};
-  document.getElementById('empresa').textContent = e.nome || 'Orçamento';
+  document.getElementById('empresa').textContent = e.nome || (relatorio ? 'Relatório' : 'Orçamento');
   document.getElementById('empresa-info').textContent = [e.telefone ? fone(e.telefone) : '', e.email || ''].filter(Boolean).join(' · ');
-  document.title = `${doc.documento.codigo || 'Orçamento'} · ${e.nome || ''}`;
+  document.title = `${doc.documento.codigo || (relatorio ? 'Relatório' : 'Orçamento')} · ${e.nome || ''}`;
   document.getElementById('rodape').textContent = [e.razao_social, e.endereco].filter(Boolean).join(' · ');
 }
 
@@ -110,7 +113,7 @@ async function carregar() {
     const r = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: CHAVE },
-      body: JSON.stringify({ acao: 'ler', t: token }),
+      body: JSON.stringify({ acao: relatorio ? 'relatorio' : 'ler', t: token }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
@@ -121,7 +124,7 @@ async function carregar() {
     // Só links https da plataforma viram botão de PDF.
     if (doc.documento && !/^https:\/\//.test(doc.documento.pdf_url || '')) doc.documento.pdf_url = null;
     cabecalho();
-    mostrar();
+    if (relatorio) mostrarRelatorio(); else mostrar();
   } catch (e) {
     mensagem('📶', 'Sem conexão', 'Confira a internet do celular e abra o link de novo.');
   }
@@ -149,6 +152,39 @@ function mostrar() {
       return mensagem('🔗', 'Link substituído', 'A empresa enviou um link novo para este orçamento. Use o mais recente.');
     default:
       return mensagem('⚠️', 'Orçamento indisponível', 'Fale com a empresa.');
+  }
+}
+
+// Relatório da OS: ver e imprimir (sem decisão).
+function mostrarRelatorio() {
+  const d = doc.documento;
+  switch (doc.estado) {
+    case 'disponivel': {
+      const concluida = d.status === 'concluida';
+      tela.innerHTML = `
+        <div class="cartao">
+          <div class="rotulo">Relatório da ordem de serviço</div>
+          <div class="grande">${esc(d.codigo)}</div>
+          <div class="rotulo">${concluida && d.concluida_em ? 'Concluída em ' + esc(dataHoraBr(d.concluida_em)) : 'Aberta em ' + esc(dataHoraBr(d.abertura_em))}${d.garantia_ate ? ' · garantia até ' + esc(dataBr(d.garantia_ate)) : ''}</div>
+          <p style="margin:12px 0 0">${esc(doc.cliente?.nome || '')}${doc.local?.nome ? ' · ' + esc(doc.local.nome) : ''}</p>
+          ${doc.local?.endereco ? `<div class="rotulo">${esc(doc.local.endereco)}</div>` : ''}
+        </div>
+        ${d.problema ? `<div class="cartao"><h2>Problema relatado</h2><div class="texto">${esc(d.problema)}</div></div>` : ''}
+        ${d.laudo ? `<div class="cartao"><h2>Laudo</h2><div class="texto">${esc(d.laudo)}</div></div>` : ''}
+        ${d.pdf_url
+          ? `<a class="botao primario" href="${esc(d.pdf_url)}" target="_blank" rel="noopener">Abrir o relatório (PDF)</a>
+             <p class="rotulo" style="text-align:center">No PDF, use o menu do celular ou do computador para imprimir ou salvar.</p>`
+          : `<div class="aviso neutro">Não deu para preparar o PDF agora. <button class="secundario" onclick="location.reload()">Tentar de novo</button></div>`}`;
+      return;
+    }
+    case 'vencido':
+      return mensagem('⏳', 'Link vencido', 'Este link de relatório venceu. Peça um novo à empresa.');
+    case 'link_revogado':
+      return mensagem('🔗', 'Link cancelado', 'A empresa cancelou este link. Peça um novo, se precisar.');
+    case 'cancelada':
+      return mensagem('🚫', 'Ordem de serviço cancelada', 'Esta ordem de serviço foi cancelada pela empresa.');
+    default:
+      return mensagem('⚠️', 'Relatório indisponível', 'Fale com a empresa.');
   }
 }
 

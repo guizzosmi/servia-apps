@@ -7,6 +7,7 @@ import '../cadastros/definicoes.dart';
 import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/escolha_equipamentos.dart';
+import '../widgets/margem.dart';
 
 /// Abertura de OS. A OS nasce "aberta", com um agendamento na fila.
 class OsNovaTela extends StatefulWidget {
@@ -197,7 +198,7 @@ class _OsNovaTelaState extends State<OsNovaTela> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(

@@ -23,6 +23,9 @@ class ConfigApp {
   String get quemMonta => '${_d['orcamento_quem_monta'] ?? 'gestor_lider'}';
   num get descontoMaxPct => num.tryParse('${_d['orcamento_desconto_max_pct'] ?? 10}') ?? 10;
   int get validadeDias => int.tryParse('${_d['orcamento_validade_dias'] ?? 15}') ?? 15;
+
+  /// Itens fora do catálogo: desligado | gestor (vai para o gestor) | liberado
+  String get itensAvulsos => '${_d['orcamento_itens_avulsos'] ?? 'desligado'}';
   String? get termo {
     final t = '${_d['termo_aceite'] ?? ''}'.trim();
     return t.isEmpty ? null : t;
@@ -30,6 +33,9 @@ class ConfigApp {
 
   /// desligado | opcional | obrigatorio
   String get aceiteConclusao => '${_d['aceite_conclusao'] ?? 'opcional'}';
+
+  /// Modelos de mensagem que a empresa mudou (o resto é o padrão).
+  Map? get mensagens => _d['mensagens'] as Map?;
 }
 
 /// Texto padrão do termo (o mesmo do PDF da plataforma), quando a empresa
@@ -43,20 +49,62 @@ const termoPadrao =
 const declaracaoConclusao =
     'Declaro que acompanhei o atendimento descrito acima e que o serviço foi realizado e entregue.';
 
-/// Um item do orçamento montado no app (só do catálogo).
+/// Um item do orçamento montado no app: do catálogo ([produto]) ou fora
+/// dele (descrição, tipo, unidade e preço digitados), conforme a empresa.
 class ItemOrcamento {
-  ItemOrcamento({required this.id, required this.produto, required this.quantidade});
+  ItemOrcamento({
+    required this.id,
+    this.produto,
+    required this.quantidade,
+    String? descricao,
+    String? tipo,
+    String? unidade,
+    num? preco,
+  })  : _descricao = descricao,
+        _tipo = tipo,
+        _unidade = unidade,
+        _preco = preco;
 
   final String id;
-  final Map<String, dynamic> produto;
+  final Map<String, dynamic>? produto; // null = fora do catálogo
   num quantidade;
+  final String? _descricao;
+  final String? _tipo;
+  final String? _unidade;
+  final num? _preco;
 
-  num get preco => num.tryParse('${produto['preco_venda'] ?? 0}') ?? 0;
+  bool get avulso => produto == null;
+  String get descricao => '${produto?['descricao'] ?? _descricao ?? 'Item'}';
+  String get tipo => '${produto?['tipo'] ?? _tipo ?? 'servico'}';
+  String get unidade => '${produto?['unidade'] ?? _unidade ?? 'un'}';
+  num get preco => produto != null ? num.tryParse('${produto!['preco_venda'] ?? 0}') ?? 0 : _preco ?? 0;
   num get bruto => centavos(quantidade * preco);
   num desconto(num pct) => centavos(bruto * pct / 100);
   num total(num pct) => centavos(bruto - desconto(pct));
 
-  Map<String, dynamic> paraRascunho() => {'id': id, 'produto_id': produto['id'], 'quantidade': quantidade};
+  Map<String, dynamic> paraRascunho() => {
+        'id': id,
+        'quantidade': quantidade,
+        if (produto != null) 'produto_id': produto!['id'],
+        if (avulso) ...{'descricao': descricao, 'tipo': tipo, 'unidade': unidade, 'preco': preco},
+      };
+
+  /// Item guardado no rascunho (o do catálogo volta com o preço de agora).
+  static ItemOrcamento? doRascunho(Map i, Map<String, dynamic>? Function(Object? id) produto) {
+    final qtd = num.tryParse('${i['quantidade']}') ?? 1;
+    if (i['produto_id'] != null) {
+      final p = produto(i['produto_id']);
+      return p == null ? null : ItemOrcamento(id: '${i['id']}', produto: p, quantidade: qtd);
+    }
+    return ItemOrcamento(
+      id: '${i['id']}',
+      quantidade: qtd,
+      descricao: '${i['descricao'] ?? 'Item'}',
+      tipo: '${i['tipo'] ?? 'servico'}',
+      unidade: '${i['unidade'] ?? 'un'}',
+      preco: num.tryParse('${i['preco'] ?? 0}') ?? 0,
+    );
+  }
 }
 
 /// O que o cliente decidiu na tela de assinatura.
@@ -234,6 +282,7 @@ class AcoesOrcamento {
     required Map<String, dynamic> atd,
     required String orcamentoId,
     required String? contatoId,
+    String? aprovadorNome,
     required String diagnostico,
     required List<ItemOrcamento> itens,
     required num descontoPct,
@@ -242,6 +291,9 @@ class AcoesOrcamento {
     Decisao? decisao,
   }) async {
     final aceiteId = AcoesAtendimento.novoId();
+    // Sem contato cadastrado: o nome que o técnico digitou.
+    final nomeLivre = contatoId == null ? aprovadorNome?.trim() : null;
+    final aprovador = nomeLivre == null || nomeLivre.isEmpty ? null : nomeLivre;
     Map<String, dynamic>? aceite;
     Map<String, dynamic> extra = const {};
     if (destino != 'gestor') {
@@ -256,11 +308,11 @@ class AcoesOrcamento {
           'id': i.id,
           'orcamento_id': orcamentoId,
           'ordem': k + 1,
-          'tipo': i.produto['tipo'] ?? 'produto',
-          'produto_id': i.produto['id'],
-          'descricao': i.produto['descricao'],
+          'tipo': i.tipo,
+          'produto_id': i.produto?['id'],
+          'descricao': i.descricao,
           'quantidade': i.quantidade,
-          'unidade': i.produto['unidade'] ?? 'un',
+          'unidade': i.unidade,
           'preco_unitario': i.preco,
           'desconto': i.desconto(descontoPct),
           'total': i.total(descontoPct),
@@ -274,12 +326,15 @@ class AcoesOrcamento {
         'atendimento_id': atd['id'],
         'destino': destino,
         if (contatoId != null) 'contato_id': contatoId,
+        if (aprovador != null) 'aprovador_nome': aprovador,
         'diagnostico': diagnostico,
         'itens': [
           for (final l in linhas)
             {
               'item_id': l['id'],
-              'produto_id': l['produto_id'],
+              if (l['produto_id'] != null) 'produto_id': l['produto_id'],
+              // Fora do catálogo: o que o técnico digitou.
+              if (l['produto_id'] == null) ...{'descricao': l['descricao'], 'tipo': l['tipo'], 'unidade': l['unidade']},
               'quantidade': l['quantidade'],
               'preco_unitario': l['preco_unitario'],
               'desconto': l['desconto'],
@@ -299,6 +354,7 @@ class AcoesOrcamento {
             'origem': 'app',
             'contato_id': contatoId,
             'diagnostico': diagnostico,
+            if (aprovador != null) 'observacoes': 'Quem aprova pelo cliente: $aprovador',
             'total': total,
             'desconto': linhas.fold<num>(0, (s, l) => s + (l['desconto'] as num)),
             'validade_ate': somarDias(hoje, config.validadeDias),

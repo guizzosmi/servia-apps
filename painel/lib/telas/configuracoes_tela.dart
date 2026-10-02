@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/margem.dart';
+
 /// Configurações da empresa (só o admin altera): orçamento no app e
 /// assinatura do cliente. Os valores ficam em empresa_config.parametros.
 class ConfiguracoesTela extends StatefulWidget {
@@ -15,6 +17,12 @@ const _quemMonta = {
   'gestor': 'Só o gestor (pelo painel)',
   'gestor_lider': 'Gestor e o líder da equipe (no app)',
   'todos': 'Gestor e toda a equipe (no app)',
+};
+
+const _itensAvulsos = {
+  'desligado': 'Não: só itens do catálogo',
+  'gestor': 'Sim, mas o orçamento vem para o gestor revisar antes do cliente',
+  'liberado': 'Sim: o técnico digita descrição e preço e já colhe a assinatura',
 };
 
 const _aceiteConclusao = {
@@ -33,9 +41,12 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
 
   String _quem = 'gestor_lider';
   String _conclusao = 'opcional';
+  String _avulsos = 'desligado';
   final _desconto = TextEditingController();
   final _validade = TextEditingController();
   final _termo = TextEditingController();
+  // Modelos das mensagens do WhatsApp (o padrão vem do pacote comum).
+  final _modelos = {for (final m in modelosMensagem) m.chave: TextEditingController()};
   bool _sujo = false;
 
   @override
@@ -49,6 +60,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
     _desconto.dispose();
     _validade.dispose();
     _termo.dispose();
+    for (final c in _modelos.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -72,10 +86,14 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       setState(() {
         _parametros = p;
         _quem = _quemMonta.containsKey(orc['quem_monta']) ? orc['quem_monta'] as String : 'gestor_lider';
+        _avulsos = _itensAvulsos.containsKey(orc['itens_avulsos_app']) ? orc['itens_avulsos_app'] as String : 'desligado';
         _conclusao = _aceiteConclusao.containsKey(p['aceite_conclusao']) ? p['aceite_conclusao'] as String : 'opcional';
         _desconto.text = _numero(orc['desconto_max_app_pct'] ?? 10);
         _validade.text = _numero(orc['validade_dias'] ?? 15);
         _termo.text = '${orc['termo_aceite'] ?? ''}';
+        for (final m in modelosMensagem) {
+          _modelos[m.chave]!.text = textoDoModelo(m.chave, p['mensagens'] as Map?);
+        }
         _sujo = false;
       });
     } catch (e) {
@@ -101,6 +119,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       // Muda só estas chaves: o resto dos parâmetros continua como está.
       final orc = Map<String, dynamic>.from((_parametros['orcamento'] as Map?) ?? const {})
         ..['quem_monta'] = _quem
+        ..['itens_avulsos_app'] = _avulsos
         ..['desconto_max_app_pct'] = desconto
         ..['validade_dias'] = validade;
       final termo = _termo.text.trim();
@@ -109,7 +128,13 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       } else {
         orc['termo_aceite'] = termo;
       }
-      final novos = {..._parametros, 'orcamento': orc, 'aceite_conclusao': _conclusao};
+      // Mensagens: guarda só o que ficou diferente do padrão.
+      final mensagens = <String, String>{
+        for (final m in modelosMensagem)
+          if (_modelos[m.chave]!.text.trim().isNotEmpty && _modelos[m.chave]!.text.trim() != m.padrao.trim())
+            m.chave: _modelos[m.chave]!.text.trim(),
+      };
+      final novos = {..._parametros, 'orcamento': orc, 'aceite_conclusao': _conclusao, 'mensagens': mensagens};
       await _db
           .from('empresa_config')
           .update({'parametros': novos})
@@ -138,7 +163,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       return Center(child: Text(_erro!, style: const TextStyle(color: Cores.erro)));
     }
     final admin = Sessao.atual?.tem(Papel.admin) ?? false;
-    return ListView(padding: const EdgeInsets.all(24), children: [
+    return ListView(padding: margemDaTela(context), children: [
       Text('Configurações', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: 4),
       const Text('Valem para a empresa ativa. O app recebe as mudanças na próxima sincronização.',
@@ -164,6 +189,18 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                           _sujo = true;
                         }) : null,
                   ),
+                const SizedBox(height: 12),
+                const Text('Itens fora do catálogo no orçamento do app'),
+                const SizedBox(height: 4),
+                for (final e in _itensAvulsos.entries)
+                  _Opcao(
+                    texto: e.value,
+                    marcada: _avulsos == e.key,
+                    aoEscolher: admin ? () => setState(() {
+                          _avulsos = e.key;
+                          _sujo = true;
+                        }) : null,
+                  ),
                 const SizedBox(height: 8),
                 Wrap(spacing: 16, runSpacing: 12, children: [
                   SizedBox(
@@ -175,7 +212,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                       decoration: const InputDecoration(
                         labelText: 'Desconto máximo no app',
                         suffixText: '%',
-                        helperText: 'Por item, sobre o preço do catálogo',
+                        helperText: 'Por item, sobre o preço (vale também para itens fora do catálogo)',
                       ),
                       onChanged: (_) => _mudou(),
                     ),
@@ -226,6 +263,59 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                           _sujo = true;
                         }) : null,
                   ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Mensagens do WhatsApp', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text(
+                    'O app e o painel abrem o WhatsApp com a mensagem pronta; quem manda confere e envia. '
+                    'Os campos entre chaves viram os dados do serviço. Uma linha com um campo vazio some '
+                    '(ex.: sem link, a linha do link não aparece).',
+                    style: TextStyle(color: Cores.neutro)),
+                for (final m in modelosMensagem) ...[
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(m.titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text(m.onde, style: const TextStyle(color: Cores.neutro, fontSize: 12)),
+                      ]),
+                    ),
+                    if (admin && _modelos[m.chave]!.text.trim() != m.padrao.trim())
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _modelos[m.chave]!.text = m.padrao;
+                          _sujo = true;
+                        }),
+                        child: const Text('Voltar ao padrão'),
+                      ),
+                  ]),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _modelos[m.chave],
+                    enabled: admin,
+                    minLines: 3,
+                    maxLines: 8,
+                    maxLength: 1000,
+                    decoration: InputDecoration(
+                      alignLabelWithHint: true,
+                      helperText: 'Campos: ${m.campos.map((c) => '{$c}').join(' ')}',
+                      helperMaxLines: 3,
+                    ),
+                    onChanged: (_) => _mudou(),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(spacing: 12, runSpacing: 4, children: [
+                  for (final e in camposMensagem.entries)
+                    Text('{${e.key}} ${e.value}', style: const TextStyle(fontSize: 12, color: Cores.neutro)),
+                ]),
               ]),
             ),
           ),

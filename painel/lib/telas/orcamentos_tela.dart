@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/servico.dart';
 import '../servicos/status.dart';
 import '../widgets/itens_os.dart' show dinheiro;
+import '../widgets/margem.dart';
 import '../widgets/status_chip.dart';
 
 /// Lista dos orçamentos, por situação. O orçamento nasce dentro da OS.
@@ -110,7 +111,7 @@ class _OrcamentosTelaState extends State<OrcamentosTela> {
   Widget build(BuildContext context) {
     final largo = MediaQuery.sizeOf(context).width >= 900;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -18,6 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ServPilot - painel do gestor">
 
   <!-- iOS meta tags & icons -->
@@ -34,7 +35,14 @@
   <title>ServPilot · Painel</title>
   <link rel="manifest" href="manifest.json">
 </head>
-<body>
+<body style="margin: 0; background: #F5F6FA;">
+  <!-- Enquanto o painel carrega (no celular leva alguns segundos). -->
+  <div id="carregando" style="position: fixed; inset: 0; display: flex; flex-direction: column;
+       align-items: center; justify-content: center; gap: 14px; font-family: system-ui, sans-serif;
+       color: #5B6474; font-size: 15px;">
+    <img src="icons/Icon-192.png" width="72" height="72" alt="">
+    <div>Carregando o ServPilot…</div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/servico.dart';
 import '../servicos/funcoes.dart';
+import '../widgets/margem.dart';
 
 /// Lista dos usuários da conta (só o admin). A leitura vem direto do banco:
 /// o RLS mostra ao admin os usuários com vínculo em alguma empresa da conta.
@@ -66,7 +67,7 @@ class _UsuariosTelaState extends State<UsuariosTela> {
   Widget build(BuildContext context) {
     final empresaAtiva = Sessao.atual?.empresaId;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

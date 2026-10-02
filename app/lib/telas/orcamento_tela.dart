@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_mensagens.dart';
 import '../core/acoes_orcamento.dart';
 import '../core/conteudos.dart';
 import '../core/estado.dart';
@@ -10,10 +11,10 @@ import '../widgets/indicador_sync.dart';
 import '../widgets/status_chip.dart';
 import 'assinatura_tela.dart';
 
-/// Orçamento no local: monta com os itens do catálogo (desconto até o
-/// limite da empresa) e mostra ao cliente para assinar, ou deixa para o
-/// gestor. Se o gestor já enviou um orçamento, colhe a assinatura dele.
-/// Tudo funciona sem internet.
+/// Orçamento no local: monta com os itens do catálogo (e, se a empresa
+/// liberar, itens fora do catálogo), desconto até o limite da empresa, e
+/// mostra ao cliente para assinar, ou deixa para o gestor. Se o gestor já
+/// enviou um orçamento, colhe a assinatura dele. Tudo funciona sem internet.
 class OrcamentoTela extends StatefulWidget {
   const OrcamentoTela({super.key, required this.atendimentoId});
 
@@ -28,6 +29,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   final _desconto = TextEditingController();
   String _orcamentoId = AcoesAtendimento.novoId();
   String? _contatoId;
+  String? _aprovadorNome; // sem contato cadastrado: o nome digitado
   List<ItemOrcamento> _itens = [];
   bool _montarOutro = false;
   bool _gravando = false;
@@ -46,12 +48,12 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       // Continua o que estava sendo montado (os preços são os do catálogo de agora).
       _orcamentoId = '${r['orcamento_id']}';
       _contatoId = r['contato_id'] as String?;
+      _aprovadorNome = r['aprovador_nome'] as String?;
       _diagnostico.text = '${r['diagnostico'] ?? ''}';
       _desconto.text = numeroBr(r['desconto_pct'] ?? 0);
       _itens = [
         for (final i in ((r['itens'] as List?) ?? const []).cast<Map>())
-          if (banco.um('produtos', i['produto_id']) case final Map<String, dynamic> prod)
-            ItemOrcamento(id: '${i['id']}', produto: prod, quantidade: num.tryParse('${i['quantidade']}') ?? 1),
+          if (ItemOrcamento.doRascunho(i, (id) => banco.um('produtos', id)) case final ItemOrcamento item) item,
       ];
       _montarOutro = r['montar_outro'] == true;
     } else {
@@ -92,6 +94,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   Future<void> _guardar() => AcoesOrcamento.guardarRascunho(widget.atendimentoId, {
         'orcamento_id': _orcamentoId,
         'contato_id': _contatoId,
+        'aprovador_nome': _aprovadorNome,
         'diagnostico': _diagnostico.text,
         'desconto_pct': _descontoPct,
         'montar_outro': _montarOutro,
@@ -105,24 +108,48 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
 
   // ---------------------------------------------------------------- itens
 
+  bool get _avulsosLiberados => AcoesOrcamento.config.itensAvulsos != 'desligado';
+
   Future<void> _adicionar() async {
     final produtos = EstadoApp.instancia.banco!.todos('produtos').where((p) => p['ativo'] != false).toList()
       ..sort((a, b) => '${a['descricao']}'.compareTo('${b['descricao']}'));
-    final escolhido = await showModalBottomSheet<Map<String, dynamic>>(
+    // Volta o produto escolhido, ou o texto buscado quando é item fora do catálogo.
+    final escolhido = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _EscolherProduto(produtos: produtos),
+      builder: (_) => _EscolherProduto(produtos: produtos, permitirAvulso: _avulsosLiberados),
     );
     if (!mounted) return;
-    if (escolhido == null) return;
+    if (escolhido is String) {
+      await _itemAvulso(descricaoInicial: escolhido);
+      return;
+    }
+    if (escolhido is! Map<String, dynamic>) return;
     final qtd = await _pedirQuantidade('${escolhido['descricao']}', '${escolhido['unidade'] ?? 'un'}', 1);
     if (qtd == null || !mounted) return;
     _itens.add(ItemOrcamento(id: AcoesAtendimento.novoId(), produto: escolhido, quantidade: qtd));
     _mudou();
   }
 
+  /// Item fora do catálogo: o técnico digita descrição, tipo, unidade e preço.
+  Future<void> _itemAvulso({ItemOrcamento? atual, String descricaoInicial = ''}) async {
+    final item = await showDialog<ItemOrcamento>(
+      context: context,
+      builder: (_) => _ItemAvulsoDialog(atual: atual, descricaoInicial: descricaoInicial),
+    );
+    if (item == null || !mounted) return;
+    final k = atual == null ? -1 : _itens.indexOf(atual);
+    if (k >= 0) {
+      _itens[k] = item;
+    } else {
+      _itens.add(item);
+    }
+    _mudou();
+  }
+
   Future<void> _alterarQuantidade(ItemOrcamento i) async {
-    final qtd = await _pedirQuantidade('${i.produto['descricao']}', '${i.produto['unidade'] ?? 'un'}', i.quantidade);
+    if (i.avulso) return _itemAvulso(atual: i);
+    final qtd = await _pedirQuantidade(i.descricao, i.unidade, i.quantidade);
     if (qtd == null || !mounted) return;
     i.quantidade = qtd;
     _mudou();
@@ -158,33 +185,102 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
 
   Future<void> _escolherContato(Map os) async {
     final contatos = _contatos(os);
+    const outra = '__outra__';
     final escolhido = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: ListView(shrinkWrap: true, children: [
-          const ListTile(title: Text('Quem aprova', style: TextStyle(fontWeight: FontWeight.w800))),
-          if (contatos.isEmpty)
-            const ListTile(title: Text('Nenhum contato cadastrado para este cliente.')),
-          for (final c in contatos)
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * .75),
+          child: ListView(shrinkWrap: true, children: [
+            const ListTile(title: Text('Quem aprova', style: TextStyle(fontWeight: FontWeight.w800))),
+            if (contatos.isEmpty)
+              const ListTile(
+                title: Text('Nenhum contato cadastrado para este cliente.'),
+                subtitle: Text('Digite o nome de quem aprova. O gestor pode cadastrar o contato depois.'),
+              ),
+            for (final c in contatos)
+              ListTile(
+                title: Text('${c['nome']}'),
+                subtitle: Text([c['cargo'], c['telefone']].where((x) => x != null && '$x'.isNotEmpty).join(' · ')),
+                trailing: c['id'] == _contatoId ? const Icon(Icons.check, color: Cores.sucesso) : null,
+                onTap: () => Navigator.of(ctx).pop('${c['id']}'),
+              ),
             ListTile(
-              title: Text('${c['nome']}'),
-              subtitle: Text([c['cargo'], c['telefone']].where((x) => x != null && '$x'.isNotEmpty).join(' · ')),
-              trailing: c['id'] == _contatoId ? const Icon(Icons.check, color: Cores.sucesso) : null,
-              onTap: () => Navigator.of(ctx).pop('${c['id']}'),
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Outra pessoa (digitar o nome)'),
+              subtitle: _contatoId == null && (_aprovadorNome ?? '').isNotEmpty ? Text(_aprovadorNome!) : null,
+              trailing: _contatoId == null && (_aprovadorNome ?? '').isNotEmpty
+                  ? const Icon(Icons.check, color: Cores.sucesso)
+                  : null,
+              onTap: () => Navigator.of(ctx).pop(outra),
             ),
-        ]),
+          ]),
+        ),
       ),
     );
     if (escolhido == null || !mounted) return;
-    _contatoId = escolhido;
+    if (escolhido == outra) {
+      final nome = await _digitarNome();
+      if (nome == null || !mounted) return;
+      _contatoId = null;
+      _aprovadorNome = nome;
+    } else {
+      _contatoId = escolhido;
+      _aprovadorNome = null;
+    }
     _mudou();
+  }
+
+  Future<String?> _digitarNome() async {
+    final c = TextEditingController(text: _contatoId == null ? _aprovadorNome ?? '' : '');
+    final r = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        void ok() {
+          final v = c.text.trim();
+          if (v.isNotEmpty) Navigator.of(ctx).pop(v);
+        }
+
+        return AlertDialog(
+          title: const Text('Quem aprova pelo cliente'),
+          content: TextField(
+            controller: c,
+            autofocus: true,
+            maxLength: 120,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Nome', hintText: 'Ex.: Jorge (zelador)'),
+            onSubmitted: (_) => ok(),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+            FilledButton(onPressed: ok, child: const Text('OK')),
+          ],
+        );
+      },
+    );
+    // Sem dispose: o diálogo ainda anima a saída usando o campo.
+    return r;
   }
 
   // ---------------------------------------------------------------- ações
 
-  String? _problema() {
-    final max = AcoesOrcamento.config.descontoMaxPct;
-    if (_itens.isEmpty) return 'Inclua ao menos um item do catálogo.';
+  String? _problema({bool paraCliente = false, bool temAberto = false}) {
+    final cfg = AcoesOrcamento.config;
+    final max = cfg.descontoMaxPct;
+    if (_itens.isEmpty) return 'Inclua ao menos um item.';
+    final avulsos = _itens.where((i) => i.avulso).length;
+    if (avulsos > 0 && cfg.itensAvulsos == 'desligado') {
+      return 'A empresa não usa mais itens fora do catálogo no app: tire os $avulsos item(ns) marcado(s).';
+    }
+    if (avulsos > 0 && paraCliente && cfg.itensAvulsos == 'gestor') {
+      if (temAberto) {
+        return 'Com item fora do catálogo, o orçamento precisa da revisão do gestor, e esta OS já tem um '
+            'orçamento em aberto com ele. Tire o item fora do catálogo ou fale com o gestor.';
+      }
+      return 'Com item fora do catálogo, o orçamento vai para o gestor revisar antes (configuração da empresa). '
+          'Use "Deixar para o gestor".';
+    }
     final pct = num.tryParse(_desconto.text.trim().replaceAll(',', '.'));
     if (pct == null || pct < 0) return 'Desconto inválido.';
     if (pct > max) return 'O desconto vai até ${numeroBr(max)}% (configuração da empresa).';
@@ -203,6 +299,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
         atd: atd,
         orcamentoId: _orcamentoId,
         contatoId: _contatoId,
+        aprovadorNome: _aprovadorNome,
         diagnostico: _diagnostico.text.trim(),
         itens: _itens,
         descontoPct: _descontoPct,
@@ -219,7 +316,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   }
 
   Future<void> _mostrarAoCliente(Map<String, dynamic> atd, Map<String, dynamic>? aberto) async {
-    final problema = _problema();
+    final problema = _problema(paraCliente: true, temAberto: aberto != null);
     if (problema != null) {
       _aviso(problema, erro: true);
       return;
@@ -245,6 +342,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       atd: atd,
       diagnostico: _diagnostico.text.trim(),
       contatoId: _contatoId,
+      aprovadorNome: _aprovadorNome,
       itens: _itens,
       descontoPct: _descontoPct,
     );
@@ -253,7 +351,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       context,
       AssinaturaTela(
         conteudo: conteudo,
-        nomeInicial: contato?['nome'] as String?,
+        nomeInicial: (contato?['nome'] as String?) ?? _aprovadorNome,
         pedirConcordo: true,
         permitirRecusa: true,
       ),
@@ -266,6 +364,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
         atd: atd,
         orcamentoId: _orcamentoId,
         contatoId: _contatoId,
+        aprovadorNome: _aprovadorNome,
         diagnostico: _diagnostico.text.trim(),
         itens: _itens,
         descontoPct: _descontoPct,
@@ -310,6 +409,30 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
     } finally {
       if (mounted) setState(() => _gravando = false);
     }
+  }
+
+  /// Link de aprovação do orçamento enviado, pelo WhatsApp (o cliente
+  /// aprova depois, pelo celular dele).
+  Future<void> _mandarLink(Map<String, dynamic> atd, Map<String, dynamic> orc) async {
+    final os = EstadoApp.instancia.banco!.um('ordens_servico', atd['os_id']);
+    if (os == null) return;
+    final mandou = await AcoesMensagens.mandar(
+      context,
+      modelo: 'orcamento_link',
+      titulo: 'Mandar o link do ${AcoesOrcamento.codigo(orc)}',
+      os: os,
+      contatoInicialId: orc['contato_id'] as String?,
+      valores: {
+        'orcamento': '${orc['codigo'] ?? ''}',
+        'total': dinheiro(orc['total']),
+        'validade': dataBr(orc['validade_ate']),
+      },
+      link: LinkPreparado.novo(entidade: 'orcamento', osId: '${os['id']}', orcamentoId: '${orc['id']}'),
+      entidade: 'orcamento',
+      entidadeId: '${orc['id']}',
+    );
+    if (!mandou || !mounted) return;
+    _aviso('Link registrado. Ele passa a abrir quando o aparelho sincronizar.');
   }
 
   // ---------------------------------------------------------------- tela
@@ -437,7 +560,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
             Text('Válido até ${dataBr(orc['validade_ate'])}', textAlign: TextAlign.right,
                 style: const TextStyle(color: Cores.neutro)),
           const SizedBox(height: 8),
-          if (enviado && !_montarOutro)
+          if (enviado && !_montarOutro) ...[
             SizedBox(
               height: 52,
               child: FilledButton.icon(
@@ -446,6 +569,16 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
                 label: const Text('Mostrar ao cliente e colher assinatura'),
               ),
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _gravando ? null : () => _mandarLink(atd, orc),
+                icon: const Icon(Icons.chat_outlined),
+                label: const Text('Mandar o link pelo WhatsApp'),
+              ),
+            ),
+          ],
           if (!enviado)
             const Text('Este orçamento está com o gestor (rascunho): ele revisa e envia ao cliente.',
                 style: TextStyle(color: Cores.neutro)),
@@ -469,6 +602,8 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
     final desconto = _itens.fold<num>(0, (s, i) => s + i.desconto(pct));
     final total = _itens.fold<num>(0, (s, i) => s + i.total(pct));
     final contato = EstadoApp.instancia.banco!.um('contatos', _contatoId);
+    final nomeLivre = contato == null && (_aprovadorNome ?? '').isNotEmpty ? _aprovadorNome : null;
+    final temAvulso = _itens.any((i) => i.avulso);
     return [
       if (_montarOutro)
         const Padding(
@@ -478,8 +613,8 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       Card(
         child: ListTile(
           leading: const Icon(Icons.person_outline),
-          title: Text(contato == null ? 'Escolher quem aprova' : '${contato['nome']}'),
-          subtitle: const Text('Quem aprova pelo cliente'),
+          title: Text(contato != null ? '${contato['nome']}' : nomeLivre ?? 'Escolher quem aprova'),
+          subtitle: Text(nomeLivre != null ? 'Quem aprova pelo cliente (sem cadastro)' : 'Quem aprova pelo cliente'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _escolherContato(os),
         ),
@@ -499,21 +634,35 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
         child: OutlinedButton.icon(
           onPressed: _adicionar,
           icon: const Icon(Icons.add),
-          label: const Text('Adicionar item do catálogo'),
+          label: Text(_avulsosLiberados ? 'Adicionar item' : 'Adicionar item do catálogo'),
         ),
       ),
       if (_itens.isEmpty)
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+              switch (cfg.itensAvulsos) {
+                'liberado' => 'Use os itens do catálogo; se faltar algum, inclua como item fora do catálogo.',
+                'gestor' => 'Use os itens do catálogo. Item fora do catálogo também entra, mas aí o orçamento '
+                    'vai para o gestor revisar antes do cliente.',
+                _ => 'No app, o orçamento usa só itens do catálogo (peças e serviços cadastrados no painel).',
+              },
+              style: const TextStyle(color: Cores.neutro)),
+        ),
+      if (temAvulso && cfg.itensAvulsos == 'gestor')
         const Padding(
-          padding: EdgeInsets.all(12),
-          child: Text('No app, o orçamento usa só itens do catálogo (peças e serviços cadastrados no painel).',
-              style: TextStyle(color: Cores.neutro)),
+          padding: EdgeInsets.fromLTRB(4, 8, 4, 4),
+          child: Text('Tem item fora do catálogo: este orçamento vai para o gestor revisar antes do cliente.',
+              style: TextStyle(color: Cores.alerta, fontWeight: FontWeight.w600)),
         ),
       for (final i in _itens)
         Card(
           child: ListTile(
-            title: Text('${i.produto['descricao']}'),
-            subtitle: Text('${numeroBr(i.quantidade)} ${i.produto['unidade'] ?? 'un'} × ${dinheiro(i.preco)}'
-                '${pct > 0 ? ' − ${dinheiro(i.desconto(pct))}' : ''}'),
+            title: Text(i.descricao),
+            subtitle: Text('${numeroBr(i.quantidade)} ${i.unidade} × ${dinheiro(i.preco)}'
+                '${pct > 0 ? ' − ${dinheiro(i.desconto(pct))}' : ''}'
+                '${i.avulso ? '\nfora do catálogo · ${i.tipo == 'produto' ? 'peça' : 'serviço'}' : ''}'),
+            isThreeLine: i.avulso,
             onTap: () => _alterarQuantidade(i),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(dinheiro(i.total(pct)), style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -558,11 +707,13 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   }
 }
 
-/// Busca no catálogo (peças e serviços ativos).
+/// Busca no catálogo (peças e serviços ativos). Volta o produto, ou o texto
+/// buscado quando o técnico escolhe incluir um item fora do catálogo.
 class _EscolherProduto extends StatefulWidget {
-  const _EscolherProduto({required this.produtos});
+  const _EscolherProduto({required this.produtos, this.permitirAvulso = false});
 
   final List<Map<String, dynamic>> produtos;
+  final bool permitirAvulso;
 
   @override
   State<_EscolherProduto> createState() => _EscolherProdutoState();
@@ -589,7 +740,10 @@ class _EscolherProdutoState extends State<_EscolherProduto> {
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * .75,
         child: Column(children: [
-          const ListTile(title: Text('Item do catálogo', style: TextStyle(fontWeight: FontWeight.w800))),
+          ListTile(
+            title: Text(widget.permitirAvulso ? 'Adicionar item' : 'Item do catálogo',
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -615,8 +769,141 @@ class _EscolherProdutoState extends State<_EscolherProduto> {
                       ),
                   ]),
           ),
+          if (widget.permitirAvulso)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(_busca.text.trim()),
+                    icon: const Icon(Icons.edit_note),
+                    label: const Text('Item fora do catálogo'),
+                  ),
+                ),
+              ),
+            ),
         ]),
       ),
+    );
+  }
+}
+
+/// Item fora do catálogo: descrição, peça ou serviço, quantidade, unidade e preço.
+class _ItemAvulsoDialog extends StatefulWidget {
+  const _ItemAvulsoDialog({this.atual, this.descricaoInicial = ''});
+
+  final ItemOrcamento? atual;
+  final String descricaoInicial;
+
+  @override
+  State<_ItemAvulsoDialog> createState() => _ItemAvulsoDialogState();
+}
+
+class _ItemAvulsoDialogState extends State<_ItemAvulsoDialog> {
+  late final _descricao = TextEditingController(text: widget.atual?.descricao ?? widget.descricaoInicial);
+  late final _quantidade = TextEditingController(text: numeroBr(widget.atual?.quantidade ?? 1));
+  late final _unidade = TextEditingController(text: widget.atual?.unidade ?? 'un');
+  late final _preco = TextEditingController(
+      text: widget.atual == null ? '' : widget.atual!.preco.toStringAsFixed(2).replaceAll('.', ','));
+  late String _tipo = widget.atual?.tipo ?? 'servico';
+  String? _erro;
+
+  // Sem dispose dos campos: o diálogo ainda anima a saída usando eles.
+
+  /// Aceita "1.234,56", "1234,56" e "1234.56".
+  static num? _numero(String t) {
+    final s = t.trim().replaceAll(' ', '');
+    if (s.isEmpty) return null;
+    return num.tryParse(s.contains(',') ? s.replaceAll('.', '').replaceAll(',', '.') : s);
+  }
+
+  void _ok() {
+    final descricao = _descricao.text.trim();
+    final qtd = _numero(_quantidade.text);
+    final preco = _numero(_preco.text);
+    final erro = descricao.isEmpty
+        ? 'Digite a descrição.'
+        : qtd == null || qtd <= 0
+            ? 'Quantidade inválida.'
+            : preco == null || preco < 0
+                ? 'Informe o preço unitário.'
+                : null;
+    if (erro != null) {
+      setState(() => _erro = erro);
+      return;
+    }
+    final unidade = _unidade.text.trim();
+    Navigator.of(context).pop(ItemOrcamento(
+      id: widget.atual?.id ?? AcoesAtendimento.novoId(),
+      quantidade: qtd!,
+      descricao: descricao,
+      tipo: _tipo,
+      unidade: unidade.isEmpty ? 'un' : unidade,
+      preco: centavos(preco!),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Item fora do catálogo'),
+      scrollable: true,
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TextField(
+          controller: _descricao,
+          autofocus: widget.atual == null && widget.descricaoInicial.isEmpty,
+          maxLength: 200,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Descrição (o cliente vê)'),
+        ),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'servico', label: Text('Serviço'), icon: Icon(Icons.handyman_outlined)),
+            ButtonSegment(value: 'produto', label: Text('Peça'), icon: Icon(Icons.inventory_2_outlined)),
+          ],
+          selected: {_tipo},
+          onSelectionChanged: (v) => setState(() => _tipo = v.first),
+        ),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _quantidade,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Quantidade'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 80,
+            child: TextField(
+              controller: _unidade,
+              maxLength: 10,
+              decoration: const InputDecoration(labelText: 'Unidade', counterText: ''),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _preco,
+          autofocus: widget.atual == null && widget.descricaoInicial.isNotEmpty,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Preço unitário', prefixText: 'R\$ '),
+          onSubmitted: (_) => _ok(),
+        ),
+        if (_erro != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_erro!, style: const TextStyle(color: Cores.erro)),
+          ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        FilledButton(onPressed: _ok, child: const Text('OK')),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_mensagens.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
@@ -145,6 +146,28 @@ class _Acoes extends StatelessWidget {
     );
   }
 
+  /// A caminho: muda o status e já oferece o aviso ao cliente.
+  Future<void> _aCaminho(BuildContext context) async {
+    await _mudar('em_deslocamento');
+    if (!context.mounted) return;
+    await _avisarCliente(context);
+  }
+
+  Future<void> _avisarCliente(BuildContext context) async {
+    final os = EstadoApp.instancia.banco!.osDo(item);
+    if (os == null) return;
+    final mandou = await AcoesMensagens.mandar(
+      context,
+      modelo: 'a_caminho',
+      titulo: 'Avisar que está a caminho',
+      os: os,
+      entidade: 'parte_item',
+      entidadeId: '${item['id']}',
+    );
+    if (!mandou || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aviso registrado na OS.')));
+  }
+
   Future<void> _naoRealizado(BuildContext context) async {
     final motivo = await showModalBottomSheet<String>(
       context: context,
@@ -201,9 +224,15 @@ class _Acoes extends StatelessWidget {
         )),
       if (aberta && status == 'programado')
         botao(OutlinedButton.icon(
-          onPressed: () => _mudar('em_deslocamento'),
+          onPressed: () => _aCaminho(context),
           icon: const Icon(Icons.directions_car_outlined),
           label: const Text('Estou a caminho'),
+        )),
+      if (aberta && status == 'em_deslocamento')
+        botao(OutlinedButton.icon(
+          onPressed: () => _avisarCliente(context),
+          icon: const Icon(Icons.chat_outlined),
+          label: const Text('Avisar o cliente (WhatsApp)'),
         )),
       if (aberta && status == 'em_deslocamento')
         botao(OutlinedButton.icon(

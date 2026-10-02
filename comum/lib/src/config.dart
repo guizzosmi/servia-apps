@@ -9,10 +9,14 @@ class Config {
 
   /// Domínio dos e-mails técnicos do login por matrícula + PIN
   /// (`<matricula>@<codigo-da-conta>.<dominio>`). Igual ao segredo
-  /// DOMINIO_EMAIL_APP das funções (padrão servia.app).
-  static const dominioEmailApp = 'servia.app';
+  /// DOMINIO_EMAIL_APP das funções (padrão app.servpilot.com.br). Ninguém
+  /// recebe e-mail nesse endereço: é só a forma de o Supabase guardar o login.
+  static const dominioEmailApp = 'app.servpilot.com.br';
 
   /// Endereço da página de aceite do cliente (Firebase Hosting do projeto
-  /// servia-ccdda). Com domínio próprio, troque aqui (ex.: https://aceite.servia.com.br).
-  static const linkAceite = 'https://servia-ccdda.web.app';
+  /// servia-ccdda, site servia-ccdda, com o domínio próprio).
+  static const linkAceite = 'https://aceite.servpilot.com.br';
+
+  /// Endereço do painel publicado (Firebase Hosting, site servpilot-painel).
+  static const linkPainel = 'https://painel.servpilot.com.br';
 }

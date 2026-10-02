@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://servpilot.com.br/sitemap.xml

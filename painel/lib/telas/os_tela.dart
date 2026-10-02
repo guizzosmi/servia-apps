@@ -6,10 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/lista.dart';
 import '../servicos/documentos.dart';
 import '../servicos/status.dart';
-import '../widgets/campos_data_hora.dart';
+import '../servicos/whatsapp.dart';
 import '../widgets/atendimentos_os.dart';
+import '../widgets/campos_data_hora.dart';
 import '../widgets/escolha_equipamentos.dart';
 import '../widgets/itens_os.dart';
+import '../widgets/margem.dart';
 import '../widgets/orcamentos_os.dart';
 import '../widgets/status_chip.dart';
 import 'orcamento_tela.dart' show descreverEventoOrcamento;
@@ -169,6 +171,93 @@ class _OsTelaState extends State<OsTela> {
         ],
       ),
     );
+  }
+
+  // ---------------- WhatsApp ----------------
+
+  /// Link do relatório (o cliente vê e imprime) mandado pelo WhatsApp.
+  Future<void> _mandarRelatorio() async {
+    final os = _os!;
+    setState(() => _ocupado = true);
+    Map<String, dynamic> r;
+    try {
+      r = await acaoLink({'acao': 'gerar_relatorio', 'os_id': widget.id});
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+      if (mounted) setState(() => _ocupado = false);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _ocupado = false);
+    final local = os['locais'] as Map? ?? const {};
+    final cliente = os['clientes'] as Map? ?? const {};
+    final enviou = await mandarWhatsApp(
+      context,
+      modelo: 'os_relatorio',
+      titulo: 'Relatório da ${os['codigo']}',
+      osId: widget.id,
+      clienteId: os['cliente_id'] as String,
+      contatoInicialId: os['solicitante_contato_id'] as String?,
+      valores: {
+        'os': '${os['codigo'] ?? ''}',
+        'cliente': '${cliente['nome'] ?? ''}',
+        'local': '${local['nome'] ?? ''}',
+        'link': '${Config.linkAceite}/r/${r['token']}',
+      },
+      linkId: r['link_id'] as String?,
+      aviso: 'O link vale 30 dias e mostra o relatório como estiver quando o cliente abrir.',
+    );
+    if (!mounted) return;
+    if (!enviou) {
+      // Ninguém recebeu: o link não precisa ficar valendo.
+      try {
+        await acaoLink({'acao': 'revogar', 'link_id': r['link_id']});
+      } catch (_) {}
+    }
+    await _carregar();
+  }
+
+  /// Data da visita: a da parte (programado) ou a desejada.
+  String? _dataDaVisita(Map<String, dynamic> a) {
+    final programadas = _tentativas
+        .where((t) => t['agendamento_id'] == a['id'] && ['programado', 'em_deslocamento'].contains(t['status']))
+        .map((t) => '${t['data']}')
+        .toList()
+      ..sort();
+    if (programadas.isNotEmpty) return programadas.last;
+    return a['data_prevista'] as String?;
+  }
+
+  Future<void> _avisarVisita(Map<String, dynamic> a) async {
+    final os = _os!;
+    final data = _dataDaVisita(a);
+    if (data == null) return;
+    final local = os['locais'] as Map? ?? const {};
+    final cliente = os['clientes'] as Map? ?? const {};
+    final endereco = [
+      [local['logradouro'], local['numero']].where((x) => x != null && '$x'.isNotEmpty).join(', '),
+      local['bairro'],
+      [local['cidade'], local['uf']].where((x) => x != null && '$x'.isNotEmpty).join('/'),
+    ].where((x) => x != null && '$x'.isNotEmpty).join(' · ');
+    final enviou = await mandarWhatsApp(
+      context,
+      modelo: 'visita_agendada',
+      titulo: 'Avisar a visita',
+      osId: widget.id,
+      clienteId: os['cliente_id'] as String,
+      contatoInicialId: os['solicitante_contato_id'] as String?,
+      valores: {
+        'os': '${os['codigo'] ?? ''}',
+        'cliente': '${cliente['nome'] ?? ''}',
+        'local': '${local['nome'] ?? ''}',
+        'endereco': endereco,
+        'data': dataPorExtenso(data),
+        'horario': janela(a['janela_inicio'], a['janela_fim']),
+      },
+      entidade: 'agendamento',
+      entidadeId: a['id'] as String?,
+    );
+    if (enviou && mounted) await _carregar();
   }
 
   Future<void> _editarDados() async {
@@ -348,7 +437,7 @@ class _OsTelaState extends State<OsTela> {
       onRefresh: _carregar,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: margemDaTela(context),
         child: Align(
           alignment: Alignment.topLeft,
           child: ConstrainedBox(
@@ -363,18 +452,29 @@ class _OsTelaState extends State<OsTela> {
                     icon: const Icon(Icons.arrow_back),
                   ),
                   const SizedBox(width: 4),
-                  Text((os['codigo'] ?? '') as String,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(width: 12),
-                  StatusChip(os['status'] as String?, statusOs),
-                  const SizedBox(width: 8),
-                  StatusChip(os['prioridade'] as String?, prioridades),
-                  const Spacer(),
+                  Expanded(
+                    child: Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      Text((os['codigo'] ?? '') as String,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      StatusChip(os['status'] as String?, statusOs),
+                      StatusChip(os['prioridade'] as String?, prioridades),
+                    ]),
+                  ),
                   if (_ocupado) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                  BotaoPdf(tipo: 'os', id: widget.id, nomeArquivo: '${os['codigo']}', rotulo: 'Relatório (PDF)'),
-                  const SizedBox(width: 8),
                   IconButton(tooltip: 'Atualizar', onPressed: _carregar, icon: const Icon(Icons.refresh)),
                 ]),
+                Padding(
+                  padding: const EdgeInsets.only(left: 52, top: 4),
+                  child: Wrap(spacing: 8, runSpacing: 8, children: [
+                    BotaoPdf(tipo: 'os', id: widget.id, nomeArquivo: '${os['codigo']}', rotulo: 'Relatório (PDF)'),
+                    if (editar && os['status'] != 'cancelada')
+                      OutlinedButton.icon(
+                        onPressed: _mandarRelatorio,
+                        icon: const Icon(Icons.chat_outlined, size: 18),
+                        label: const Text('Relatório pelo WhatsApp'),
+                      ),
+                  ]),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(left: 52),
                   child: Text(
@@ -587,6 +687,12 @@ class _OsTelaState extends State<OsTela> {
           StatusChip(status, statusAgendamento),
           const SizedBox(width: 8),
           Expanded(child: Text(detalhes)),
+          if (podeEditarCadastros() && ['pendente', 'programado', 'em_andamento'].contains(status) && _dataDaVisita(a) != null)
+            IconButton(
+              tooltip: 'Avisar o cliente da visita (WhatsApp)',
+              onPressed: () => _avisarVisita(a),
+              icon: const Icon(Icons.chat_outlined, color: Cores.sucesso),
+            ),
           if (editar && ['pendente', 'suspenso', 'programado'].contains(status))
             PopupMenuButton<String>(
               tooltip: 'Ações',
@@ -681,7 +787,13 @@ String descreverEvento(Map<String, dynamic> l) {
     'os:medicao_alterada': 'Medição corrigida',
     'os:fluido_alterado': 'Fluido corrigido',
     'os:foto_excluida': 'Foto excluída',
+    'os:link_relatorio': 'Link do relatório gerado',
+    'os:link_relatorio_revogado': 'Link do relatório cancelado',
   };
+  if (entidade == 'os' && acao == 'mensagem') {
+    final titulo = modeloMensagem('${dados['modelo']}')?.titulo ?? '${dados['modelo']}';
+    return 'Mensagem "$titulo" ${dados['meio'] == 'copiada' ? 'copiada' : 'pelo WhatsApp'} para ${dados['para'] ?? ''}';
+  }
   var texto = nomes['$entidade:$acao'] ?? '$entidade: $acao';
   if (dados['descricao'] != null) texto += ': ${dados['descricao']}';
   if (dados['medicao'] != null) texto += ': ${dados['medicao']}';

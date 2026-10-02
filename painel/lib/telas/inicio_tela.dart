@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
+import '../widgets/margem.dart';
 
 /// Tela inicial: atalhos e contadores dos cadastros.
 /// (O quadro do dia entra aqui na etapa de agendamentos.)
@@ -94,7 +95,7 @@ class _InicioTelaState extends State<InicioTela> {
   Widget build(BuildContext context) {
     final sessao = Sessao.atual;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

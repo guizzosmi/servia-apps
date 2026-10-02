@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,9 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/lista.dart';
 import '../servicos/documentos.dart';
 import '../servicos/status.dart';
+import '../servicos/whatsapp.dart';
 import '../widgets/assinatura_cliente.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/itens_os.dart';
+import '../widgets/margem.dart';
 import '../widgets/status_chip.dart';
 
 /// Um orçamento: dados, itens, respostas do cliente, versões e histórico.
@@ -406,7 +407,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
       onRefresh: _carregar,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: margemDaTela(context),
         child: Align(
           alignment: Alignment.topLeft,
           child: ConstrainedBox(
@@ -866,16 +867,37 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
     }
     final r = await _acaoLink({'acao': 'gerar', 'orcamento_id': _id}, 'Link gerado.');
     if (r == null || !mounted) return;
-    final url = '${Config.linkAceite}/a/${r['token']}';
-    final contato = '${r['contato'] ?? ''}'.trim();
-    final primeiro = contato.split(' ').first;
-    final msg = '${primeiro.isEmpty ? 'Olá!' : 'Olá, $primeiro!'} Segue o orçamento ${o['codigo']} '
-        '(${dinheiro(o['total'])}, válido até ${dataBr(o['validade_ate'])}). '
-        'Para ver e aprovar: $url';
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => _DialogoLink(url: url, mensagem: msg, contato: contato, telefone: '${r['telefone'] ?? ''}'),
+    final os = o['ordens_servico'] as Map? ?? const {};
+    final enviou = await mandarWhatsApp(
+      context,
+      modelo: 'orcamento_link',
+      titulo: 'Mandar o link do ${o['codigo']}',
+      osId: '${os['id']}',
+      clienteId: '${os['cliente_id']}',
+      contatoInicialId: (r['contato_id'] ?? o['contato_id']) as String?,
+      valores: {
+        'os': '${os['codigo'] ?? ''}',
+        'cliente': '${(os['clientes'] as Map?)?['nome'] ?? ''}',
+        'local': '${(os['locais'] as Map?)?['nome'] ?? ''}',
+        'orcamento': '${o['codigo'] ?? ''}',
+        'total': dinheiro(o['total']),
+        'validade': dataBr(o['validade_ate']),
+        'link': '${Config.linkAceite}/a/${r['token']}',
+      },
+      entidade: 'orcamento',
+      entidadeId: _id,
+      linkId: r['link_id'] as String?,
+      aviso: 'Guarde agora: por segurança, o link aparece só nesta tela. Se perder, gere outro (o anterior deixa de valer).',
     );
+    if (!mounted) return;
+    if (!enviou) {
+      // Ninguém recebeu e o link não aparece de novo: cancela.
+      try {
+        await acaoLink({'acao': 'revogar', 'link_id': r['link_id']});
+      } catch (_) {}
+      _avisar('Link não enviado: ele foi cancelado. Gere outro quando for mandar.');
+    }
+    if (mounted) await _carregar(manterEdicao: true);
   }
 
   Future<void> _revogarLink(Map<String, dynamic> l) async {
@@ -1239,57 +1261,3 @@ String _navegador(String ua) {
   return [nav ?? 'navegador', if (so != null) 'no $so'].join(' ');
 }
 
-/// O link gerado: aparece só agora (o banco guarda só o "carimbo" dele).
-class _DialogoLink extends StatelessWidget {
-  const _DialogoLink({required this.url, required this.mensagem, required this.contato, required this.telefone});
-
-  final String url;
-  final String mensagem;
-  final String contato;
-  final String telefone;
-
-  void _copiar(BuildContext context, String texto, String aviso) {
-    Clipboard.setData(ClipboardData(text: texto));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aviso)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Link para o cliente'),
-      content: SizedBox(
-        width: 520,
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(contato.isEmpty
-              ? 'Mande para quem vai aprovar, pelo WhatsApp ou e-mail.'
-              : 'Mande para $contato${telefone.isEmpty ? '' : ' ($telefone)'}, pelo WhatsApp ou e-mail.'),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Cores.fundo, borderRadius: BorderRadius.circular(10)),
-            child: SelectableText(mensagem),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Guarde agora: por segurança, o link aparece só nesta tela. Se perder, gere outro '
-            '(o anterior deixa de valer).',
-            style: TextStyle(fontSize: 12, color: Cores.neutro),
-          ),
-        ]),
-      ),
-      actions: [
-        TextButton.icon(
-          onPressed: () => _copiar(context, url, 'Link copiado.'),
-          icon: const Icon(Icons.link),
-          label: const Text('Copiar só o link'),
-        ),
-        FilledButton.icon(
-          onPressed: () => _copiar(context, mensagem, 'Mensagem copiada: é só colar no WhatsApp.'),
-          icon: const Icon(Icons.copy),
-          label: const Text('Copiar mensagem'),
-        ),
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Fechar')),
-      ],
-    );
-  }
-}

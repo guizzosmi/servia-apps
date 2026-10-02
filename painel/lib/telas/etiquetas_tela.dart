@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/campos.dart';
 import '../cadastros/definicoes.dart';
 import '../servicos/etiquetas_pdf.dart';
+import '../widgets/margem.dart';
 
 /// Etiquetas QR dos equipamentos em PDF A4, para papel adesivo.
 /// O QR leva o qr_token do equipamento; o app lê e acha o equipamento na hora.
@@ -136,7 +137,7 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
         ? null
         : ((_quantidade! + (int.tryParse(_pular.text) ?? 0)) / _modelo.porFolha).ceil();
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: Align(
         alignment: Alignment.topLeft,
         child: ConstrainedBox(

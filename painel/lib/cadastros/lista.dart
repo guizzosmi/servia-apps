@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../widgets/margem.dart';
 import 'definicoes.dart';
 import 'servico.dart';
 
@@ -239,7 +240,7 @@ class _ListaCadastroState extends State<ListaCadastro> {
 
     if (widget.embutida) return conteudo;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: margemDaTela(context),
       child: conteudo,
     );
   }
