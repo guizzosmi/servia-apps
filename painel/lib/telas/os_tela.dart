@@ -9,6 +9,7 @@ import '../servicos/status.dart';
 import '../servicos/whatsapp.dart';
 import '../widgets/atendimentos_os.dart';
 import '../widgets/campos_data_hora.dart';
+import '../widgets/checklist_da_os.dart';
 import '../widgets/escolha_equipamentos.dart';
 import '../widgets/itens_os.dart';
 import '../widgets/margem.dart';
@@ -421,7 +422,10 @@ class _OsTelaState extends State<OsTela> {
       );
     }
     final os = _os!;
-    final editar = podeEditarCadastros() && !_ocupado;
+    // OS do aparelho (ciclo do plano): nasce concluída pelo checklist do lote e não se edita aqui.
+    final ciclo = os['plano_papel'] == 'ciclo';
+    final mandar = podeEditarCadastros() && !_ocupado;
+    final editar = mandar && !ciclo;
     // Ajustes do que veio do campo: até a OS ser faturada (cancelada, nunca).
     final ajustar = podeEditarCadastros() && os['status'] != 'cancelada' && os['cobranca_status'] != 'faturada';
     final cliente = os['clientes'] as Map? ?? const {};
@@ -458,6 +462,24 @@ class _OsTelaState extends State<OsTela> {
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                       StatusChip(os['status'] as String?, statusOs),
                       StatusChip(os['prioridade'] as String?, prioridades),
+                      if (os['origem'] == 'app')
+                        const Chip(
+                          avatar: Icon(Icons.phone_android, size: 16, color: Cores.indigo700),
+                          label: Text('Aberta pelo app'),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      if (os['plano_id'] != null)
+                        ActionChip(
+                          avatar: const Icon(Icons.event_repeat, size: 16, color: Cores.indigo700),
+                          label: Text(switch (os['plano_papel']) {
+                            'lote' => 'Lote do plano',
+                            'ciclo' => 'Ciclo do aparelho',
+                            _ => 'Gerada pelo plano',
+                          }),
+                          tooltip: 'Abrir o plano',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => context.push('/planos/${os['plano_id']}'),
+                        ),
                     ]),
                   ),
                   if (_ocupado) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -467,7 +489,7 @@ class _OsTelaState extends State<OsTela> {
                   padding: const EdgeInsets.only(left: 52, top: 4),
                   child: Wrap(spacing: 8, runSpacing: 8, children: [
                     BotaoPdf(tipo: 'os', id: widget.id, nomeArquivo: '${os['codigo']}', rotulo: 'Relatório (PDF)'),
-                    if (editar && os['status'] != 'cancelada')
+                    if (mandar && os['status'] != 'cancelada')
                       OutlinedButton.icon(
                         onPressed: _mandarRelatorio,
                         icon: const Icon(Icons.chat_outlined, size: 18),
@@ -561,6 +583,38 @@ class _OsTelaState extends State<OsTela> {
                 ),
                 const SizedBox(height: 16),
 
+                // ---------- checklist (lote do plano ou ciclo do aparelho) ----------
+                if (os['plano_id'] != null) ...[
+                  _Secao(
+                    titulo: ciclo
+                        ? 'Checklist do ciclo'
+                        : 'Checklist do lote (${dataBr(os['plano_janela_inicio'])} a ${dataBr(os['plano_janela_fim'])})',
+                    children: [
+                      if (!_encerrada && !ciclo)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Text(
+                              'A equipe marca no app. Aparelho com tudo marcado fecha o ciclo e ganha a OS dele. Enquanto '
+                              'faltar algo, cada visita concluída gera a próxima na Fila; o que sobrar no fim do mês passa '
+                              'para o lote seguinte.',
+                              style: TextStyle(fontSize: 12, color: Cores.neutro)),
+                        ),
+                      if (ciclo && os['observacao_interna'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('${os['observacao_interna']}', style: const TextStyle(color: Cores.alerta)),
+                        ),
+                      ChecklistDaOs(
+                          osId: widget.id,
+                          editavel: editar && !_encerrada,
+                          versao: _versao,
+                          aoMudar: _carregar,
+                          ciclo: ciclo),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // ---------- agendamentos ----------
                 _Secao(
                   titulo: 'Agendamentos',
@@ -652,7 +706,9 @@ class _OsTelaState extends State<OsTela> {
                               child: Text(dataHoraBr(l['criado_em']),
                                   style: const TextStyle(color: Cores.neutro, fontSize: 13))),
                           Expanded(
-                            child: Text('${descreverEvento(l)} · ${l['ator_nome'] ?? ''}',
+                            child: Text(
+                                '${descreverEvento(l)}${l['origem'] == 'app' ? ' (pelo app)' : ''}'
+                                '${l['origem'] == 'plano' ? ' (automático, pelo plano)' : ' · ${l['ator_nome'] ?? ''}'}',
                                 style: const TextStyle(fontSize: 13)),
                           ),
                         ]),
@@ -790,6 +846,31 @@ String descreverEvento(Map<String, dynamic> l) {
     'os:link_relatorio': 'Link do relatório gerado',
     'os:link_relatorio_revogado': 'Link do relatório cancelado',
   };
+  if (entidade == 'os' && acao == 'cadastro_pelo_app') {
+    return [
+      if (dados['cliente'] != null) 'Cliente cadastrado no app: ${dados['cliente']}',
+      if (dados['cliente_existente'] != null) 'CPF/CNPJ já cadastrado: usado o cliente ${dados['cliente_existente']}',
+      if (dados['local'] != null) 'Local cadastrado no app: ${dados['local']}',
+      if (dados['contato'] != null) 'Contato cadastrado no app: ${dados['contato']}',
+      if (dados['equipamentos'] is List)
+        'Equipamento(s) cadastrado(s) no app: ${(dados['equipamentos'] as List).join(', ')}',
+    ].join(' · ');
+  }
+  if (entidade == 'os' && acao == 'ciclo') {
+    return 'Ciclo fechado: ${dados['codigo'] ?? ''}${dados['equipamento'] != null ? ' (${dados['equipamento']})' : ''}';
+  }
+  if (entidade == 'os' && acao == 'ciclo_concluido') return 'Ciclo do aparelho concluído no lote ${dados['lote'] ?? ''}';
+  if (entidade == 'os' && acao == 'ciclo_reaberto') return 'Ciclo reaberto (item desmarcado no lote)';
+  if (entidade == 'os' && acao == 'aparelho_transferido') return 'Aparelho veio do lote ${dados['de'] ?? ''}';
+  if (entidade == 'os' && acao == 'checklist') {
+    return 'Checklist da preventiva: ${dados['itens'] ?? ''} item(ns) marcado(s)';
+  }
+  if (entidade == 'agendamento' && acao == 'continuacao') {
+    return 'Continuação na fila: faltam ${dados['faltam'] ?? ''}';
+  }
+  if (entidade == 'os' && acao == 'ficou_na_fila') {
+    return '${dados['mensagem'] ?? 'Não deu para atender na hora: ficou na fila do escritório.'}';
+  }
   if (entidade == 'os' && acao == 'mensagem') {
     final titulo = modeloMensagem('${dados['modelo']}')?.titulo ?? '${dados['modelo']}';
     return 'Mensagem "$titulo" ${dados['meio'] == 'copiada' ? 'copiada' : 'pelo WhatsApp'} para ${dados['para'] ?? ''}';

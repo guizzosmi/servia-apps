@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:servia_comum/servia_comum.dart';
 
+import '../core/estado.dart';
 import '../core/formatos.dart';
 
 /// Etiqueta colorida de status: sempre cor e texto.
@@ -36,4 +38,29 @@ class Selo extends StatelessWidget {
         decoration: BoxDecoration(color: cor.withValues(alpha: .12), borderRadius: BorderRadius.circular(4)),
         child: Text(texto, style: TextStyle(fontSize: 11, color: cor, fontWeight: FontWeight.w700)),
       );
+}
+
+/// Situação de envio de um registro criado no aparelho (OS aberta, cadastro
+/// rápido): "Aguardando envio", "Recusado" ou null (já subiu, ou veio da
+/// plataforma).
+String? textoEnvio(Object? id) {
+  if (id == null) return null;
+  return switch (EstadoApp.instancia.banco?.criadosNaFila['$id']) {
+    'pendente' => 'Aguardando envio',
+    'recusada' => 'Recusado (veja Sincronização)',
+    _ => null,
+  };
+}
+
+/// Selo de envio (nada, se o registro já subiu).
+class SeloEnvio extends StatelessWidget {
+  const SeloEnvio(this.id, {super.key});
+  final Object? id;
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = textoEnvio(id);
+    if (texto == null) return const SizedBox.shrink();
+    return Selo(texto, texto.startsWith('Recusado') ? Cores.erro : Cores.alerta);
+  }
 }

@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
+import '../servicos/parametros.dart';
 
 /// Moldura do painel: menu lateral + barra superior com a empresa e "Sair".
 /// Em telas estreitas o menu vira uma gaveta (ícone ☰).
@@ -15,6 +16,8 @@ class Casca extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Parâmetros da empresa (menu, Início, planos): a gaveta fechada não é desenhada.
+    ParametrosEmpresa.instancia.garantir();
     final largura = MediaQuery.sizeOf(context).width;
     final largo = largura >= 1000;
     final celular = largura < 600;
@@ -84,7 +87,10 @@ class _Menu extends StatelessWidget {
                   color: Cores.neutro)),
         );
 
-    return ListView(
+    final param = ParametrosEmpresa.instancia..garantir();
+    return ListenableBuilder(
+      listenable: param,
+      builder: (context, _) => ListView(
       padding: const EdgeInsets.all(8),
       children: [
         item(Icons.home_outlined, 'Início', '/'),
@@ -93,6 +99,8 @@ class _Menu extends StatelessWidget {
         item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
         item(Icons.assignment_outlined, 'Ordens de serviço', '/os'),
         item(Icons.request_quote_outlined, 'Orçamentos', '/orcamentos'),
+        // Só para quem usa (Configurações > Preventivas).
+        if (param.usaPreventivas) item(Icons.event_repeat_outlined, param.nomePlanos, '/planos'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),
@@ -110,6 +118,7 @@ class _Menu extends StatelessWidget {
           title: Text('Financeiro'),
         ),
       ],
+      ),
     );
   }
 }

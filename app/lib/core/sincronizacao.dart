@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.4.0';
+const versaoApp = '0.6.1';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -244,6 +244,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
         respondidas.add(opId);
         if (m['ok'] == true) {
           aceitas.add(opId);
+          await _depoisDeAceita(lote.firstWhere((o) => o.opId == opId, orElse: () => lote.first), m);
         } else if (m['temporario'] == true) {
           await banco.marcarTentativa(opId, '${m['mensagem'] ?? 'Tentar de novo'}');
           parar = true; // tenta de novo na próxima sincronização
@@ -257,6 +258,30 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       if (parar || envio.any((o) => !respondidas.contains(o.opId))) return;
     }
   }
+
+  /// O que a plataforma respondeu e o técnico precisa saber.
+  Future<void> _depoisDeAceita(Operacao op, Map m) async {
+    if (op.opId != m['op_id'] || (op.tipo != 'os_abrir' && op.tipo != 'cadastro_app')) return;
+    // CPF/CNPJ que já existia: a OS ficou no cliente cadastrado; o cliente
+    // criado no aparelho sai da lista (senão aparece duplicado).
+    final novo = (op.dados['cliente_novo'] as Map?)?['id'];
+    if (novo != null && m['cliente_id'] != null && m['cliente_id'] != novo) {
+      await banco.apagarIds('clientes', ['$novo']);
+    }
+    final aviso = m['aviso'];
+    if (aviso is Map && (aviso['tipo'] == 'ficou_na_fila' || aviso['tipo'] == 'codigo_repetido')) {
+      final quem = op.tipo == 'os_abrir' ? '${m['codigo'] ?? 'OS'}: ' : '';
+      await banco.gravarMeta('aviso:${op.opId}', '$quem${aviso['mensagem']}', avisar: true);
+    }
+  }
+
+  /// Avisos da plataforma ainda não vistos (chave, texto).
+  List<(String, String)> get avisos => [
+        for (final k in banco.chavesMeta('aviso:'))
+          if (banco.meta(k) case final String t) (k, t),
+      ];
+
+  Future<void> dispensarAviso(String chave) => banco.gravarMeta(chave, null, avisar: true);
 
   /// Sobe para o bucket "fotos" os arquivos das fotos do lote que ainda
   /// não subiram. Sem internet, a falha interrompe a sincronização (tenta

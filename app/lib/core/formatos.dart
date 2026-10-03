@@ -52,8 +52,15 @@ const motivosNaoRealizado = {
   'outro': 'Outro',
 };
 
+/// Número da OS; a aberta no app fica "OS nova" até a plataforma numerar.
+String codigoOs(Map? os) => os == null ? '' : '${os['codigo'] ?? 'OS nova'}';
+
 /// Nome das operações da fila, para a tela de sincronização.
 const nomesOperacoes = {
+  'os_abrir': 'Abrir OS',
+  'cadastro_app': 'Cadastro (equipamento ou contato)',
+  'mensagem': 'Mensagem ao cliente',
+  'link_app': 'Link para o cliente',
   'item_status': 'Andamento do serviço',
   'checkin': 'Check-in',
   'checkout': 'Saída do serviço',
@@ -68,6 +75,7 @@ const nomesOperacoes = {
   'orcamento_app': 'Orçamento',
   'orcamento_assinar': 'Assinatura do orçamento',
   'aceite_conclusao': 'Assinatura da conclusão',
+  'checklist_marcar': 'Checklist da preventiva',
 };
 
 const statusOrcamento = {

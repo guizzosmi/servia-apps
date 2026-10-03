@@ -36,6 +36,9 @@ class ConfigApp {
 
   /// Modelos de mensagem que a empresa mudou (o resto é o padrão).
   Map? get mensagens => _d['mensagens'] as Map?;
+
+  /// Preventiva: item que pede foto só é marcado com a foto.
+  bool get fotoPreventivaObrigatoria => _d['preventiva_foto_obrigatoria'] != false;
 }
 
 /// Texto padrão do termo (o mesmo do PDF da plataforma), quando a empresa

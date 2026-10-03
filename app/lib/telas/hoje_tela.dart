@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../core/acoes_os.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
@@ -82,11 +83,25 @@ class _HojeTelaState extends State<HojeTela> {
               ),
             ],
           ),
+          floatingActionButton: AcoesOs.possoAbrir
+              ? FloatingActionButton.extended(
+                  onPressed: () => context.push('/nova-os'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nova OS'),
+                )
+              : null,
           body: RefreshIndicator(
             onRefresh: sync.sincronizar,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
               children: [
+                for (final (chave, texto) in sync.avisos)
+                  _Aviso(
+                    icone: Icons.info_outline,
+                    texto: texto,
+                    botao: 'Ok',
+                    aoTocar: () => sync.dispensarAviso(chave),
+                  ),
                 _SeletorDeDia(
                   hoje: hoje,
                   deslocamento: _deslocamento,
@@ -312,7 +327,7 @@ class _CartaoServico extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('${os['codigo'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(codigoOs(os), style: const TextStyle(fontWeight: FontWeight.w800)),
                   const Spacer(),
                   StatusChip(item['status'] as String?, statusItem),
                 ]),
@@ -331,6 +346,7 @@ class _CartaoServico extends StatelessWidget {
                 Wrap(spacing: 6, runSpacing: 4, children: [
                   if (ag['prioridade'] == 'urgente' || ag['prioridade'] == 'alta')
                     StatusChip(ag['prioridade'] as String?, prioridades),
+                  if (textoEnvio(os['id']) != null) SeloEnvio(os['id']),
                   if (item['incluido_apos_publicacao'] == true) const Selo('Novo', Cores.coral500),
                   if (item['alterado_apos_publicacao'] == true) const Selo('Alterado', Cores.alerta),
                   if (item['papel_equipe'] == 'apoio') const Selo('Apoio', Cores.andamento),

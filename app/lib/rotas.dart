@@ -6,6 +6,7 @@ import 'telas/atendimento_tela.dart';
 import 'telas/hoje_tela.dart';
 import 'telas/leitor_qr_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/nova_os_tela.dart';
 import 'telas/orcamento_tela.dart';
 import 'telas/revogado_tela.dart';
 import 'telas/servico_tela.dart';
@@ -32,6 +33,13 @@ final rotas = GoRouter(
     GoRoute(path: '/hoje', builder: (_, __) => const HojeTela()),
     GoRoute(path: '/sincronizacao', builder: (_, __) => const SincronizacaoTela()),
     GoRoute(path: '/ler-codigo', builder: (_, __) => const LeitorQrTela()),
+    GoRoute(
+      path: '/nova-os',
+      builder: (_, state) => NovaOsTela(
+        clienteId: state.uri.queryParameters['cliente'],
+        localId: state.uri.queryParameters['local'],
+      ),
+    ),
     GoRoute(
       path: '/atendimento/:id',
       builder: (_, state) {

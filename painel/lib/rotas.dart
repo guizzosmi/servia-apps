@@ -22,6 +22,8 @@ import 'telas/orcamentos_tela.dart';
 import 'telas/os_lista_tela.dart';
 import 'telas/os_nova_tela.dart';
 import 'telas/os_tela.dart';
+import 'telas/plano_tela.dart';
+import 'telas/planos_tela.dart';
 import 'telas/usuario_tela.dart';
 import 'telas/usuarios_tela.dart';
 
@@ -103,6 +105,20 @@ final rotas = GoRouter(
               builder: (_, state) {
                 final id = state.pathParameters['id']!;
                 return OrcamentoTela(key: ValueKey('orcamento-$id'), id: id);
+              },
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/planos',
+          builder: (_, __) => const PlanosTela(),
+          routes: [
+            GoRoute(path: 'novo', builder: (_, __) => const PlanoTela(key: ValueKey('plano-novo'))),
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return PlanoTela(key: ValueKey('plano-$id'), id: id);
               },
             ),
           ],

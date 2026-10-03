@@ -8,9 +8,12 @@ import 'package:path/path.dart' as p;
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_cadastro.dart';
 import '../core/arquivos.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
+import 'cadastros_rapidos.dart';
+import 'status_chip.dart';
 
 const _nomesLeitura = {
   'qr': 'QR',
@@ -102,6 +105,23 @@ class AbaEquipamentos extends StatelessWidget {
     }
   }
 
+  /// Equipamento que não está cadastrado: cadastra aqui e já identifica.
+  Future<void> _cadastrar(BuildContext context) async {
+    final os = EstadoApp.instancia.banco!.um('ordens_servico', atd['os_id']);
+    if (os == null) return;
+    final e = await cadastrarEquipamento(
+      context,
+      localId: os['local_id'] as String?,
+      codigosUsados: AcoesCadastro.codigosDoCliente(os['cliente_id']),
+    );
+    if (e == null || !context.mounted) return;
+    await AcoesCadastro.equipamentoNoAtendimento(atd, e);
+    if (context.mounted) {
+      _aviso(context,
+          'Cadastrado e identificado: ${e.rotulo}${e.provisorio ? ' (código provisório: dá para anotar no aparelho)' : ''}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final banco = EstadoApp.instancia.banco!;
@@ -131,11 +151,20 @@ class AbaEquipamentos extends StatelessWidget {
             ),
           ),
         ]),
+      if (habilitado)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => _cadastrar(context),
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Não está cadastrado? Cadastrar equipamento'),
+          ),
+        ),
       const SizedBox(height: 8),
       if (lista.isEmpty)
         const Padding(
           padding: EdgeInsets.all(16),
-          child: Text('Nenhum equipamento nesta OS. Leia a etiqueta ou escolha no local.',
+          child: Text('Nenhum equipamento nesta OS. Leia a etiqueta, escolha no local ou cadastre.',
               style: TextStyle(color: Cores.neutro)),
         ),
       for (final e in lista)
@@ -149,6 +178,7 @@ class AbaEquipamentos extends StatelessWidget {
                 banco.um('ambientes', e['ambiente_id'])?['nome'],
                 [e['marca'], e['modelo']].where((x) => x != null).join(' '),
                 if (id != null) 'Identificado (${_nomesLeitura[id['leitura']] ?? id['leitura']})',
+                textoEnvio(e['id']),
               ].where((x) => x != null && '$x'.isNotEmpty).join(' · ')),
               trailing: id == null && habilitado
                   ? Row(mainAxisSize: MainAxisSize.min, children: [
@@ -593,6 +623,34 @@ class AbaItens extends StatelessWidget {
 // Fotos
 // =====================================================================
 
+/// Foto só pela câmera, reduzida (1600 px, JPEG) e guardada na pasta do app
+/// até subir para a plataforma. Com [equipamentoId], fica ligada ao aparelho
+/// (ex.: checklist da preventiva). Devolve o id da foto (null se a pessoa
+/// desistiu).
+Future<String?> tirarFoto(Map<String, dynamic> atd, {String? equipamentoId}) async {
+  final foto = await ImagePicker().pickImage(
+    source: ImageSource.camera,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    imageQuality: 70,
+  );
+  if (foto == null) return null;
+  final id = AcoesAtendimento.novoId();
+  final pasta = await Arquivos.pastaFotos();
+  await pasta.create(recursive: true);
+  final destino = p.join(pasta.path, '$id.jpg');
+  final bytes = await foto.readAsBytes();
+  await File(destino).writeAsBytes(bytes, flush: true);
+  await AcoesAtendimento.registrarFoto(
+    atd,
+    fotoId: id,
+    arquivoLocal: destino,
+    sha256: sha256.convert(bytes).toString(),
+    equipamentoId: equipamentoId,
+  );
+  return id;
+}
+
 class AbaFotos extends StatefulWidget {
   const AbaFotos({super.key, required this.atd, required this.habilitado});
 
@@ -606,30 +664,10 @@ class AbaFotos extends StatefulWidget {
 class _AbaFotosState extends State<AbaFotos> {
   bool _tirando = false;
 
-  /// Foto só pela câmera, reduzida (1600 px, JPEG) e guardada na pasta
-  /// do app até subir para a plataforma.
   Future<void> _tirar() async {
     setState(() => _tirando = true);
     try {
-      final foto = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 70,
-      );
-      if (foto == null) return;
-      final id = AcoesAtendimento.novoId();
-      final pasta = await Arquivos.pastaFotos();
-      await pasta.create(recursive: true);
-      final destino = p.join(pasta.path, '$id.jpg');
-      final bytes = await foto.readAsBytes();
-      await File(destino).writeAsBytes(bytes, flush: true);
-      await AcoesAtendimento.registrarFoto(
-        widget.atd,
-        fotoId: id,
-        arquivoLocal: destino,
-        sha256: sha256.convert(bytes).toString(),
-      );
+      await tirarFoto(widget.atd);
     } catch (e) {
       if (mounted) _aviso(context, 'Não foi possível tirar a foto: $e');
     } finally {

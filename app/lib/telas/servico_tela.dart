@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_checklist.dart';
 import '../core/acoes_mensagens.dart';
+import '../core/acoes_os.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
@@ -48,8 +50,19 @@ class ServicoTela extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('${os['codigo'] ?? 'Serviço'}'),
-            actions: const [IndicadorSync()],
+            title: Text(os.isEmpty ? 'Serviço' : codigoOs(os)),
+            actions: [
+              const IndicadorSync(),
+              if (AcoesOs.possoAbrir && os['cliente_id'] != null)
+                IconButton(
+                  tooltip: 'Outra OS neste cliente',
+                  icon: const Icon(Icons.add_task),
+                  onPressed: () => context.push(Uri(path: '/nova-os', queryParameters: {
+                    'cliente': '${os['cliente_id']}',
+                    if (os['local_id'] != null) 'local': '${os['local_id']}',
+                  }).toString()),
+                ),
+            ],
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
@@ -61,6 +74,14 @@ class ServicoTela extends StatelessWidget {
                 const Spacer(),
                 Text(tiposAgendamento[ag['tipo']] ?? '', style: const TextStyle(color: Cores.neutro)),
               ]),
+              if (textoEnvio(os['id']) case final envio?)
+                _Faixa(
+                  icone: envio.startsWith('Recusado') ? Icons.error_outline : Icons.cloud_upload_outlined,
+                  texto: envio.startsWith('Recusado')
+                      ? 'A plataforma recusou esta OS. Veja o motivo em Sincronização.'
+                      : 'Aguardando envio: esta OS foi aberta no celular e sobe quando houver internet.',
+                  cor: envio.startsWith('Recusado') ? Cores.erro : Cores.alerta,
+                ),
               if (os['garantia_status'] == 'confirmada')
                 const _Faixa(
                   icone: Icons.verified_user_outlined,
@@ -84,6 +105,19 @@ class ServicoTela extends StatelessWidget {
               ]),
               _Secao(titulo: 'O que fazer', filhos: [
                 if ((os['problema_relatado'] ?? '').toString().isNotEmpty) Text('${os['problema_relatado']}'),
+                if (AcoesChecklist.temChecklist(os['id']))
+                  Builder(builder: (_) {
+                    final and = AcoesChecklist.andamento(os['id']);
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Checklist do lote: ${and.prontas} de ${and.total} pronto(s) · até ${dataBr(and.prazo)}',
+                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(value: and.fracao, minHeight: 6, borderRadius: BorderRadius.circular(3)),
+                      ]),
+                    );
+                  }),
                 for (final o in orientacoes)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),

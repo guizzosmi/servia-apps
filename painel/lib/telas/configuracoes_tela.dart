@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../servicos/parametros.dart';
 import '../widgets/margem.dart';
 
-/// Configurações da empresa (só o admin altera): orçamento no app e
-/// assinatura do cliente. Os valores ficam em empresa_config.parametros.
+/// Configurações da empresa (só o admin altera): preventivas, orçamento no
+/// app, assinatura do cliente e mensagens. Os valores ficam em empresa_config.parametros.
 class ConfiguracoesTela extends StatefulWidget {
   const ConfiguracoesTela({super.key});
 
@@ -47,6 +48,12 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   final _termo = TextEditingController();
   // Modelos das mensagens do WhatsApp (o padrão vem do pacote comum).
   final _modelos = {for (final m in modelosMensagem) m.chave: TextEditingController()};
+  // Preventivas: menu, PMOC e os números da geração e dos cards.
+  bool _usaPrev = true;
+  bool _pmoc = false;
+  final _antecedencia = TextEditingController();
+  final _tolerancia = TextEditingController();
+  bool _fotoObrigatoria = true;
   bool _sujo = false;
 
   @override
@@ -60,6 +67,8 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
     _desconto.dispose();
     _validade.dispose();
     _termo.dispose();
+    _antecedencia.dispose();
+    _tolerancia.dispose();
     for (final c in _modelos.values) {
       c.dispose();
     }
@@ -94,6 +103,12 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         for (final m in modelosMensagem) {
           _modelos[m.chave]!.text = textoDoModelo(m.chave, p['mensagens'] as Map?);
         }
+        final prev = Map<String, dynamic>.from((p['preventivas'] as Map?) ?? const {});
+        _usaPrev = prev['usa'] != false;
+        _pmoc = prev['pmoc'] == true;
+        _antecedencia.text = _numero(p['antecedencia_preventivas_dias'] ?? 15);
+        _tolerancia.text = _numero(prev['tolerancia_dias'] ?? 15);
+        _fotoObrigatoria = prev['foto_obrigatoria'] != false;
         _sujo = false;
       });
     } catch (e) {
@@ -114,8 +129,23 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       _avisar('Validade: de 1 a 365 dias.', erro: true);
       return;
     }
+    final antecedencia = int.tryParse(_antecedencia.text.trim());
+    final tolerancia = int.tryParse(_tolerancia.text.trim());
+    if (antecedencia == null || antecedencia < 0 || antecedencia > 90) {
+      _avisar('Antecedência das preventivas: de 0 a 90 dias.', erro: true);
+      return;
+    }
+    if (tolerancia == null || tolerancia < 0 || tolerancia > 90) {
+      _avisar('Tolerância: de 0 a 90 dias.', erro: true);
+      return;
+    }
     setState(() => _salvando = true);
     try {
+      final prev = Map<String, dynamic>.from((_parametros['preventivas'] as Map?) ?? const {})
+        ..['usa'] = _usaPrev
+        ..['pmoc'] = _usaPrev && _pmoc
+        ..['tolerancia_dias'] = tolerancia
+        ..['foto_obrigatoria'] = _fotoObrigatoria;
       // Muda só estas chaves: o resto dos parâmetros continua como está.
       final orc = Map<String, dynamic>.from((_parametros['orcamento'] as Map?) ?? const {})
         ..['quem_monta'] = _quem
@@ -134,12 +164,20 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
           if (_modelos[m.chave]!.text.trim().isNotEmpty && _modelos[m.chave]!.text.trim() != m.padrao.trim())
             m.chave: _modelos[m.chave]!.text.trim(),
       };
-      final novos = {..._parametros, 'orcamento': orc, 'aceite_conclusao': _conclusao, 'mensagens': mensagens};
+      final novos = {
+        ..._parametros,
+        'orcamento': orc,
+        'aceite_conclusao': _conclusao,
+        'mensagens': mensagens,
+        'preventivas': prev,
+        'antecedencia_preventivas_dias': antecedencia,
+      };
       await _db
           .from('empresa_config')
           .update({'parametros': novos})
           .eq('empresa_id', Sessao.atual!.empresaId!);
       _avisar('Configurações salvas. O app recebe na próxima sincronização.');
+      await ParametrosEmpresa.instancia.recarregar(); // o menu acompanha
       await _carregar();
     } catch (e) {
       _avisar(mensagemDeErro(e), erro: true);
@@ -172,6 +210,85 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Preventivas', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('O menu mostra só o que a empresa usa.', style: TextStyle(color: Cores.neutro)),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Usa planos de preventiva'),
+                  subtitle: const Text('Serviços recorrentes (manutenção preventiva, contratos): menu, OS automáticas '
+                      'e os cards de prazo na Início'),
+                  value: _usaPrev,
+                  onChanged: admin ? (v) => setState(() {
+                        _usaPrev = v;
+                        _sujo = true;
+                      }) : null,
+                ),
+                if (_usaPrev) ...[
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Atende PMOC (climatização)'),
+                    subtitle: const Text('Plano do tipo PMOC, responsável técnico e as atividades padrão da '
+                        'Portaria GM/MS 3.523/98'),
+                    value: _pmoc,
+                    onChanged: admin ? (v) => setState(() {
+                          _pmoc = v;
+                          _sujo = true;
+                        }) : null,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 16, runSpacing: 12, children: [
+                    SizedBox(
+                      width: 210,
+                      child: TextField(
+                        controller: _antecedencia,
+                        enabled: admin,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Gerar o lote com antecedência',
+                          suffixText: 'dias',
+                          helperText: 'O lote do mês seguinte nasce isso antes (o plano pode ter a sua)',
+                          helperMaxLines: 2,
+                        ),
+                        onChanged: (_) => _mudou(),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 210,
+                      child: TextField(
+                        controller: _tolerancia,
+                        enabled: admin,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Tolerância',
+                          suffixText: 'dias',
+                          helperText: 'Janela antes do vencimento de cada aparelho (o plano pode ter a sua)',
+                          helperMaxLines: 2,
+                        ),
+                        onChanged: (_) => _mudou(),
+                      ),
+                    ),
+                  ]),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Foto obrigatória nos itens que pedem foto'),
+                    subtitle: const Text('No app, a câmera abre ao marcar o item; sem a foto, ele não é marcado. '
+                        'Desligado, dá para marcar sem a foto'),
+                    value: _fotoObrigatoria,
+                    onChanged: admin ? (v) => setState(() {
+                          _fotoObrigatoria = v;
+                          _sujo = true;
+                        }) : null,
+                  ),
+                ],
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),

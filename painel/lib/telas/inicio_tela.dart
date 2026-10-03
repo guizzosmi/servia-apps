@@ -4,10 +4,12 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
+import '../servicos/parametros.dart';
 import '../widgets/margem.dart';
+import '../widgets/prazos_preventivas.dart';
 
-/// Tela inicial: atalhos e contadores dos cadastros.
-/// (O quadro do dia entra aqui na etapa de agendamentos.)
+/// Tela inicial: números da operação, prazos das preventivas (quando a
+/// empresa usa) e contadores dos cadastros.
 class InicioTela extends StatefulWidget {
   const InicioTela({super.key});
 
@@ -110,7 +112,19 @@ class _InicioTelaState extends State<InicioTela> {
             _cartaoOperacao(Icons.assignment_outlined, 'OS em aberto', _osAbertas, '/os'),
             _cartaoOperacao(Icons.request_quote_outlined, 'Orçamentos em Aberto', _orcamentosEmAberto, '/orcamentos'),
           ]),
-          const SizedBox(height: 16),
+          // Abrir a Início também gera as OS de preventiva que já podem nascer.
+          ListenableBuilder(
+            listenable: ParametrosEmpresa.instancia,
+            builder: (context, _) {
+              final p = ParametrosEmpresa.instancia;
+              if (!p.carregado || !p.usaPreventivas) return const SizedBox.shrink();
+              return const Padding(
+                padding: EdgeInsets.only(top: 24),
+                child: PrazosPreventivas(),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
           Wrap(
             spacing: 16,
             runSpacing: 16,

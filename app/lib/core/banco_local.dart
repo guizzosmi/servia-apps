@@ -25,6 +25,7 @@ const tabelasDoDia = [
   'orcamentos',
   'orcamento_itens',
   'aceites',
+  'plano_execucoes',
 ];
 
 /// Uma ação feita no app, esperando para subir para a plataforma.
@@ -145,6 +146,43 @@ class BancoLocal extends ChangeNotifier {
   Future<void> _carregarFila() async {
     final linhas = await _db.query('fila', orderBy: 'seq');
     _fila = linhas.map(Operacao.daLinha).toList();
+    _naFila = null;
+  }
+
+  Map<String, String>? _naFila;
+
+  /// Registros criados no aparelho (OS aberta, cadastro rápido) que ainda
+  /// não subiram: id -> 'pendente' (aguardando envio) ou 'recusada'.
+  Map<String, String> get criadosNaFila => _naFila ??= {
+        for (final op in _fila)
+          for (final id in _idsCriados(op)) id: op.situacao,
+      };
+
+  static Iterable<String> _idsCriados(Operacao op) sync* {
+    final d = op.dados;
+    Iterable<String> doMapa(Object? m) sync* {
+      if (m is! Map) return;
+      if (m['id'] != null) yield '${m['id']}';
+      for (final k in const ['ambiente_novo', 'tipo_novo']) {
+        final filho = m[k];
+        if (filho is Map && filho['id'] != null) yield '${filho['id']}';
+      }
+    }
+
+    switch (op.tipo) {
+      case 'os_abrir':
+        for (final k in const ['os_id', 'agendamento_id', 'parte_item_id']) {
+          if (d[k] != null) yield '${d[k]}';
+        }
+        for (final k in const ['cliente_novo', 'local_novo', 'contato_novo']) {
+          yield* doMapa(d[k]);
+        }
+        for (final e in (d['equipamentos_novos'] as List?) ?? const []) {
+          yield* doMapa(e);
+        }
+      case 'cadastro_app':
+        yield* doMapa(d['dados']);
+    }
   }
 
   // ------------------------------------------------------------------

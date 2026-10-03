@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_checklist.dart';
 import '../core/acoes_mensagens.dart';
 import '../core/acoes_orcamento.dart';
 import '../core/banco_local.dart';
@@ -10,6 +11,7 @@ import '../core/consultas.dart';
 import '../core/conteudos.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../widgets/aba_checklist.dart';
 import '../widgets/aba_orcamento.dart';
 import '../widgets/abas_atendimento.dart';
 import '../widgets/entrar_no_servico.dart';
@@ -116,6 +118,20 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
               TextField(controller: nome, decoration: const InputDecoration(labelText: 'Nome de quem acompanhou')),
             const SizedBox(height: 8),
             const Text('Todos que estão no serviço saem agora.', style: TextStyle(color: Cores.neutro)),
+            if (AcoesChecklist.temChecklist(atd['os_id']))
+              Builder(builder: (_) {
+                final and = AcoesChecklist.andamento(atd['os_id']);
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    and.faltam == 0
+                        ? 'Checklist do lote completo.'
+                        : 'Checklist: faltam ${and.faltam} de ${and.total}. Eles voltam para a fila numa nova visita '
+                            '(lote até ${dataBr(and.prazo)}).',
+                    style: TextStyle(color: and.faltam == 0 ? Cores.sucesso : Cores.alerta, fontWeight: FontWeight.w600),
+                  ),
+                );
+              }),
           ]),
           actions: [
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
@@ -291,50 +307,51 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
         final os = banco.um('ordens_servico', atd['os_id']) ?? const {};
         final cliente = banco.um('clientes', os['cliente_id']) ?? const {};
         final aberto = atd['status'] == 'em_andamento' || atd['status'] == 'pausado';
+        // OS preventiva do plano: o checklist vem primeiro.
+        final checklist = AcoesChecklist.temChecklist(atd['os_id']);
+        final abas = <(String, Widget)>[
+          if (checklist) ('Checklist', AbaChecklist(atd: atd, habilitado: aberto)),
+          (
+            'Relato',
+            _Relato(
+              controles: _relato,
+              habilitado: aberto,
+              sujo: _sujo,
+              aoMudar: () => setState(() => _sujo = true),
+              aoSalvar: _salvarRelato,
+            )
+          ),
+          ('Equipamentos', AbaEquipamentos(atd: atd, habilitado: aberto)),
+          ('Medições', AbaMedicoes(atd: atd, habilitado: aberto)),
+          ('Itens', AbaItens(atd: atd, habilitado: aberto)),
+          ('Fotos', AbaFotos(atd: atd, habilitado: aberto)),
+          ('Orçamento', AbaOrcamento(atd: atd, habilitado: aberto)),
+        ];
 
         return PopScope(
           onPopInvokedWithResult: (didPop, _) {
             if (didPop) _salvarRelato(avisar: false);
           },
           child: DefaultTabController(
-            length: 6,
+            key: ValueKey(abas.length),
+            length: abas.length,
             child: Scaffold(
               appBar: AppBar(
                 title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${os['codigo'] ?? 'Atendimento'}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(os.isEmpty ? 'Atendimento' : codigoOs(os), style: const TextStyle(fontWeight: FontWeight.w800)),
                   Text('${cliente['nome'] ?? ''}', style: const TextStyle(fontSize: 13, color: Cores.neutro)),
                 ]),
                 actions: const [IndicadorSync()],
-                bottom: const TabBar(
+                bottom: TabBar(
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
-                  tabs: [
-                    Tab(text: 'Relato'),
-                    Tab(text: 'Equipamentos'),
-                    Tab(text: 'Medições'),
-                    Tab(text: 'Itens'),
-                    Tab(text: 'Fotos'),
-                    Tab(text: 'Orçamento'),
-                  ],
+                  tabs: [for (final a in abas) Tab(text: a.$1)],
                 ),
               ),
               body: Column(children: [
                 _QuemEsta(banco: banco, atd: atd, aberto: aberto),
                 Expanded(
-                  child: TabBarView(children: [
-                    _Relato(
-                      controles: _relato,
-                      habilitado: aberto,
-                      sujo: _sujo,
-                      aoMudar: () => setState(() => _sujo = true),
-                      aoSalvar: _salvarRelato,
-                    ),
-                    AbaEquipamentos(atd: atd, habilitado: aberto),
-                    AbaMedicoes(atd: atd, habilitado: aberto),
-                    AbaItens(atd: atd, habilitado: aberto),
-                    AbaFotos(atd: atd, habilitado: aberto),
-                    AbaOrcamento(atd: atd, habilitado: aberto),
-                  ]),
+                  child: TabBarView(children: [for (final a in abas) a.$2]),
                 ),
               ]),
               bottomNavigationBar: aberto

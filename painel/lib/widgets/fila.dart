@@ -8,7 +8,7 @@ import 'status_chip.dart';
 /// Colunas lidas para a fila (usadas também no quadro da parte diária).
 const selectFila = 'id, os_id, tipo, status, data_prevista, janela_inicio, janela_fim, duracao_estimada_min, '
     'prioridade, orientacoes, tentativas, ultimo_motivo, motivo_suspensao, criado_em, '
-    'ordens_servico(codigo, problema_relatado, garantia_status, requer_orcamento, '
+    'ordens_servico(codigo, origem, problema_relatado, garantia_status, requer_orcamento, '
     'clientes(nome), locais(nome, cidade, regiao))';
 
 /// Agendamentos na fila (pendentes) e, se pedido, os suspensos.
@@ -91,6 +91,20 @@ class CartaoFila extends StatelessWidget {
               Text('${os['codigo'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(width: 6),
               StatusChip(ag['prioridade'] as String?, prioridades, compacto: true),
+              if (os['origem'] == 'app')
+                const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Tooltip(
+                      message: 'Aberta pelo app',
+                      child: Icon(Icons.phone_android, size: 16, color: Cores.indigo500)),
+                ),
+              if (os['origem'] == 'plano')
+                const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Tooltip(
+                      message: 'Preventiva gerada pelo plano',
+                      child: Icon(Icons.event_repeat, size: 16, color: Cores.indigo500)),
+                ),
               if (os['garantia_status'] == 'sugerida' || os['garantia_status'] == 'confirmada')
                 const Padding(
                   padding: EdgeInsets.only(left: 6),

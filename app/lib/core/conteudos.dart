@@ -29,7 +29,7 @@ class Conteudos {
       ('Local', _endereco(_um('locais', os['local_id']))),
       if (contato != null) ('Contato', '${contato['nome']}'),
       if (contato == null && (aprovadorNome ?? '').trim().isNotEmpty) ('Quem aprova', aprovadorNome!.trim()),
-      ('Ordem de serviço', '${os['codigo'] ?? ''}'),
+      ('Ordem de serviço', codigoOs(os)),
       if (equipamentos.isNotEmpty)
         ('Equipamentos', equipamentos.map((e) => [e['codigo'], e['descricao']].where((x) => x != null).join(' ')).join('; ')),
     ];
@@ -123,7 +123,7 @@ class Conteudos {
       ..sort((a, b) => '${a['descricao']}'.compareTo('${b['descricao']}'));
     return ConteudoResumo(
       titulo: 'RECIBO DE SERVIÇO',
-      subtitulo: '${_um('ordens_servico', atd['os_id'])?['codigo'] ?? ''} · ${dataBr(EstadoApp.instancia.sync!.hoje)}',
+      subtitulo: '${codigoOs(_um('ordens_servico', atd['os_id']))} · ${dataBr(EstadoApp.instancia.sync!.hoje)}',
       empresa: AcoesOrcamento.empresa,
       campos: [
         ..._cabecalho(atd),

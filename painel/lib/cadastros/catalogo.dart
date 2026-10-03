@@ -63,6 +63,26 @@ const _situacoesEquip = [
   Opcao('removido', 'Removido'),
 ];
 
+// Quem cadastrou (clientes, locais, contatos, ambientes, equipamentos e tipos).
+// Na lista, só o "app" aparece.
+const _origensCadastro = [
+  Opcao('painel', 'Painel'),
+  Opcao('app', 'App (o técnico cadastrou: confira os dados)'),
+  Opcao('importacao', 'Planilha'),
+];
+const _origensNaLista = [Opcao('painel', ''), Opcao('app', 'Pelo app'), Opcao('importacao', '')];
+
+// Mesmos códigos de modelos_atividade / plano_atividades.
+const _periodicidades = [
+  Opcao('semanal', 'Semanal'),
+  Opcao('quinzenal', 'Quinzenal (15 dias)'),
+  Opcao('mensal', 'Mensal'),
+  Opcao('bimestral', 'Bimestral'),
+  Opcao('trimestral', 'Trimestral'),
+  Opcao('semestral', 'Semestral'),
+  Opcao('anual', 'Anual'),
+];
+
 const _tiposProduto = [Opcao('produto', 'Produto'), Opcao('servico', 'Serviço')];
 
 const _funcoesColab = [
@@ -121,9 +141,12 @@ final List<CadastroDef> catalogo = [
       ColunaDef('nome', 'Nome', flex: 3),
       ColunaDef('documento', 'CPF/CNPJ', tipo: TipoCampo.documento),
       ColunaDef('telefone', 'Telefone', tipo: TipoCampo.telefone),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
       ColunaDef('ativo', 'Ativo', tipo: TipoCampo.simNao, flex: 1),
     ],
     campos: [
+      const CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       const CampoDef('tipo', 'Tipo',
           tipo: TipoCampo.opcoes, opcoes: _tiposCliente, obrigatorio: true,
           padrao: 'pj', metade: true),
@@ -160,8 +183,11 @@ final List<CadastroDef> catalogo = [
       ColunaDef('cidade', 'Cidade'),
       ColunaDef('regiao', 'Região'),
       ColunaDef('distancia_km', 'Km', tipo: TipoCampo.numero, flex: 1),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
     ],
     campos: [
+      const CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       const CampoDef('cliente_id', 'Cliente',
           tipo: TipoCampo.lookup, obrigatorio: true,
           lookup: Lookup(tabela: 'clientes')),
@@ -206,8 +232,11 @@ final List<CadastroDef> catalogo = [
       ColunaDef('nome', 'Nome', flex: 3),
       ColunaDef('setor_andar', 'Setor/andar'),
       ColunaDef('area_m2', 'Área (m²)', tipo: TipoCampo.numero, flex: 1),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
     ],
     campos: [
+      CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       CampoDef('local_id', 'Local',
           tipo: TipoCampo.lookup, obrigatorio: true,
           lookup: Lookup(tabela: 'locais', colunaDetalhe: 'cidade')),
@@ -237,8 +266,11 @@ final List<CadastroDef> catalogo = [
       ColunaDef('cargo', 'Cargo'),
       ColunaDef('telefone', 'Telefone', tipo: TipoCampo.telefone),
       ColunaDef('funcoes', 'Funções', tipo: TipoCampo.multiOpcoes, opcoes: _funcoesContato, flex: 3),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
     ],
     campos: [
+      CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       CampoDef('cliente_id', 'Cliente',
           tipo: TipoCampo.lookup, obrigatorio: true,
           lookup: Lookup(tabela: 'clientes')),
@@ -277,8 +309,11 @@ final List<CadastroDef> catalogo = [
       ColunaDef('clientes.nome', 'Cliente'),
       ColunaDef('locais.nome', 'Local'),
       ColunaDef('situacao', 'Situação', tipo: TipoCampo.opcoes, opcoes: _situacoesEquip, flex: 1),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
     ],
     campos: [
+      CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       CampoDef('codigo', 'Código (plaqueta/patrimônio)', obrigatorio: true, metade: true,
           ajuda: 'O número da plaqueta do cliente (pode repetir entre clientes diferentes)'),
       CampoDef('qr_token', 'Código do QR', somenteLeitura: true, somenteNaEdicao: true,
@@ -365,9 +400,12 @@ final List<CadastroDef> catalogo = [
     colunas: [
       ColunaDef('nome', 'Nome', flex: 3),
       ColunaDef('categoria', 'Categoria', tipo: TipoCampo.opcoes, opcoes: _categoriasTipo),
+      ColunaDef('origem', 'Origem', tipo: TipoCampo.opcoes, opcoes: _origensNaLista, flex: 1),
       ColunaDef('ativo', 'Ativo', tipo: TipoCampo.simNao, flex: 1),
     ],
     campos: [
+      CampoDef('origem', 'Cadastrado no', tipo: TipoCampo.opcoes, opcoes: _origensCadastro,
+          somenteLeitura: true, somenteNaEdicao: true),
       CampoDef('nome', 'Nome', obrigatorio: true, metade: true,
           ajuda: 'Ex.: Split hi-wall, Câmara fria, Self contained'),
       CampoDef('categoria', 'Categoria',
@@ -377,6 +415,39 @@ final List<CadastroDef> catalogo = [
     ],
     filhos: [FilhoDef('modelos-medicao', 'tipo_equipamento_id')],
     aviso: 'Os tipos de equipamento e as medições valem para todas as empresas da conta.',
+  ),
+
+  const CadastroDef(
+    chave: 'modelos-atividade',
+    tabela: 'modelos_atividade',
+    titulo: 'Biblioteca de atividades',
+    singular: 'Atividade',
+    icone: Icons.checklist_outlined,
+    select: '*, tipos_equipamento(nome)',
+    colunasBusca: ['descricao'],
+    ordem: 'ordem',
+    colunaTitulo: 'descricao',
+    colunas: [
+      ColunaDef('descricao', 'Atividade', flex: 4),
+      ColunaDef('tipos_equipamento.nome', 'Tipo (vazio = geral do plano)'),
+      ColunaDef('periodicidade', 'Periodicidade', tipo: TipoCampo.opcoes, opcoes: _periodicidades),
+      ColunaDef('ativo', 'Ativa', tipo: TipoCampo.simNao, flex: 1),
+    ],
+    campos: [
+      CampoDef('tipo_equipamento_id', 'Tipo de equipamento',
+          tipo: TipoCampo.lookup, lookup: Lookup(tabela: 'tipos_equipamento'),
+          ajuda: 'Vazio: atividade geral do plano (uma vez por período, ex.: avaliação da qualidade do ar)'),
+      CampoDef('descricao', 'Descrição', obrigatorio: true, ajuda: 'Vira um item do checklist da OS preventiva'),
+      CampoDef('periodicidade', 'Periodicidade',
+          tipo: TipoCampo.opcoes, opcoes: _periodicidades, obrigatorio: true, padrao: 'mensal', metade: true),
+      CampoDef('ordem', 'Ordem no checklist', tipo: TipoCampo.inteiro, padrao: 0, metade: true),
+      CampoDef('exige_foto', 'Exige foto', tipo: TipoCampo.simNao, metade: true),
+      CampoDef('ativo', 'Ativa', tipo: TipoCampo.simNao, padrao: true, metade: true),
+      CampoDef('observacao', 'Observação', tipo: TipoCampo.textoLongo,
+          ajuda: 'Ex.: produto a usar, norma de referência'),
+    ],
+    aviso: 'A biblioteca é copiada para cada plano, onde dá para ajustar. No plano, "Copiar da biblioteca" '
+        'oferece carregar o padrão do PMOC (Portaria 3.523/98) quando ainda não há atividades para o tipo.',
   ),
 
   const CadastroDef(
@@ -450,6 +521,8 @@ final List<CadastroDef> catalogo = [
           tipo: TipoCampo.opcoes, opcoes: _momentoComissao, obrigatorio: true,
           padrao: 'fechamento_os', metade: true),
       CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
+      CampoDef('pode_abrir_os', 'Pode abrir OS pelo app', tipo: TipoCampo.simNao, padrao: false, metade: true,
+          ajuda: 'Abre OS no celular (atende na hora ou manda para o escritório) e cadastra cliente novo, se precisar.'),
     ],
     aviso: 'Colaborador é quem executa serviços. O acesso ao app (usuário e senha) '
         'é liberado na tela de usuários, na próxima etapa.',
