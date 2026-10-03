@@ -101,6 +101,8 @@ class _Menu extends StatelessWidget {
         item(Icons.request_quote_outlined, 'Orçamentos', '/orcamentos'),
         // Só para quem usa (Configurações > Preventivas).
         if (param.usaPreventivas) item(Icons.event_repeat_outlined, param.nomePlanos, '/planos'),
+        grupo('Financeiro'),
+        item(Icons.handshake_outlined, 'Contratos', '/contratos'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),
@@ -115,7 +117,7 @@ class _Menu extends StatelessWidget {
           dense: true,
           enabled: false,
           leading: Icon(Icons.payments_outlined, size: 20),
-          title: Text('Financeiro'),
+          title: Text('Faturamento'),
         ),
       ],
       ),

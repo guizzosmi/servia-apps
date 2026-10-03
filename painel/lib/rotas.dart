@@ -12,6 +12,8 @@ import 'telas/cadastro_form_tela.dart';
 import 'telas/cadastro_lista_tela.dart';
 import 'telas/casca.dart';
 import 'telas/configuracoes_tela.dart';
+import 'telas/contrato_tela.dart';
+import 'telas/contratos_tela.dart';
 import 'telas/empresa_tela.dart';
 import 'telas/etiquetas_tela.dart';
 import 'telas/fila_tela.dart';
@@ -119,6 +121,20 @@ final rotas = GoRouter(
               builder: (_, state) {
                 final id = state.pathParameters['id']!;
                 return PlanoTela(key: ValueKey('plano-$id'), id: id);
+              },
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/contratos',
+          builder: (_, __) => const ContratosTela(),
+          routes: [
+            GoRoute(path: 'novo', builder: (_, __) => const ContratoTela(key: ValueKey('contrato-novo'))),
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return ContratoTela(key: ValueKey('contrato-$id'), id: id);
               },
             ),
           ],

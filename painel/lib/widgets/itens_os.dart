@@ -152,6 +152,7 @@ class _ItensDaOsState extends State<ItensDaOs> {
 
   String _origem(Map<String, dynamic> i) {
     if (i['origem'] == 'orcamento') return 'Orçamento';
+    if (i['origem'] == 'contrato') return 'Contrato';
     final item = (i['atendimentos'] as Map?)?['partes_itens'] as Map?;
     if (item == null) return 'Painel';
     final equipe = ((item['partes_diarias'] as Map?)?['equipes'] as Map?)?['nome'];

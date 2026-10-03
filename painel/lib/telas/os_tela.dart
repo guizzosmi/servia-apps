@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/lista.dart';
+import '../servicos/contratos.dart';
 import '../servicos/documentos.dart';
 import '../servicos/status.dart';
 import '../servicos/whatsapp.dart';
@@ -56,7 +57,7 @@ class _OsTelaState extends State<OsTela> {
       final os = await _db
           .from('ordens_servico')
           .select('*, clientes(nome, telefone), locais(nome, logradouro, numero, bairro, cidade, uf, instrucoes_acesso), '
-              'contatos(nome, telefone)')
+              'contatos(nome, telefone), contratos(codigo, modalidade)')
           .eq('id', widget.id)
           .single();
       String? codigoOrigem;
@@ -479,6 +480,15 @@ class _OsTelaState extends State<OsTela> {
                           tooltip: 'Abrir o plano',
                           visualDensity: VisualDensity.compact,
                           onPressed: () => context.push('/planos/${os['plano_id']}'),
+                        ),
+                      if (os['contratos'] case final Map contrato)
+                        ActionChip(
+                          avatar: const Icon(Icons.handshake_outlined, size: 16, color: Cores.indigo700),
+                          label: Text('Contrato ${contrato['codigo']} · '
+                              '${modalidadesContrato[contrato['modalidade']]?.texto ?? ''}'),
+                          tooltip: 'Abrir o contrato',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => context.push('/contratos/${os['contrato_id']}'),
                         ),
                     ]),
                   ),

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
 import '../servicos/parametros.dart';
+import '../widgets/avisos_contratos.dart';
 import '../widgets/margem.dart';
 import '../widgets/prazos_preventivas.dart';
 
@@ -124,6 +125,8 @@ class _InicioTelaState extends State<InicioTela> {
               );
             },
           ),
+          // Reajuste perto, franquia passada, OS do aparelho sem preço.
+          const AvisosContratos(),
           const SizedBox(height: 24),
           Wrap(
             spacing: 16,
