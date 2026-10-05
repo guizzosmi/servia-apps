@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/estado.dart';
 import 'telas/atendimento_tela.dart';
+import 'telas/encerrar_dia_tela.dart';
 import 'telas/hoje_tela.dart';
 import 'telas/leitor_qr_tela.dart';
 import 'telas/login_tela.dart';
@@ -54,6 +55,13 @@ final rotas = GoRouter(
       builder: (_, state) {
         final id = state.pathParameters['id']!;
         return OrcamentoTela(key: ValueKey('orcamento-$id'), atendimentoId: id);
+      },
+    ),
+    GoRoute(
+      path: '/encerrar-dia/:id',
+      builder: (_, state) {
+        final id = state.pathParameters['id']!;
+        return EncerrarDiaTela(key: ValueKey('encerrar-$id'), parteId: id);
       },
     ),
     GoRoute(

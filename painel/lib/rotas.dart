@@ -81,7 +81,8 @@ final rotas = GoRouter(
           path: '/quadro',
           builder: (_, state) {
             final data = state.uri.queryParameters['data'];
-            return QuadroTela(key: ValueKey('quadro-$data'), data: data);
+            final encerrar = state.uri.queryParameters['encerrar'];
+            return QuadroTela(key: ValueKey('quadro-$data-$encerrar'), data: data, encerrar: encerrar);
           },
         ),
         GoRoute(

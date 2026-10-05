@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_os.dart';
+import '../core/acoes_parte.dart';
 import '../core/acoes_relato.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
@@ -118,6 +119,14 @@ class _HojeTelaState extends State<HojeTela> {
                     texto: texto,
                     botao: 'Ok',
                     aoTocar: () => sync.dispensarAviso(chave),
+                  ),
+                // Dia anterior que o líder não encerrou (guia 30).
+                for (final p in AcoesParte.diasSemFechar())
+                  _Aviso(
+                    icone: Icons.nightlight_outlined,
+                    texto: 'O dia ${dataComDia('${p['data']}')} da ${banco.nomeEquipe(p['equipe_id'])} não foi encerrado.',
+                    botao: 'Encerrar',
+                    aoTocar: () => context.push('/encerrar-dia/${p['id']}'),
                   ),
                 // OS faladas (guia 17b) ainda não abertas: tocar abre a Nova OS preenchida.
                 if (AcoesOs.possoAbrir)
@@ -283,7 +292,7 @@ class _BlocoParte extends StatelessWidget {
                       ),
                   ]),
                 ],
-                if (!estouNela)
+                if (!estouNela && parte['status'] != 'encerrada')
                   const Padding(
                     padding: EdgeInsets.only(top: 6),
                     child: Text('Você saiu desta equipe neste dia.', style: TextStyle(color: Cores.alerta)),
@@ -299,6 +308,21 @@ class _BlocoParte extends StatelessWidget {
           ),
         for (var i = 0; i < itens.length; i++)
           _CartaoServico(banco: banco, item: itens[i], posicao: i + 1, eu: eu),
+        // O líder encerra o dia (hoje ou um dia anterior que ficou aberto).
+        if (AcoesParte.podeEncerrar(parte))
+          SizedBox(
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/encerrar-dia/${parte['id']}'),
+              icon: const Icon(Icons.nightlight_round),
+              label: const Text('Encerrar o dia'),
+            ),
+          ),
+        if (parte['status'] == 'encerrada' && '${parte['resumo_texto'] ?? ''}'.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+            child: Text('Resumo do dia: ${parte['resumo_texto']}', style: const TextStyle(color: Cores.neutro)),
+          ),
       ]),
     );
   }

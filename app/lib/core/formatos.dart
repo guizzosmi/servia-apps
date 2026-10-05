@@ -77,6 +77,7 @@ const nomesOperacoes = {
   'aceite_conclusao': 'Assinatura da conclusão',
   'checklist_marcar': 'Checklist da preventiva',
   'relato_gravado': 'Relato por áudio',
+  'parte_encerrar': 'Encerrar o dia',
 };
 
 const statusOrcamento = {

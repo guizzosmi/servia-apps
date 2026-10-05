@@ -170,7 +170,8 @@ Future<Map<String, dynamic>?> pedirEncerramento(
                 decoration: const InputDecoration(labelText: 'Resumo do dia (opcional)'),
               ),
               const SizedBox(height: 8),
-              const Text('A composição é fechada no horário de agora.',
+              const Text('A composição e quem ainda estava num serviço (check-in) são fechados no horário de agora '
+                  '(dia anterior: no fim daquele dia).',
                   style: TextStyle(fontSize: 12, color: Cores.neutro)),
             ]),
           ),

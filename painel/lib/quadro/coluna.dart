@@ -10,6 +10,9 @@ import 'modelo.dart';
 /// O que a coluna pede para a tela do quadro fazer.
 abstract interface class AcoesQuadro {
   bool get podeEditar;
+
+  /// O dia do quadro já passou (o "Encerrar o dia" fica à vista).
+  bool get diaPassado;
   String nomeColaborador(String? id);
   void arrastando(bool sim);
   Future<void> soltar(Arrasto a, ColunaQuadro destino, Map<String, dynamic>? itemAlvo);
@@ -172,6 +175,8 @@ class _Cabecalho extends StatelessWidget {
         ),
         if (coluna.rascunho && acoes.podeEditar)
           TextButton(onPressed: () => acoes.acaoEquipe('publicar', coluna), child: const Text('Publicar')),
+        if (coluna.semFechar && acoes.diaPassado && acoes.podeEditar)
+          TextButton(onPressed: () => acoes.acaoEquipe('encerrar', coluna), child: const Text('Encerrar')),
         if (acoes.podeEditar && opcoes.isNotEmpty)
           PopupMenuButton<String>(
             tooltip: 'Ações da equipe',

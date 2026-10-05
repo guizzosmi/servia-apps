@@ -54,6 +54,9 @@ class ColunaQuadro {
   bool get rascunho => status == 'rascunho';
   bool get encerrada => status == 'encerrada';
 
+  /// Publicada ou em andamento: falta encerrar o dia.
+  bool get semFechar => status == 'publicada' || status == 'em_andamento';
+
   /// Dá para mexer (programar, mover, compor)? Sem parte também: ela é aberta na hora.
   bool get aceitaMudancas => !encerrada;
 

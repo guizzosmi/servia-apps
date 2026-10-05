@@ -16,10 +16,13 @@ import 'modelo.dart';
 /// Quadro da parte diária: fila à esquerda, uma coluna por equipe e o log
 /// do dia à direita. Tudo ao vivo (Supabase Realtime).
 class QuadroTela extends StatefulWidget {
-  const QuadroTela({super.key, this.data});
+  const QuadroTela({super.key, this.data, this.encerrar});
 
   /// Data inicial (aaaa-mm-dd), vinda de /quadro?data=...
   final String? data;
+
+  /// Parte para já abrir o "Encerrar o dia" (vindo do alerta da Início).
+  final String? encerrar;
 
   @override
   State<QuadroTela> createState() => _QuadroTelaState();
@@ -72,6 +75,7 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     final d = DateTime.tryParse(widget.data ?? '');
     final hoje = DateTime.now();
     _dia = d ?? DateTime(hoje.year, hoje.month, hoje.day);
+    _encerrarAoAbrir = widget.encerrar;
     _carregar();
     _escutar();
     _relogio = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -147,6 +151,7 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           if (item != null) _noServico.putIfAbsent(item, () => []).add(pa);
         }
       });
+      _abrirEncerramentoPedido();
     } catch (e) {
       if (mounted && geracao == _geracao) setState(() => _erro = mensagemDeErro(e));
     } finally {
@@ -268,6 +273,51 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
 
   @override
   bool get podeEditar => Sessao.atual?.tem(Papel.gestor) ?? false;
+
+  @override
+  bool get diaPassado {
+    final h = DateTime.now();
+    return _dia.isBefore(DateTime(h.year, h.month, h.day));
+  }
+
+  /// Vindo do alerta da Início: abre o encerramento daquela parte uma vez.
+  String? _encerrarAoAbrir;
+
+  void _abrirEncerramentoPedido() {
+    final id = _encerrarAoAbrir;
+    if (id == null || !podeEditar) return;
+    _encerrarAoAbrir = null;
+    final coluna = _colunas.where((c) => c.parteId == id && c.semFechar).firstOrNull;
+    if (coluna == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) acaoEquipe('encerrar', coluna);
+    });
+  }
+
+  /// "Encerrar o dia (N)" no topo: uma equipe vai direto; várias, escolhe.
+  Future<void> _encerrarPendentes(List<ColunaQuadro> colunas) async {
+    final coluna = colunas.length == 1
+        ? colunas.first
+        : await showDialog<ColunaQuadro>(
+            context: context,
+            builder: (ctx) => SimpleDialog(
+              title: const Text('Encerrar o dia de qual equipe?'),
+              children: [
+                for (final c in colunas)
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.of(ctx).pop(c),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(c.nome),
+                      subtitle: Text('${c.itens.where(itemAberto).length} serviço(s) sem resultado'),
+                    ),
+                  ),
+              ],
+            ),
+          );
+    if (coluna == null || !mounted) return;
+    await acaoEquipe('encerrar', coluna);
+  }
 
   @override
   String nomeColaborador(String? id) => _nomes[id] ?? '?';
@@ -713,6 +763,7 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     final ehHoje = _dia.year == hoje.year && _dia.month == hoje.month && _dia.day == hoje.day;
     final semParte = colunas.where((c) => c.parte == null && c.equipe['ativa'] == true).length;
     final paraPublicar = colunas.where((c) => c.rascunho && c.itens.isNotEmpty).toList();
+    final semFechar = diaPassado ? colunas.where((c) => c.semFechar).toList() : <ColunaQuadro>[];
     final estreito = largura < 760; // celular: uma coisa de cada vez
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -802,6 +853,12 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
                   icon: const Icon(Icons.send, size: 18),
                   label: Text('Publicar todas (${paraPublicar.length})'),
                 ),
+              if (podeEditar && semFechar.isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () => _encerrarPendentes(semFechar),
+                  icon: const Icon(Icons.nightlight_round, size: 18),
+                  label: Text('Encerrar o dia (${semFechar.length})'),
+                ),
               IconButton(
                 tooltip: mostrarLog ? 'Esconder log do dia' : 'Mostrar log do dia',
                 isSelected: mostrarLog,
@@ -814,6 +871,17 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
       ),
       const Divider(height: 1),
       if (_carregando) const LinearProgressIndicator(minHeight: 2) else const SizedBox(height: 2),
+      if (podeEditar && semFechar.isNotEmpty)
+        Container(
+          color: Cores.alerta.withValues(alpha: .08),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Text(
+            semFechar.length == 1
+                ? 'Este dia ficou sem fechar na ${semFechar.first.nome}. Encerre para o que não foi feito voltar para a fila.'
+                : 'Este dia ficou sem fechar em ${semFechar.length} equipes. Encerre cada uma para o que não foi '
+                    'feito voltar para a fila.',
+          ),
+        ),
       if (_erro != null)
         Padding(
           padding: const EdgeInsets.all(16),

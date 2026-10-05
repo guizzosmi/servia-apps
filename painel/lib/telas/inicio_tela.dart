@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/catalogo.dart';
 import '../servicos/parametros.dart';
 import '../widgets/avisos_contratos.dart';
+import '../widgets/dias_sem_fechar.dart';
 import '../widgets/margem.dart';
 import '../widgets/prazos_preventivas.dart';
 
@@ -107,6 +108,8 @@ class _InicioTelaState extends State<InicioTela> {
                   ?.copyWith(fontWeight: FontWeight.w700)),
           Text('${sessao?.email ?? ''} · ${sessao?.papeis.join(', ') ?? ''}',
               style: const TextStyle(color: Cores.neutro)),
+          // Dias anteriores sem fechar (só o gestor vê; nunca hoje nem futuro).
+          const DiasSemFechar(),
           const SizedBox(height: 24),
           Wrap(spacing: 16, runSpacing: 16, children: [
             _cartaoOperacao(Icons.inbox_outlined, 'na fila', _naFila, '/fila'),
