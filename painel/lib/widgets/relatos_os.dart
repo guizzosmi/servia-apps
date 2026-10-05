@@ -46,7 +46,8 @@ class _RelatosDaOsState extends State<RelatosDaOs> {
       final r = await Supabase.instance.client
           .from('audios')
           .select('id, caminho, status, erro, tentativas, duracao_s, gravado_em, transcricao, transcricao_provedor, '
-              'organizacao_modelo, resultado, custo_estimado, ms_total, processado_em, colaboradores(nome)')
+              'organizacao_modelo, resultado, custo_estimado, ms_total, processado_em, revisao, revisado_em, '
+              'colaboradores(nome)')
           .eq('os_id', widget.osId)
           .isFilter('excluido_em', null)
           .order('gravado_em', ascending: false);
@@ -253,6 +254,16 @@ class _RelatosDaOsState extends State<RelatosDaOs> {
               Text('${a['transcricao']}', style: const TextStyle(fontStyle: FontStyle.italic)),
               const SizedBox(height: 8),
             ],
+            if (a['revisao'] is Map)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Revisado no app em ${dataHoraBr(a['revisado_em'])}: '
+                  '${(a['revisao'] as Map)['aceitos_sem_editar'] ?? 0} de ${(a['revisao'] as Map)['total'] ?? 0} '
+                  'proposta(s) da IA aceita(s) sem mudar.',
+                  style: const TextStyle(color: Cores.indigo700, fontWeight: FontWeight.w600),
+                ),
+              ),
             if (a['resultado'] is Map) _resultado(a),
           ],
         ),

@@ -865,6 +865,9 @@ String descreverEvento(Map<String, dynamic> l) {
     'os:link_relatorio_revogado': 'Link do relatório cancelado',
     'os:relato_gravado': 'Relato por áudio gravado',
     'os:relato_pronto': 'Relato por áudio organizado pela IA',
+    'os:relato_revisado': 'Relato por áudio revisado e levado para o atendimento',
+    'os:relato_descartado': 'Relato por áudio descartado',
+    'os:aberta_por_audio': 'OS aberta pelo app a partir de um áudio',
   };
   if (entidade == 'os' && acao == 'cadastro_pelo_app') {
     return [
