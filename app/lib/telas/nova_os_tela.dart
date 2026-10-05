@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../core/acoes_atendimento.dart';
 import '../core/acoes_cadastro.dart';
 import '../core/acoes_os.dart';
 import '../core/acoes_relato.dart';
@@ -10,6 +11,7 @@ import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../widgets/cadastros_rapidos.dart';
+import '../widgets/entrar_no_servico.dart';
 import '../widgets/relato_audio.dart';
 import '../widgets/status_chip.dart';
 
@@ -63,6 +65,10 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   // OS falada: o áudio, se ele também é o relato e o que a IA não resolveu.
   String? _audioId;
   bool _comoRelato = false;
+
+  /// Pelo que ele falou ("estou na...", "fui na..."), já está no local:
+  /// "Atender agora" também faz o check-in. ("amanhã vou na..." = não.)
+  bool _jaNoLocal = false;
   bool _propostaAplicada = false;
   List<String> _dicas = const [];
   List<Map> _clientesSugeridos = const [];
@@ -291,6 +297,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         dicas.add('Equipamento: ${eq['texto']}.');
       }
       _comoRelato = ab['tem_relato'] == true;
+      _jaNoLocal = ab['momento'] != 'futuro';
       _dicas = dicas;
       _clientesSugeridos = sugeridos;
     });
@@ -406,6 +413,13 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                   title: const Text('O que foi falado'),
                   children: [Text(r!.transcricao!, style: const TextStyle(fontStyle: FontStyle.italic))],
                 ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _jaNoLocal,
+                onChanged: (v) => setState(() => _jaNoLocal = v),
+                title: const Text('Já estou no local'),
+                subtitle: const Text('"Atender agora" já faz o check-in no serviço.'),
+              ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
@@ -482,7 +496,20 @@ class _NovaOsTelaState extends State<NovaOsTela> {
           audioComoRelato: _comoRelato);
       if (!mounted) return;
       final aviso = ScaffoldMessenger.of(context);
-      if (itemId != null) {
+      if (itemId != null && _audioId != null && _jaNoLocal) {
+        // Já está no local: entra no serviço agora (quem está junto, se for o líder).
+        final item = EstadoApp.instancia.banco!.um('partes_itens', itemId);
+        if (item != null) await entrarNoServico(context, Map<String, dynamic>.from(item), abrir: false);
+        if (!mounted) return;
+        final atdId = AcoesAtendimento.idAtendimento(itemId);
+        if (AcoesAtendimento.meuCheckin()?['atendimento_id'] == atdId) {
+          aviso.showSnackBar(const SnackBar(content: Text('OS aberta e você já está no serviço.')));
+          context.pushReplacement('/atendimento/$atdId');
+        } else {
+          aviso.showSnackBar(const SnackBar(content: Text('OS aberta e incluída na sua parte. Faça o check-in quando começar.')));
+          context.pushReplacement('/servico/$itemId');
+        }
+      } else if (itemId != null) {
         aviso.showSnackBar(const SnackBar(content: Text('OS aberta e incluída na sua parte. Faça o check-in quando começar.')));
         context.pushReplacement('/servico/$itemId');
       } else {
@@ -843,7 +870,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                     child: FilledButton.icon(
                       onPressed: _salvando || partes.isEmpty ? null : () => _salvar(agora: true),
                       icon: const Icon(Icons.play_arrow),
-                      label: const Text('Atender agora'),
+                      label: Text(_audioId != null && _jaNoLocal ? 'Atender agora e entrar no serviço' : 'Atender agora'),
                     ),
                   ),
                   Padding(
