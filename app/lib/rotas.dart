@@ -39,6 +39,7 @@ final rotas = GoRouter(
         clienteId: state.uri.queryParameters['cliente'],
         localId: state.uri.queryParameters['local'],
         audioId: state.uri.queryParameters['audio'],
+        falarAoAbrir: state.uri.queryParameters['falar'] == '1',
       ),
     ),
     GoRoute(

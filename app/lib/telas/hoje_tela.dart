@@ -85,11 +85,27 @@ class _HojeTelaState extends State<HojeTela> {
             ],
           ),
           floatingActionButton: AcoesOs.possoAbrir
-              ? FloatingActionButton.extended(
-                  onPressed: () => context.push('/nova-os'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nova OS'),
-                )
+              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  // Falar a OS: já abre gravando (a IA preenche a Nova OS).
+                  if (AcoesRelato.ligado)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton(
+                        heroTag: 'falar-os',
+                        tooltip: 'Falar a OS',
+                        backgroundColor: Cores.coral500,
+                        foregroundColor: Colors.white,
+                        onPressed: () => context.push('/nova-os?falar=1'),
+                        child: const Icon(Icons.mic),
+                      ),
+                    ),
+                  FloatingActionButton.extended(
+                    heroTag: 'nova-os',
+                    onPressed: () => context.push('/nova-os'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nova OS'),
+                  ),
+                ])
               : null,
           body: RefreshIndicator(
             onRefresh: sync.sincronizar,

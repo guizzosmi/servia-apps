@@ -218,8 +218,9 @@ class _ItemRelato extends StatelessWidget {
 
 enum _Fase { preparando, semPermissao, gravando, pausado, terminado }
 
-/// Tela de gravação: até 10 minutos, com pausa. No fim, enviar, gravar de
-/// novo ou descartar. Devolve (arquivo, duração) ao enviar.
+/// Tela de gravação: até 10 minutos, com pausa. "Terminar e enviar" já
+/// devolve (arquivo, duração); gravação curta demais fica na tela para
+/// gravar de novo ou descartar.
 class GravadorRelatoTela extends StatefulWidget {
   const GravadorRelatoTela({super.key, this.abertura = false});
 
@@ -241,6 +242,9 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
   String? _arquivo;
   String? _erro;
   bool _enviado = false;
+
+  /// "Terminar e enviar" já foi tocado (ou o limite de 10 minutos chegou).
+  bool _parando = false;
 
   @override
   void initState() {
@@ -356,6 +360,8 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
   }
 
   Future<void> _parar({bool limite = false}) async {
+    if (_parando) return;
+    _parando = true;
     _relogio.stop();
     _tique?.cancel();
     await _nivelSub?.cancel();
@@ -365,13 +371,21 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
     final caminho = await _gravador.stop();
     if (caminho != null) _arquivo = caminho;
     if (!mounted) return;
+    // Terminou: já vai para a IA (um toque a menos). Curta demais: fica aqui
+    // para gravar de novo ou descartar.
+    if (_relogio.elapsed >= AcoesRelato.duracaoMinima) {
+      if (limite) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Chegou a 10 minutos: a gravação foi enviada.')));
+      }
+      _enviar();
+      return;
+    }
     setState(() {
       _fase = _Fase.terminado;
       _nivel = 0;
+      _parando = false;
     });
-    if (limite) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chegou a 10 minutos: a gravação parou.')));
-    }
   }
 
   Future<void> _deNovo() async {
@@ -382,7 +396,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
 
   void _enviar() {
     final a = _arquivo;
-    if (a == null) return;
+    if (a == null || _enviado) return;
     _enviado = true;
     Navigator.of(context).pop((a, _relogio.elapsed));
   }
@@ -409,7 +423,6 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
   @override
   Widget build(BuildContext context) {
     final tempo = _relogio.elapsed;
-    final curto = tempo < AcoesRelato.duracaoMinima;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -461,7 +474,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
                     _Fase.semPermissao => _erro ?? 'Sem permissão para usar o microfone.',
                     _Fase.gravando => 'Gravando · até 10:00',
                     _Fase.pausado => 'Pausado',
-                    _Fase.terminado => curto ? 'Gravação curta demais.' : 'Gravação pronta.',
+                    _Fase.terminado => 'Gravação curta demais. Grave de novo.',
                   },
                   textAlign: TextAlign.center,
                   style: TextStyle(color: _fase == _Fase.semPermissao ? Cores.erro : Cores.neutro),
@@ -476,7 +489,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
                   backgroundColor: Cores.linha,
                 ),
               const Spacer(),
-              ..._botoes(curto),
+              ..._botoes(),
             ]),
           ),
         ),
@@ -484,7 +497,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
     );
   }
 
-  List<Widget> _botoes(bool curto) {
+  List<Widget> _botoes() {
     Widget grande(Widget b) => Padding(padding: const EdgeInsets.only(top: 8), child: SizedBox(height: 56, child: b));
     switch (_fase) {
       case _Fase.preparando:
@@ -512,20 +525,15 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
               flex: 2,
               child: grande(FilledButton.icon(
                 style: FilledButton.styleFrom(backgroundColor: Cores.coral500),
-                onPressed: _parar,
-                icon: const Icon(Icons.stop),
-                label: const Text('Terminar'),
+                onPressed: _parando ? null : _parar,
+                icon: const Icon(Icons.send),
+                label: const Text('Terminar e enviar'),
               )),
             ),
           ]),
         ];
       case _Fase.terminado:
         return [
-          grande(FilledButton.icon(
-            onPressed: curto ? null : _enviar,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('Enviar para a IA'),
-          )),
           Row(children: [
             Expanded(
               child: grande(OutlinedButton.icon(

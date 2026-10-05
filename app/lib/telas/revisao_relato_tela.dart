@@ -3,6 +3,7 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_cadastro.dart';
 import '../core/acoes_relato.dart';
+import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../widgets/abas_atendimento.dart' show buscarProduto;
@@ -35,6 +36,19 @@ class _RevisaoRelatoTelaState extends State<RevisaoRelatoTela> {
     for (final i in (_r['itens'] is List ? _r['itens'] as List : const []).whereType<Map>()) _peca(i),
   ];
   late final PecaRevisada? _mao = _maoDeObra();
+  late final List<MedicaoRevisada> _medicoes = [
+    for (final m in (_r['medicoes'] is List ? _r['medicoes'] as List : const []).whereType<Map>())
+      MedicaoRevisada(
+        falado: '${m['nome'] ?? 'Medição'}',
+        valorIa: num.tryParse('${m['valor']}'),
+        unidadeFalada: '${m['unidade'] ?? ''}',
+      ),
+  ];
+  late final FluidoRevisado? _fluido = _fluidoFalado();
+
+  /// O tipo do equipamento para o qual as medições foram propostas.
+  String? _tipoDasMedicoes;
+  bool _medicoesPropostas = false;
 
   // Equipamento
   late final String _proposta = '${_eq['tipo'] ?? 'confirmar'}';
@@ -97,6 +111,37 @@ class _RevisaoRelatoTelaState extends State<RevisaoRelatoTela> {
     );
   }
 
+  FluidoRevisado? _fluidoFalado() {
+    final f = _r['fluido'];
+    if (f is! Map) return null;
+    final ad = num.tryParse('${f['adicionado_kg'] ?? 0}') ?? 0;
+    final rec = num.tryParse('${f['recolhido_kg'] ?? 0}') ?? 0;
+    final tipo = '${f['tipo'] ?? ''}'.trim();
+    if (tipo.isEmpty && ad == 0 && rec == 0) return null;
+    return FluidoRevisado(tipoIa: tipo, adicionadoIa: ad, recolhidoIa: rec);
+  }
+
+  /// O tipo do equipamento escolhido (ou do cadastrado agora, se for de um tipo existente).
+  String? get _tipoEquip {
+    if (_novo != null) return _novo!.tipoNovo == null ? _novo!.tipoId : null;
+    return _equip == null ? null : EstadoApp.instancia.banco!.um('equipamentos', _equip)?['tipo_equipamento_id'] as String?;
+  }
+
+  /// As medições do cadastro para o equipamento: propõe de novo quando o tipo muda.
+  List<Map<String, dynamic>> _modelosAtuais() {
+    final tipo = _tipoEquip;
+    final modelos = tipo == null ? const <Map<String, dynamic>>[] : EstadoApp.instancia.banco!.modelosDoTipo(tipo);
+    if (!_medicoesPropostas || tipo != _tipoDasMedicoes) {
+      _medicoesPropostas = true;
+      _tipoDasMedicoes = tipo;
+      for (final m in _medicoes) {
+        m.modeloIa = medicaoDoCadastro(modelos, m.falado, m.unidadeFalada);
+        m.modeloId = m.modeloIa;
+      }
+    }
+    return modelos;
+  }
+
   String? _ambienteDoEquip(String? id) =>
       id == null ? null : EstadoApp.instancia.banco!.um('equipamentos', id)?['ambiente_id'] as String?;
 
@@ -117,6 +162,8 @@ class _RevisaoRelatoTelaState extends State<RevisaoRelatoTela> {
           equipamentoNovo: _novo,
           pecas: _pecas,
           maoDeObra: _mao,
+          medicoes: _medicoes,
+          fluido: _fluido,
         ),
       );
       if (!mounted) return;
@@ -387,14 +434,116 @@ class _RevisaoRelatoTelaState extends State<RevisaoRelatoTela> {
     );
   }
 
+  Widget _medicoesFaladas() {
+    final modelos = _modelosAtuais()
+        .where((x) => x['tipo_valor'] == null || x['tipo_valor'] == 'numero')
+        .toList();
+    final semEquip = _equip == null && _novo == null;
+    final fl = _fluido;
+    String rotulo(Map m) => '${m['nome']}${m['unidade'] == null || m['unidade'] == 'outro' ? '' : ' (${m['unidade']})'}';
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _titulo('Medições faladas',
+          ajuda: semEquip
+              ? 'Escolha o equipamento (acima) para registrar as medições nele.'
+              : 'Vão para a aba Medições do equipamento. Confira a medição do cadastro e o valor.'),
+      for (final m in _medicoes)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text('Falado: "${m.falado}" ${numeroBr(m.valorIa)} ${m.unidadeFalada}',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              if (!semEquip)
+                Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButton<String?>(
+                      value: modelos.any((x) => '${x['id']}' == m.modeloId) ? m.modeloId : null,
+                      isExpanded: true,
+                      items: [
+                        const DropdownMenuItem<String?>(
+                            value: null, child: Text('Não registrar', style: TextStyle(color: Cores.erro))),
+                        for (final x in modelos)
+                          DropdownMenuItem<String?>(
+                              value: '${x['id']}', child: Text(rotulo(x), overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: (v) => setState(() => m.modeloId = v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: m.valor == null ? '' : numeroBr(m.valor),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      decoration: const InputDecoration(labelText: 'Valor', isDense: true),
+                      onChanged: (t) => m.valor = num.tryParse(t.trim().replaceAll(',', '.')),
+                    ),
+                  ),
+                ]),
+            ]),
+          ),
+        ),
+      if (fl != null)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 12, 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: fl.registrar && !semEquip,
+                onChanged: semEquip ? null : (v) => setState(() => fl.registrar = v ?? false),
+                title: Text('Fluido: ${fl.tipoIa.isEmpty ? '(tipo não falado)' : fl.tipoIa}'),
+                subtitle: Text('${numeroBr(fl.adicionadoIa)} kg adicionados · ${numeroBr(fl.recolhidoIa)} kg recolhidos'),
+              ),
+              if (fl.registrar && !semEquip)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(children: [
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: fl.tipo,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(labelText: 'Fluido (ex.: R-410A)', isDense: true),
+                        onChanged: (t) => fl.tipo = t,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: numeroBr(fl.adicionado),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'Adicionado (kg)', isDense: true),
+                        onChanged: (t) => fl.adicionado =
+                            num.tryParse(t.trim().replaceAll(',', '.')) ?? 0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: numeroBr(fl.recolhido),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'Recolhido (kg)', isDense: true),
+                        onChanged: (t) => fl.recolhido =
+                            num.tryParse(t.trim().replaceAll(',', '.')) ?? 0,
+                      ),
+                    ),
+                  ]),
+                ),
+            ]),
+          ),
+        ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final duvidas = (_r['duvidas'] is List ? _r['duvidas'] as List : const [])
         .map((x) => '$x'.trim())
         .where((x) => x.isNotEmpty)
         .toList();
-    final medicoes = (_r['medicoes'] is List ? _r['medicoes'] as List : const []).whereType<Map>().toList();
-    final fluido = _r['fluido'] is Map ? _r['fluido'] as Map : null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Revisar o relato'),
@@ -429,12 +578,7 @@ class _RevisaoRelatoTelaState extends State<RevisaoRelatoTela> {
           _titulo('Mão de obra'),
           _linhaPeca(_mao, mao: true),
         ],
-        if (medicoes.isNotEmpty || fluido != null) ...[
-          _titulo('Medições faladas', ajuda: 'Registre na aba Medições (elas não entram sozinhas).'),
-          for (final m in medicoes) Text('• ${m['nome'] ?? ''}: ${numeroBr(m['valor'])} ${m['unidade'] ?? ''}'),
-          if (fluido != null)
-            Text('• Fluido ${fluido['tipo'] ?? ''}: ${numeroBr(fluido['adicionado_kg'] ?? 0)} kg adicionados'),
-        ],
+        if (_medicoes.isNotEmpty || _fluido != null) _medicoesFaladas(),
         const SizedBox(height: 24),
         SizedBox(
           height: 52,

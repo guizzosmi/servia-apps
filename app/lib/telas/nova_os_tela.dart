@@ -19,11 +19,14 @@ import '../widgets/status_chip.dart';
 /// de um serviço ("outra OS neste cliente"). [audioId]: uma OS falada
 /// (guia 17b), que preenche a tela com o que a IA entendeu.
 class NovaOsTela extends StatefulWidget {
-  const NovaOsTela({super.key, this.clienteId, this.localId, this.audioId});
+  const NovaOsTela({super.key, this.clienteId, this.localId, this.audioId, this.falarAoAbrir = false});
 
   final String? clienteId;
   final String? localId;
   final String? audioId;
+
+  /// Abre já gravando ("Falar a OS" da tela Hoje).
+  final bool falarAoAbrir;
 
   @override
   State<NovaOsTela> createState() => _NovaOsTelaState();
@@ -68,6 +71,11 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   void initState() {
     super.initState();
     _audioId = widget.audioId;
+    if (widget.falarAoAbrir && _audioId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _falar();
+      });
+    }
     final banco = EstadoApp.instancia.banco!;
     _cliente = banco.um('clientes', widget.clienteId);
     if (_cliente != null) {

@@ -70,6 +70,8 @@ class DecisaoRevisao {
     this.equipamentoNovo,
     required this.pecas,
     this.maoDeObra,
+    this.medicoes = const [],
+    this.fluido,
   });
 
   final Map<String, String> camposIa;
@@ -82,6 +84,110 @@ class DecisaoRevisao {
   final EquipamentoNovo? equipamentoNovo;
   final List<PecaRevisada> pecas;
   final PecaRevisada? maoDeObra;
+  final List<MedicaoRevisada> medicoes;
+  final FluidoRevisado? fluido;
+}
+
+/// Uma medição falada na revisão: a medição do cadastro (do tipo do
+/// equipamento) e o valor. [modeloId] null = não registrar.
+class MedicaoRevisada {
+  MedicaoRevisada({required this.falado, required this.valorIa, required this.unidadeFalada}) : valor = valorIa;
+
+  final String falado;
+  final num? valorIa;
+  final String unidadeFalada;
+
+  /// A medição do cadastro que a revisão propôs (muda com o equipamento).
+  String? modeloIa;
+  String? modeloId;
+  num? valor;
+
+  bool get incluida => modeloId != null && valor != null;
+  bool get igual => modeloId == modeloIa && valor == valorIa;
+
+  Map<String, dynamic> paraRevisao(String? medicaoId) => {
+        'falado': falado,
+        'valor_ia': valorIa,
+        'valor': valor,
+        'modelo_ia': modeloIa,
+        'modelo': modeloId,
+        'incluida': incluida,
+        'igual': igual,
+        if (medicaoId != null) 'medicao_id': medicaoId,
+      };
+}
+
+/// O fluido falado (carga ou recolhimento) na revisão.
+class FluidoRevisado {
+  FluidoRevisado({required this.tipoIa, required this.adicionadoIa, required this.recolhidoIa})
+      : tipo = tipoIa,
+        adicionado = adicionadoIa,
+        recolhido = recolhidoIa;
+
+  final String tipoIa;
+  final num adicionadoIa;
+  final num recolhidoIa;
+  String tipo;
+  num adicionado;
+  num recolhido;
+  bool registrar = true;
+
+  bool get incluido => registrar && tipo.trim().isNotEmpty && (adicionado > 0 || recolhido > 0);
+  bool get igual => registrar && tipo == tipoIa && adicionado == adicionadoIa && recolhido == recolhidoIa;
+}
+
+/// Texto simples para comparar nomes falados com o cadastro.
+String _simples(Object? t) {
+  const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
+  const para = 'aaaaaeeeeiiiiooooouuuuc';
+  final b = StringBuffer();
+  for (final c in '${t ?? ''}'.toLowerCase().split('')) {
+    final i = de.indexOf(c);
+    b.write(i >= 0 ? para[i] : c);
+  }
+  return b.toString().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+}
+
+/// Unidade falada -> a do cadastro (psi, bar, c, a, v, kg).
+String? _unidade(String u) {
+  final s = _simples(u);
+  if (s.isEmpty) return null;
+  if (s.startsWith('psi') || s.startsWith('libra')) return 'psi';
+  if (s.startsWith('bar')) return 'bar';
+  if (s == 'c' || s.contains('grau') || s.contains('celsius')) return 'c';
+  if (s == 'a' || s.startsWith('amp')) return 'a';
+  if (s == 'v' || s.startsWith('volt')) return 'v';
+  if (s == 'kg' || s.startsWith('quilo')) return 'kg';
+  return null;
+}
+
+/// A medição do cadastro que corresponde à falada (pelas palavras do nome e
+/// do código; unidade diferente não serve). null = nenhuma.
+String? medicaoDoCadastro(List<Map<String, dynamic>> modelos, String falado, String unidade) {
+  const fora = {'de', 'do', 'da', 'no', 'na', 'e', 'o', 'a'};
+  final palavras = _simples(falado).split(' ').where((p) => p.isNotEmpty && !fora.contains(p)).toSet();
+  final u = _unidade(unidade);
+  String? melhor;
+  var nota = 0.0;
+  var empate = false;
+  for (final m in modelos) {
+    if (m['tipo_valor'] != null && m['tipo_valor'] != 'numero') continue;
+    if (u != null && m['unidade'] != null && m['unidade'] != 'outro' && m['unidade'] != u) continue;
+    final dele = _simples('${m['nome']} ${'${m['codigo'] ?? ''}'.replaceAll('_', ' ')}')
+        .split(' ')
+        .where((p) => p.isNotEmpty && !fora.contains(p))
+        .toSet();
+    if (dele.isEmpty) continue;
+    final n = dele.intersection(palavras).length / dele.length;
+    if (n > nota) {
+      nota = n;
+      melhor = '${m['id']}';
+      empate = false;
+    } else if (n == nota && n > 0) {
+      empate = true; // ("pressão" serve para sucção e descarga: o técnico escolhe)
+    }
+  }
+  return nota >= 0.5 && !empate ? melhor : null;
 }
 
 /// Um relato por áudio do atendimento, como a tela mostra: o que ainda está
@@ -318,7 +424,32 @@ class AcoesRelato {
       pecas.add(p.paraRevisao(itemId));
     }
 
-    // 4. A revisão: o que foi aceito sem mudar (para medir a IA).
+    // 4. Medições e fluido, no equipamento escolhido (ou cadastrado agora).
+    final equipId = d.equipamentoNovo?.id ?? d.equipamentoId;
+    final medIds = <String>{};
+    final medicoes = <Map<String, dynamic>>[];
+    String? fluidoId;
+    final equip = equipId == null ? null : _banco.um('equipamentos', equipId) ?? {'id': equipId};
+    for (final m in d.medicoes) {
+      String? id;
+      final modelo = m.modeloId == null ? null : _banco.um('modelos_medicao', m.modeloId);
+      final idDela = equipId == null ? null : AcoesAtendimento.idMedicao(atd['id'], equipId, m.modeloId);
+      // (duas faladas na mesma medição do cadastro: vale a primeira)
+      if (equip != null && m.incluida && modelo != null && idDela != null && !medIds.contains(idDela)) {
+        await AcoesAtendimento.salvarMedicao(atd, equip, modelo, numero: m.valor);
+        id = idDela;
+        medIds.add(idDela);
+      }
+      medicoes.add(m.paraRevisao(id));
+    }
+    final f = d.fluido;
+    if (equip != null && f != null && f.incluido) {
+      await AcoesAtendimento.salvarFluido(atd, equip,
+          fluido: f.tipo.trim(), adicionadoKg: f.adicionado, recolhidoKg: f.recolhido);
+      fluidoId = AcoesAtendimento.idFluido(atd['id'], equipId);
+    }
+
+    // 5. A revisão: o que foi aceito sem mudar (para medir a IA).
     var total = 0, iguais = 0;
     final campoRev = <String, dynamic>{};
     for (final e in d.camposIa.entries) {
@@ -342,6 +473,17 @@ class AcoesRelato {
       total++;
       if (p.igual) iguais++;
     }
+    // (sem equipamento, as medições e o fluido não foram registrados: não contam)
+    if (equipId != null) {
+      for (final m in d.medicoes) {
+        total++;
+        if (m.igual && m.incluida) iguais++;
+      }
+      if (d.fluido != null) {
+        total++;
+        if (d.fluido!.igual) iguais++;
+      }
+    }
     await _sync.registrar(
       'relato_revisar',
       {
@@ -349,6 +491,8 @@ class AcoesRelato {
         // (o relato que veio da abertura da OS fica neste atendimento)
         'atendimento_id': atd['id'],
         'itens_ids': ids,
+        'medicoes_ids': medIds.toList(),
+        'fluidos_ids': [?fluidoId],
         'revisao': {
           'versao': 1,
           'campos': campoRev,
@@ -360,6 +504,16 @@ class AcoesRelato {
             'igual': eqIgual,
           },
           'itens': pecas,
+          'medicoes': medicoes,
+          if (d.fluido != null)
+            'fluido': {
+              'tipo_ia': d.fluido!.tipoIa,
+              'tipo': d.fluido!.tipo,
+              'adicionado_kg': d.fluido!.adicionado,
+              'recolhido_kg': d.fluido!.recolhido,
+              'incluido': fluidoId != null,
+              'igual': d.fluido!.igual,
+            },
           'aceitos_sem_editar': iguais,
           'total': total,
         },
