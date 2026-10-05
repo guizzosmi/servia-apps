@@ -47,7 +47,7 @@ const camposMensagem = <String, String>{
 };
 
 /// Os modelos. O texto padrão fica aqui; a empresa guarda só o que mudou
-/// (empresa_config.parametros.mensagens.<chave>).
+/// (`empresa_config.parametros.mensagens.<chave>`).
 ///
 /// Regra do texto: uma linha com um campo vazio some inteira (ex.: sem
 /// link, a linha do link não aparece).
