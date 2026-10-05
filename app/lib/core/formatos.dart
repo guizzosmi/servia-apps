@@ -76,6 +76,7 @@ const nomesOperacoes = {
   'orcamento_assinar': 'Assinatura do orçamento',
   'aceite_conclusao': 'Assinatura da conclusão',
   'checklist_marcar': 'Checklist da preventiva',
+  'relato_gravado': 'Relato por áudio',
 };
 
 const statusOrcamento = {

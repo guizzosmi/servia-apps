@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.6.1';
+const versaoApp = '0.7.0';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -65,6 +65,10 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Parado ao sair do app (ou trocar de usuário): não sincroniza nem avisa mais.
   bool _parado = false;
+
+  /// Chamando a IA para os relatos registrados (não trava a sincronização).
+  bool _processandoRelatos = false;
+  bool _relatosDeNovo = false;
 
   static const _uuid = Uuid();
   SupabaseClient get _db => Supabase.instance.client;
@@ -156,6 +160,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       await _baixar();
       await banco.gravarMeta('ultima_sync', DateTime.now().toUtc().toIso8601String());
       _mudar(SituacaoSync.ok);
+      unawaited(_processarRelatos());
       await _limparDeVezEmQuando();
     } on _SemConexao catch (e) {
       _mudar(SituacaoSync.semConexao, e.motivo);
@@ -231,7 +236,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       if (lote.isEmpty) return;
       // Os arquivos sobem antes das operações que os registram. A foto
       // cujo arquivo sumiu já ficou recusada aqui e não vai no lote.
-      final semArquivo = {...await _subirFotos(lote), ...await _subirAnexos(lote)};
+      final semArquivo = {...await _subirFotos(lote), ...await _subirAnexos(lote), ...await _subirAudios(lote)};
       final envio = lote.where((o) => !semArquivo.contains(o.opId)).toList();
       if (envio.isEmpty) continue;
       final r = await _rpc('sync_enviar', {..._base(), 'operacoes': envio.map((o) => o.paraEnvio()).toList()});
@@ -261,7 +266,25 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
 
   /// O que a plataforma respondeu e o técnico precisa saber.
   Future<void> _depoisDeAceita(Operacao op, Map m) async {
-    if (op.opId != m['op_id'] || (op.tipo != 'os_abrir' && op.tipo != 'cadastro_app')) return;
+    if (op.opId != m['op_id']) return;
+    if (op.tipo == 'relato_gravado') {
+      // O relato continua na tela até o dia chegar de novo com ele.
+      final d = op.dados;
+      if (banco.um('audios', d['audio_id']) == null) {
+        await banco.gravar('audios', [
+          {
+            'id': d['audio_id'],
+            'atendimento_id': d['atendimento_id'],
+            'status': '${m['status'] ?? 'enviado'}',
+            'gravado_em': d['gravado_em'] ?? op.em,
+            'duracao_s': d['duracao_s'],
+            'gravado_por': conta.colaboradorId,
+          }
+        ], avisar: false);
+      }
+      return;
+    }
+    if (op.tipo != 'os_abrir' && op.tipo != 'cadastro_app') return;
     // CPF/CNPJ que já existia: a OS ficou no cliente cadastrado; o cliente
     // criado no aparelho sai da lista (senão aparece duplicado).
     final novo = (op.dados['cliente_novo'] as Map?)?['id'];
@@ -348,6 +371,92 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
     return recusadas;
+  }
+
+  /// Sobe para o bucket "audios" os relatos gravados do lote (como as
+  /// fotos: sem internet, tenta depois; arquivo que sumiu recusa a operação).
+  Future<Set<String>> _subirAudios(List<Operacao> lote) async {
+    final recusadas = <String>{};
+    for (final op in lote.where((o) => o.tipo == 'relato_gravado')) {
+      final audioId = '${op.dados['audio_id']}';
+      if (banco.meta('audio_subiu:$audioId') != null) continue;
+      final arquivo = Arquivos.audio(op.dados['arquivo_local']);
+      if (arquivo == null || !await arquivo.exists()) {
+        await banco.marcarRecusada(op.opId, 'O arquivo deste relato não está mais no aparelho.');
+        recusadas.add(op.opId);
+        continue;
+      }
+      try {
+        await _db.storage.from('audios').uploadBinary(
+              '${op.dados['caminho']}',
+              await arquivo.readAsBytes(),
+              fileOptions: FileOptions(contentType: '${op.dados['mime'] ?? 'audio/mp4'}'),
+            );
+      } on StorageException catch (e) {
+        final jaExiste = e.statusCode == '409' || e.message.toLowerCase().contains('exist') ||
+            e.message.toLowerCase().contains('duplicate');
+        if (!jaExiste) rethrow;
+      }
+      await banco.gravarMeta('audio_subiu:$audioId', '1');
+    }
+    return recusadas;
+  }
+
+  /// Relatos já registrados na plataforma e ainda não processados: chama a
+  /// função relato-processar (transcreve e organiza) e, se mudou algo, pede
+  /// outra sincronização para baixar o resultado. Cada relato a processar
+  /// fica marcado no aparelho (`relato_processar:<id>`) até a função responder.
+  Future<void> _processarRelatos() async {
+    if (_parado) return;
+    if (_processandoRelatos) {
+      _relatosDeNovo = true;
+      return;
+    }
+    final chaves = banco.chavesMeta('relato_processar:');
+    if (chaves.isEmpty) return;
+    _processandoRelatos = true;
+    var mudou = false;
+    try {
+      final naFila = {
+        for (final o in banco.fila)
+          if (o.tipo == 'relato_gravado') '${o.dados['audio_id']}': o.situacao,
+      };
+      for (final chave in chaves) {
+        if (_parado) return;
+        final id = chave.substring('relato_processar:'.length);
+        final situacao = naFila[id];
+        if (situacao == 'pendente') continue; // ainda não chegou à plataforma
+        if (situacao == 'recusada') {
+          await banco.gravarMeta(chave, null);
+          continue;
+        }
+        try {
+          await _db.functions
+              .invoke('relato-processar', body: {'audio_id': id})
+              .timeout(const Duration(seconds: 120));
+          await banco.gravarMeta(chave, null);
+          mudou = true;
+        } on FunctionException catch (e) {
+          final codigo = e.details is Map ? '${(e.details as Map)['code']}' : '';
+          // Outro pedido já está processando: confere de novo na próxima.
+          if (codigo == 'audio_processando') continue;
+          // Sessão ou servidor fora: tenta tudo de novo depois.
+          if (e.status == 401 || (e.status >= 500 && codigo != 'ia_falhou')) break;
+          // A IA falhou (o relato fica "Erro", com o motivo) ou o relato não
+          // pode mais ser processado: não insiste sozinho.
+          await banco.gravarMeta(chave, null);
+          mudou = true;
+          debugPrint('Relato $id: ${e.status} ${e.details}');
+        }
+      }
+    } catch (e) {
+      // Sem internet ou tempo esgotado: tenta na próxima sincronização.
+      debugPrint('Processar relatos: $e');
+    } finally {
+      _processandoRelatos = false;
+      if (mudou || _relatosDeNovo) pedir();
+      _relatosDeNovo = false;
+    }
   }
 
   /// Baixa os cadastros (por cursor, em páginas) e o dia.

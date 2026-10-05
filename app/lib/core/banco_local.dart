@@ -26,6 +26,7 @@ const tabelasDoDia = [
   'orcamento_itens',
   'aceites',
   'plano_execucoes',
+  'audios',
 ];
 
 /// Uma ação feita no app, esperando para subir para a plataforma.

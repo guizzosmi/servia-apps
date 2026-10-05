@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Gravar o relato do atendimento (guia 16). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="ServPilot"
         android:allowBackup="false"

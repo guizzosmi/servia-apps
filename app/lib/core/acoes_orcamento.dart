@@ -39,6 +39,9 @@ class ConfigApp {
 
   /// Preventiva: item que pede foto só é marcado com a foto.
   bool get fotoPreventivaObrigatoria => _d['preventiva_foto_obrigatoria'] != false;
+
+  /// Relato por áudio (a IA organiza o que o técnico falou).
+  bool get relatoAudio => _d['relato_audio'] != false;
 }
 
 /// Texto padrão do termo (o mesmo do PDF da plataforma), quando a empresa

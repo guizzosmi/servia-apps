@@ -54,6 +54,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   final _antecedencia = TextEditingController();
   final _tolerancia = TextEditingController();
   bool _fotoObrigatoria = true;
+  // IA: relato por áudio e o texto de encerramento das OS.
+  bool _relatoAudio = true;
+  final _encerramento = TextEditingController();
   bool _sujo = false;
 
   @override
@@ -69,6 +72,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
     _termo.dispose();
     _antecedencia.dispose();
     _tolerancia.dispose();
+    _encerramento.dispose();
     for (final c in _modelos.values) {
       c.dispose();
     }
@@ -109,6 +113,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         _antecedencia.text = _numero(p['antecedencia_preventivas_dias'] ?? 15);
         _tolerancia.text = _numero(prev['tolerancia_dias'] ?? 15);
         _fotoObrigatoria = prev['foto_obrigatoria'] != false;
+        final ia = Map<String, dynamic>.from((p['ia'] as Map?) ?? const {});
+        _relatoAudio = ia['relato_audio'] != false;
+        _encerramento.text = '${ia['texto_encerramento'] ?? 'Testes realizados, tudo de acordo com os parâmetros.'}';
         _sujo = false;
       });
     } catch (e) {
@@ -164,8 +171,15 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
           if (_modelos[m.chave]!.text.trim().isNotEmpty && _modelos[m.chave]!.text.trim() != m.padrao.trim())
             m.chave: _modelos[m.chave]!.text.trim(),
       };
+      final ia = Map<String, dynamic>.from((_parametros['ia'] as Map?) ?? const {})
+        ..['relato_audio'] = _relatoAudio
+        // Vazio = o texto padrão (é o que a função de relato usa no lugar).
+        ..['texto_encerramento'] = _encerramento.text.trim().isEmpty
+            ? 'Testes realizados, tudo de acordo com os parâmetros.'
+            : _encerramento.text.trim();
       final novos = {
         ..._parametros,
+        'ia': ia,
         'orcamento': orc,
         'aceite_conclusao': _conclusao,
         'mensagens': mensagens,
@@ -285,6 +299,39 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                         }) : null,
                   ),
                 ],
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Relato por áudio (IA)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('O técnico fala o que fez e a IA escreve a OS: problema, causa, solução, peças, mão de obra e '
+                    'o equipamento. Nada entra na OS sem ele revisar.', style: TextStyle(color: Cores.neutro)),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Usar o relato por áudio'),
+                  value: _relatoAudio,
+                  onChanged: admin ? (v) => setState(() {
+                        _relatoAudio = v;
+                        _sujo = true;
+                      }) : null,
+                ),
+                if (_relatoAudio)
+                  TextField(
+                    controller: _encerramento,
+                    enabled: admin,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Texto de encerramento da OS',
+                      helperText: 'Vai nas observações quando o serviço terminou sem pendência',
+                    ),
+                    onChanged: (_) => _mudou(),
+                  ),
               ]),
             ),
           ),

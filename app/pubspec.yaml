@@ -31,6 +31,8 @@ dependencies:
   firebase_messaging: ^16.0.0
   # Resumo que o cliente assina (PDF gerado no aparelho, sem internet).
   pdf: ^3.11.0
+  # Relato do atendimento por áudio (m4a/AAC, gravado no aparelho).
+  record: ^6.0.0
 
 dev_dependencies:
   flutter_test:

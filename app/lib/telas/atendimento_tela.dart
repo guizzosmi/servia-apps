@@ -16,6 +16,7 @@ import '../widgets/aba_orcamento.dart';
 import '../widgets/abas_atendimento.dart';
 import '../widgets/entrar_no_servico.dart';
 import '../widgets/indicador_sync.dart';
+import '../widgets/relato_audio.dart';
 import '../widgets/status_chip.dart';
 import 'assinatura_tela.dart';
 
@@ -314,6 +315,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
           (
             'Relato',
             _Relato(
+              atd: atd,
               controles: _relato,
               habilitado: aberto,
               sujo: _sujo,
@@ -486,6 +488,7 @@ class _QuemEsta extends StatelessWidget {
 
 class _Relato extends StatelessWidget {
   const _Relato({
+    required this.atd,
     required this.controles,
     required this.habilitado,
     required this.sujo,
@@ -493,6 +496,7 @@ class _Relato extends StatelessWidget {
     required this.aoSalvar,
   });
 
+  final Map<String, dynamic> atd;
   final Map<String, TextEditingController> controles;
   final bool habilitado;
   final bool sujo;
@@ -502,6 +506,8 @@ class _Relato extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(padding: const EdgeInsets.all(12), children: [
+      // Relato falado: a IA organiza (o técnico revisa antes de ir para a OS).
+      RelatosDoAtendimento(atd: atd, habilitado: habilitado),
       for (final e in _camposRelato.entries)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),

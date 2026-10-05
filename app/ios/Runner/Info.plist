@@ -66,6 +66,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O microfone é usado para gravar o relato do atendimento.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>A câmera é usada para ler a etiqueta dos equipamentos e tirar as fotos do atendimento.</string>
 </dict>

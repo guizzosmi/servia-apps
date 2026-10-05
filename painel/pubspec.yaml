@@ -19,6 +19,8 @@ dependencies:
   # PDF das etiquetas QR e impressão/download no navegador.
   pdf: ^3.11.0
   printing: ^5.13.0
+  # Escolher arquivo e abrir aba no navegador (relato por áudio de teste).
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

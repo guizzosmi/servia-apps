@@ -15,6 +15,7 @@ import '../widgets/escolha_equipamentos.dart';
 import '../widgets/itens_os.dart';
 import '../widgets/margem.dart';
 import '../widgets/orcamentos_os.dart';
+import '../widgets/relatos_os.dart';
 import '../widgets/status_chip.dart';
 import 'orcamento_tela.dart' show descreverEventoOrcamento;
 
@@ -649,6 +650,13 @@ class _OsTelaState extends State<OsTela> {
                 ),
                 const SizedBox(height: 16),
 
+                // ---------- relatos por áudio (IA) ----------
+                _Secao(
+                  titulo: 'Relatos por áudio',
+                  children: [RelatosDaOs(osId: widget.id, podeEnviar: editar, versao: _versao)],
+                ),
+                const SizedBox(height: 16),
+
                 // ---------- orçamentos ----------
                 _Secao(
                   titulo: 'Orçamentos',
@@ -855,6 +863,8 @@ String descreverEvento(Map<String, dynamic> l) {
     'os:foto_excluida': 'Foto excluída',
     'os:link_relatorio': 'Link do relatório gerado',
     'os:link_relatorio_revogado': 'Link do relatório cancelado',
+    'os:relato_gravado': 'Relato por áudio gravado',
+    'os:relato_pronto': 'Relato por áudio organizado pela IA',
   };
   if (entidade == 'os' && acao == 'cadastro_pelo_app') {
     return [
