@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.7.0';
+const versaoApp = '0.9.0';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -267,6 +267,15 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
   /// O que a plataforma respondeu e o técnico precisa saber.
   Future<void> _depoisDeAceita(Operacao op, Map m) async {
     if (op.opId != m['op_id']) return;
+    if (op.tipo == 'relato_vincular') {
+      // O áudio já é da OS (a OS falada sai da lista; o relato aparece no atendimento).
+      final d = op.dados;
+      await banco.alterar('audios', d['audio_id'], {
+        'os_id': d['os_id'],
+        if (d['como_relato'] == true) 'finalidade': 'relato' else 'status': 'revisado',
+      });
+      return;
+    }
     if (op.tipo == 'relato_gravado') {
       // O relato continua na tela até o dia chegar de novo com ele.
       final d = op.dados;
@@ -275,6 +284,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
           {
             'id': d['audio_id'],
             'atendimento_id': d['atendimento_id'],
+            'finalidade': d['finalidade'] ?? 'relato',
             'status': '${m['status'] ?? 'enviado'}',
             'gravado_em': d['gravado_em'] ?? op.em,
             'duracao_s': d['duracao_s'],

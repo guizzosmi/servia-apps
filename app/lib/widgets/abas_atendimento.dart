@@ -510,6 +510,26 @@ class _AbaMedicoesState extends State<AbaMedicoes> {
 // Itens (peças e serviços usados)
 // =====================================================================
 
+/// Busca de peça ou serviço no catálogo do aparelho (também usada na
+/// revisão do relato por áudio). null = cancelou.
+Future<Map<String, dynamic>?> buscarProduto(BuildContext context, {String titulo = 'Peça ou serviço'}) {
+  final produtos = EstadoApp.instancia.banco!.todos('produtos').where((p) => p['ativo'] != false).toList()
+    ..sort((a, b) => '${a['descricao']}'.compareTo('${b['descricao']}'));
+  return showModalBottomSheet<Map<String, dynamic>>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => _Busca(
+      titulo: titulo,
+      itens: produtos,
+      texto: (p) => [
+        p['codigo'],
+        p['descricao'],
+        ...((p['sinonimos'] as List?) ?? const []),
+      ].where((x) => x != null && '$x'.isNotEmpty).join(' · '),
+    ),
+  );
+}
+
 class AbaItens extends StatelessWidget {
   const AbaItens({super.key, required this.atd, required this.habilitado});
 

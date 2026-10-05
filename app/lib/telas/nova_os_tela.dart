@@ -5,21 +5,25 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_cadastro.dart';
 import '../core/acoes_os.dart';
+import '../core/acoes_relato.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../widgets/cadastros_rapidos.dart';
+import '../widgets/relato_audio.dart';
 import '../widgets/status_chip.dart';
 
 /// Abrir uma OS no celular (quem tem a permissão). Funciona sem internet:
 /// a OS aparece na hora como "OS nova" e ganha o número quando sincronizar.
 /// [clienteId] e [localId] já vêm preenchidos quando ela é aberta de dentro
-/// de um serviço ("outra OS neste cliente").
+/// de um serviço ("outra OS neste cliente"). [audioId]: uma OS falada
+/// (guia 17b), que preenche a tela com o que a IA entendeu.
 class NovaOsTela extends StatefulWidget {
-  const NovaOsTela({super.key, this.clienteId, this.localId});
+  const NovaOsTela({super.key, this.clienteId, this.localId, this.audioId});
 
   final String? clienteId;
   final String? localId;
+  final String? audioId;
 
   @override
   State<NovaOsTela> createState() => _NovaOsTelaState();
@@ -53,9 +57,17 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   ContatoNovo? _contatoNovo;
   bool _salvando = false;
 
+  // OS falada: o áudio, se ele também é o relato e o que a IA não resolveu.
+  String? _audioId;
+  bool _comoRelato = false;
+  bool _propostaAplicada = false;
+  List<String> _dicas = const [];
+  List<Map> _clientesSugeridos = const [];
+
   @override
   void initState() {
     super.initState();
+    _audioId = widget.audioId;
     final banco = EstadoApp.instancia.banco!;
     _cliente = banco.um('clientes', widget.clienteId);
     if (_cliente != null) {
@@ -73,6 +85,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   }
 
   bool get _preencheuAlgo =>
+      _audioId != null ||
       _cliente != null ||
       _clienteNovo ||
       _problema.text.trim().isNotEmpty ||
@@ -169,6 +182,239 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   }
 
   // ------------------------------------------------------------------
+  // OS falada
+
+  Future<void> _falar() async {
+    final gravado = await Navigator.of(context).push<(String, Duration)>(
+      MaterialPageRoute(fullscreenDialog: true, builder: (_) => const GravadorRelatoTela(abertura: true)),
+    );
+    if (gravado == null) return;
+    final (arquivo, duracao) = gravado;
+    final id = arquivo.split(RegExp(r'[/\\]')).last.replaceAll('.m4a', '');
+    await AcoesRelato.registrarAbertura(audioId: id, arquivoLocal: arquivo, duracao: duracao);
+    if (!mounted) return;
+    setState(() {
+      _audioId = id;
+      _propostaAplicada = false;
+    });
+  }
+
+  Future<void> _descartarAudio() async {
+    final id = _audioId;
+    if (id == null) return;
+    final r = AcoesRelato.um(id);
+    // Ainda no aparelho: sai da fila; já na plataforma: fica registrado como descartado.
+    if (r?.opId != null) {
+      await EstadoApp.instancia.sync!.descartar(r!.opId!);
+      await EstadoApp.instancia.banco!.gravarMeta('relato_processar:$id', null);
+    } else {
+      await AcoesRelato.descartar(id);
+    }
+    if (!mounted) return;
+    setState(() {
+      _audioId = null;
+      _dicas = const [];
+      _clientesSugeridos = const [];
+    });
+  }
+
+  /// Preenche a tela com a proposta da IA (uma vez). O que ela não resolveu
+  /// vira dica para o técnico escolher.
+  void _aplicarProposta(Map<String, dynamic> ab) {
+    final banco = EstadoApp.instancia.banco!;
+    final dicas = <String>[];
+    var sugeridos = <Map>[];
+    final cli = ab['cliente'] is Map ? ab['cliente'] as Map : const {};
+    final loc = ab['local'] is Map ? ab['local'] as Map : const {};
+    final eq = ab['equipamento'] is Map ? ab['equipamento'] as Map : const {};
+    final falado = '${cli['falado'] ?? ''}'.trim();
+    setState(() {
+      _propostaAplicada = true;
+      // O que o técnico já escolheu (ou veio preenchido) fica: a proposta só completa.
+      final jaTinhaCliente = _cliente != null || _clienteNovo;
+      if (!jaTinhaCliente) {
+        final c = cli['tipo'] == 'identificado' ? banco.um('clientes', cli['cliente_id']) : null;
+        if (c != null) {
+          _trocarCliente(c);
+        } else if (cli['tipo'] == 'cadastrar' && falado.isNotEmpty) {
+          _cliente = null;
+          _clienteNovo = true;
+          _contatoId = null;
+          _contatoNovo = null;
+          _cNome.text = falado;
+          _local = null;
+          _localNovo = true;
+          _lNome.text = '${loc['falado'] ?? ''}'.trim();
+          dicas.add('Cliente "$falado" não está no cadastro: confira o nome (ou escolha da lista).');
+        } else {
+          sugeridos = [
+            for (final x in (cli['candidatos'] is List ? cli['candidatos'] as List : const []).whereType<Map>())
+              if (banco.um('clientes', x['cliente_id']) != null) x,
+          ];
+          dicas.add(falado.isEmpty ? 'Não deu para saber o cliente: escolha.' : 'Qual cliente é "$falado"? Escolha.');
+        }
+      } else if (_cliente != null && cli['cliente_id'] != null && cli['cliente_id'] != _cliente!['id']) {
+        dicas.add('A IA entendeu outro cliente ("$falado"). Ficou o que já estava escolhido.');
+      }
+      // Local: o identificado, se for do cliente escolhido e o técnico ainda não escolheu.
+      if (_cliente != null && _local == null && !_localNovo) {
+        final l = loc['tipo'] == 'identificado' ? banco.um('locais', loc['local_id']) : null;
+        if (l != null && l['cliente_id'] == _cliente!['id']) {
+          _local = l;
+        } else {
+          _escolherLocalPadrao();
+          if (_local == null && !_localNovo) {
+            final f = '${loc['falado'] ?? ''}'.trim();
+            dicas.add('${f.isEmpty ? 'O local não foi falado' : 'Não achei o local "$f"'}: escolha abaixo.');
+          }
+        }
+      }
+      final tipo = '${ab['tipo_servico'] ?? ''}';
+      if (tiposOs.containsKey(tipo)) _tipo = tipo;
+      final problema = '${ab['problema'] ?? ''}'.trim();
+      if (problema.isNotEmpty && _problema.text.trim().isEmpty) _problema.text = problema;
+      // O equipamento só se for do local escolhido.
+      final e = eq['equipamento_id'] == null ? null : banco.um('equipamentos', eq['equipamento_id']);
+      final doLocal = e != null && _local != null && e['local_id'] == _local!['id'];
+      if ((eq['tipo'] == 'sugerido' || eq['tipo'] == 'confirmar') && doLocal) {
+        _equipamentos.add('${e['id']}');
+        if (eq['tipo'] == 'confirmar') dicas.add('Confira o equipamento: ${eq['texto'] ?? ''}.');
+      } else if (eq['tipo'] != null && eq['texto'] != null) {
+        dicas.add('Equipamento: ${eq['texto']}.');
+      }
+      _comoRelato = ab['tem_relato'] == true;
+      _dicas = dicas;
+      _clientesSugeridos = sugeridos;
+    });
+  }
+
+  /// Troca o cliente: o local, os equipamentos e o contato eram do outro.
+  void _trocarCliente(Map<String, dynamic> c) {
+    _limparEquipamentos();
+    _contatoId = null;
+    _contatoNovo = null;
+    _cliente = c;
+    _clienteNovo = false;
+    _local = null;
+    _escolherLocalPadrao();
+  }
+
+  Widget _osFalada() {
+    final banco = EstadoApp.instancia.banco!;
+    return ListenableBuilder(
+      listenable: banco,
+      builder: (context, _) {
+        final id = _audioId;
+        if (id == null) {
+          if (!AcoesRelato.ligado) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: _salvando ? null : _falar,
+                icon: const Icon(Icons.mic, color: Cores.coral500),
+                label: const Text('Falar a OS (a IA preenche)'),
+              ),
+            ),
+          );
+        }
+        final r = AcoesRelato.um(id);
+        final ab = r?.abertura ?? (r?.resultado?['abertura_proposta'] as Map?)?.cast<String, dynamic>();
+        if (r != null && r.status == 'pronto' && ab != null && !_propostaAplicada) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_propostaAplicada) _aplicarProposta(ab);
+          });
+        }
+        final status = r?.status ?? 'aguardando_envio';
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                const Icon(Icons.record_voice_over_outlined, color: Cores.coral500),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('OS falada', style: TextStyle(fontWeight: FontWeight.w800))),
+                TextButton(
+                  onPressed: _descartarAudio,
+                  child: const Text('Descartar o áudio', style: TextStyle(color: Cores.erro)),
+                ),
+              ]),
+              switch (status) {
+                'aguardando_envio' => const Text(
+                    'Sem internet agora: a proposta chega quando conectar (fica também na tela Hoje). '
+                    'Se quiser, preencha à mão.',
+                    style: TextStyle(color: Cores.neutro)),
+                'enviado' || 'processando' => const Row(children: [
+                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('A IA está organizando (uns segundos)...')),
+                  ]),
+                'erro' || 'recusado' => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(r?.erro ?? 'Não deu para organizar o áudio.', style: const TextStyle(color: Cores.erro)),
+                    if (status == 'erro')
+                      TextButton.icon(
+                        onPressed: () => AcoesRelato.processarDeNovo(id),
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Tentar de novo'),
+                      ),
+                  ]),
+                'revisado' || 'descartado' => const Text('Este áudio já foi usado ou descartado.',
+                    style: TextStyle(color: Cores.neutro)),
+                _ => _propostaAplicada
+                    ? const Text('Preenchido com o que a IA entendeu. Confira antes de salvar.',
+                        style: TextStyle(color: Cores.sucesso, fontWeight: FontWeight.w600))
+                    : const Text('A IA não trouxe uma proposta. Preencha à mão.', style: TextStyle(color: Cores.neutro)),
+              },
+              for (final d in _dicas)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('• $d', style: const TextStyle(color: Cores.alerta)),
+                ),
+              if (_clientesSugeridos.isNotEmpty)
+                Wrap(spacing: 6, children: [
+                  for (final c in _clientesSugeridos)
+                    ActionChip(
+                      label: Text('${c['nome_fantasia'] ?? c['nome']}'),
+                      onPressed: () {
+                        final cliente = banco.um('clientes', c['cliente_id']);
+                        if (cliente == null) return;
+                        setState(() {
+                          _trocarCliente(cliente);
+                          _clientesSugeridos = const [];
+                          _dicas = _dicas
+                              .where((d) => !d.startsWith('Qual cliente') && !d.startsWith('Não deu para saber o cliente'))
+                              .toList();
+                          // Com um local só, ele já fica; com vários, o técnico escolhe na lista.
+                          if (_local == null && !_localNovo) _dicas = [..._dicas, 'Escolha o local abaixo.'];
+                        });
+                      },
+                    ),
+                ]),
+              if ((r?.transcricao ?? '').trim().isNotEmpty)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('O que foi falado'),
+                  children: [Text(r!.transcricao!, style: const TextStyle(fontStyle: FontStyle.italic))],
+                ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _comoRelato,
+                onChanged: (v) => setState(() => _comoRelato = v ?? false),
+                title: const Text('Usar este áudio também como relato do serviço'),
+                subtitle: const Text('Marque quando você já contou o que encontrou e o que fez. '
+                    'A revisão fica no atendimento.'),
+              ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  // ------------------------------------------------------------------
 
   Future<void> _salvar({required bool agora}) async {
     if (_salvando) return;
@@ -220,7 +466,12 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         contatoId: _contatoNovo == null ? _contatoId : null,
         contatoNovo: _contatoNovo,
       );
-      final itemId = await AcoesOs.abrir(pedido, parte: parte);
+      // A OS falada recusada (arquivo sumiu...) não liga: a OS vai sem ela.
+      final audio = _audioId == null ? null : AcoesRelato.um(_audioId!);
+      final itemId = await AcoesOs.abrir(pedido,
+          parte: parte,
+          audioId: audio == null || const ['recusado', 'revisado', 'descartado'].contains(audio.status) ? null : audio.id,
+          audioComoRelato: _comoRelato);
       if (!mounted) return;
       final aviso = ScaffoldMessenger.of(context);
       if (itemId != null) {
@@ -261,7 +512,9 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Descartar esta OS?'),
-        content: const Text('O que você preencheu não será salvo.'),
+        content: Text(_audioId == null
+            ? 'O que você preencheu não será salvo.'
+            : 'O que você preencheu não será salvo. O áudio fica na tela Hoje, em "OS faladas".'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Continuar preenchendo')),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Descartar')),
@@ -293,6 +546,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
             children: [
+              _osFalada(),
               // ---------- cliente ----------
               _Secao(titulo: 'Cliente', filhos: [
                 if (_clienteNovo) ...[

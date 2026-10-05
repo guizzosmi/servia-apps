@@ -16,6 +16,7 @@ Future<EquipamentoNovo?> cadastrarEquipamento(
   Map<String, String> codigosUsados = const {},
   List<EquipamentoNovo> pendentes = const [],
   String sugestao = '',
+  String? ambienteId,
 }) =>
     showModalBottomSheet<EquipamentoNovo>(
       context: context,
@@ -26,6 +27,7 @@ Future<EquipamentoNovo?> cadastrarEquipamento(
         codigosUsados: codigosUsados,
         pendentes: pendentes,
         sugestao: sugestao,
+        ambienteId: ambienteId,
       ),
     );
 
@@ -46,9 +48,13 @@ class _FormEquipamento extends StatefulWidget {
     required this.codigosUsados,
     required this.pendentes,
     required this.sugestao,
+    this.ambienteId,
   });
 
   final String? localId;
+
+  /// Ambiente já escolhido (ex.: o que o técnico falou no relato).
+  final String? ambienteId;
   final Map<String, String> codigosUsados;
   final List<EquipamentoNovo> pendentes;
   final String sugestao;
@@ -67,7 +73,9 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
   final _fluido = TextEditingController();
   final _ambienteNovo = TextEditingController();
   final _tipoNovo = TextEditingController();
-  String? _ambiente;
+  // (só se o ambiente estiver na lista: o menu não aceita valor de fora)
+  late String? _ambiente =
+      _ambientes.any((a) => '${a['id']}' == widget.ambienteId) ? widget.ambienteId : null;
   String? _tipo;
 
   @override

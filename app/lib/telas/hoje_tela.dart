@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_os.dart';
+import '../core/acoes_relato.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
@@ -102,6 +103,15 @@ class _HojeTelaState extends State<HojeTela> {
                     botao: 'Ok',
                     aoTocar: () => sync.dispensarAviso(chave),
                   ),
+                // OS faladas (guia 17b) ainda não abertas: tocar abre a Nova OS preenchida.
+                if (AcoesOs.possoAbrir)
+                  for (final r in AcoesRelato.osFaladas())
+                    _Aviso(
+                      icone: Icons.record_voice_over_outlined,
+                      texto: _textoOsFalada(r),
+                      botao: 'Abrir',
+                      aoTocar: () => context.push(Uri(path: '/nova-os', queryParameters: {'audio': r.id}).toString()),
+                    ),
                 _SeletorDeDia(
                   hoje: hoje,
                   deslocamento: _deslocamento,
@@ -360,4 +370,16 @@ class _CartaoServico extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "OS falada 10:42: Friella da Cacic" (ou a situação, enquanto não fica pronta).
+String _textoOsFalada(RelatoAudio r) {
+  final onde = '${r.abertura?['onde_falado'] ?? ''}'.trim();
+  final situacao = switch (r.status) {
+    'pronto' => onde.isEmpty ? 'pronta para abrir' : onde,
+    'aguardando_envio' => 'aguardando internet',
+    'erro' || 'recusado' => 'com erro',
+    _ => 'a IA está organizando',
+  };
+  return 'OS falada ${horaDe(r.gravadoEm)}: $situacao';
 }

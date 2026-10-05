@@ -1,5 +1,6 @@
 import 'acoes_atendimento.dart';
 import 'acoes_cadastro.dart';
+import 'acoes_relato.dart';
 import 'banco_local.dart';
 import 'consultas.dart';
 import 'estado.dart';
@@ -149,7 +150,10 @@ class AcoesOs {
   /// Abre a OS. Com [parte] ("atender agora"), ela entra no fim da parte e
   /// devolve o id do serviço (para abrir a tela dele); sem, vai para a fila
   /// do escritório e devolve null.
-  static Future<String?> abrir(PedidoOs pedido, {Map<String, dynamic>? parte}) async {
+  /// [audioId]: a OS falada que deu origem a esta (guia 17b); [audioComoRelato]:
+  /// o mesmo áudio também é o relato do serviço.
+  static Future<String?> abrir(PedidoOs pedido,
+      {Map<String, dynamic>? parte, String? audioId, bool audioComoRelato = false}) async {
     final osId = AcoesAtendimento.novoId();
     final agId = AcoesAtendimento.novoId();
     final itemId = parte == null ? null : AcoesAtendimento.novoId();
@@ -293,6 +297,7 @@ class AcoesOs {
       }
       _banco.avisar();
     });
+    if (audioId != null) await AcoesRelato.vincular(audioId, osId, comoRelato: audioComoRelato);
     return itemId;
   }
 }

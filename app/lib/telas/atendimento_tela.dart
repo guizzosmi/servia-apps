@@ -321,6 +321,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
               sujo: _sujo,
               aoMudar: () => setState(() => _sujo = true),
               aoSalvar: _salvarRelato,
+              antesDeRevisar: () => _salvarRelato(avisar: false),
             )
           ),
           ('Equipamentos', AbaEquipamentos(atd: atd, habilitado: aberto)),
@@ -494,6 +495,7 @@ class _Relato extends StatelessWidget {
     required this.sujo,
     required this.aoMudar,
     required this.aoSalvar,
+    required this.antesDeRevisar,
   });
 
   final Map<String, dynamic> atd;
@@ -502,12 +504,13 @@ class _Relato extends StatelessWidget {
   final bool sujo;
   final VoidCallback aoMudar;
   final Future<void> Function() aoSalvar;
+  final Future<void> Function() antesDeRevisar;
 
   @override
   Widget build(BuildContext context) {
     return ListView(padding: const EdgeInsets.all(12), children: [
       // Relato falado: a IA organiza (o técnico revisa antes de ir para a OS).
-      RelatosDoAtendimento(atd: atd, habilitado: habilitado),
+      RelatosDoAtendimento(atd: atd, habilitado: habilitado, antesDeRevisar: antesDeRevisar),
       for (final e in _camposRelato.entries)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),

@@ -302,6 +302,8 @@ class AcoesAtendimento {
     Map<String, dynamic> atd, {
     Map<String, dynamic>? produto,
     String? descricao,
+    String? tipo,
+    String? unidade,
     required num quantidade,
     String? itemId,
   }) async {
@@ -323,6 +325,8 @@ class AcoesAtendimento {
         'atendimento_id': atd['id'],
         if (produto != null) 'produto_id': produto['id'],
         if (descricao != null) 'descricao': descricao,
+        if (tipo != null) 'tipo': tipo,
+        if (unidade != null) 'unidade': unidade,
         'quantidade': quantidade,
       },
       aplicarLocal: () => _banco.gravar('os_itens', [
@@ -332,9 +336,9 @@ class AcoesAtendimento {
           'atendimento_id': atd['id'],
           'produto_id': produto?['id'],
           'descricao': descricao ?? produto?['descricao'] ?? 'Item',
-          'tipo': produto?['tipo'] ?? 'produto',
+          'tipo': produto?['tipo'] ?? tipo ?? 'produto',
           'quantidade': quantidade,
-          'unidade': produto?['unidade'] ?? 'un',
+          'unidade': produto?['unidade'] ?? unidade ?? 'un',
           'preco_unitario': preco,
           'desconto': desconto,
           'total': (quantidade * preco * 100).round() / 100 - desconto,

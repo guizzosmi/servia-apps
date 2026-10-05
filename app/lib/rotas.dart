@@ -38,6 +38,7 @@ final rotas = GoRouter(
       builder: (_, state) => NovaOsTela(
         clienteId: state.uri.queryParameters['cliente'],
         localId: state.uri.queryParameters['local'],
+        audioId: state.uri.queryParameters['audio'],
       ),
     ),
     GoRoute(

@@ -11,6 +11,7 @@ import '../core/arquivos.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../telas/revisao_relato_tela.dart';
 import 'status_chip.dart';
 
 const _statusRelato = {
@@ -33,10 +34,14 @@ String duracaoCurta(num? segundos) {
 /// Relatos por áudio do atendimento (no alto da aba Relato): gravar e ver
 /// a situação de cada um. A IA organiza depois que o áudio sobe.
 class RelatosDoAtendimento extends StatelessWidget {
-  const RelatosDoAtendimento({super.key, required this.atd, required this.habilitado});
+  const RelatosDoAtendimento({super.key, required this.atd, required this.habilitado, this.antesDeRevisar});
 
   final Map<String, dynamic> atd;
   final bool habilitado;
+
+  /// Grava o que foi digitado no relato antes de abrir a revisão (o texto da
+  /// IA entra embaixo do que já está escrito).
+  final Future<void> Function()? antesDeRevisar;
 
   Future<void> _gravar(BuildContext context) async {
     final gravado = await Navigator.of(context).push<(String, Duration)>(
@@ -54,7 +59,7 @@ class RelatosDoAtendimento extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final relatos = AcoesRelato.doAtendimento(atd['id']);
+    final relatos = AcoesRelato.doAtendimento(atd);
     final ligado = AcoesRelato.ligado;
     if (!ligado && relatos.isEmpty) return const SizedBox.shrink();
     return Card(
@@ -82,7 +87,7 @@ class RelatosDoAtendimento extends StatelessWidget {
               ),
             ),
           ],
-          for (final r in relatos) _ItemRelato(r),
+          for (final r in relatos) _ItemRelato(r, atd: atd, habilitado: habilitado, antesDeRevisar: antesDeRevisar),
         ]),
       ),
     );
@@ -90,8 +95,37 @@ class RelatosDoAtendimento extends StatelessWidget {
 }
 
 class _ItemRelato extends StatelessWidget {
-  const _ItemRelato(this.r);
+  const _ItemRelato(this.r, {required this.atd, required this.habilitado, this.antesDeRevisar});
   final RelatoAudio r;
+  final Map<String, dynamic> atd;
+  final bool habilitado;
+  final Future<void> Function()? antesDeRevisar;
+
+  Future<void> _revisar(BuildContext context) async {
+    await antesDeRevisar?.call();
+    if (!context.mounted) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => RevisaoRelatoTela(atd: atd, relato: r)),
+    );
+  }
+
+  Future<void> _descartar(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Descartar este relato?'),
+        content: const Text('Ele sai da lista. O áudio continua registrado na plataforma.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Descartar', style: TextStyle(color: Cores.erro)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await AcoesRelato.descartar(r.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,19 +179,36 @@ class _ItemRelato extends StatelessWidget {
                   children: [for (final l in resumo) Text(l, style: const TextStyle(fontSize: 13))],
                 ),
         },
-        if (podeTentar)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => AcoesRelato.processarDeNovo(r.id),
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Tentar de novo'),
+        if (podeTentar || (r.status == 'erro' && habilitado))
+          Wrap(spacing: 8, children: [
+            if (podeTentar)
+              TextButton.icon(
+                onPressed: () => AcoesRelato.processarDeNovo(r.id),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Tentar de novo'),
+              ),
+            if (r.status == 'erro' && habilitado)
+              TextButton(
+                onPressed: () => _descartar(context),
+                child: const Text('Descartar', style: TextStyle(color: Cores.erro)),
+              ),
+          ]),
+        if (r.status == 'pronto' && habilitado)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: () => _revisar(context),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Revisar e levar para o atendimento'),
+              ),
             ),
           ),
-        if (r.status == 'pronto')
+        if (r.status == 'pronto' && !habilitado)
           const Padding(
             padding: EdgeInsets.only(top: 4),
-            child: Text('Levar o que a IA escreveu para o relato e a OS: em breve, nesta tela.',
+            child: Text('Atendimento encerrado: a revisão não está mais disponível no app.',
                 style: TextStyle(color: Cores.neutro, fontSize: 12)),
           ),
       ]),
@@ -170,7 +221,10 @@ enum _Fase { preparando, semPermissao, gravando, pausado, terminado }
 /// Tela de gravação: até 10 minutos, com pausa. No fim, enviar, gravar de
 /// novo ou descartar. Devolve (arquivo, duração) ao enviar.
 class GravadorRelatoTela extends StatefulWidget {
-  const GravadorRelatoTela({super.key});
+  const GravadorRelatoTela({super.key, this.abertura = false});
+
+  /// Gravando para abrir uma OS (o título e a dica mudam).
+  final bool abertura;
 
   @override
   State<GravadorRelatoTela> createState() => _GravadorRelatoTelaState();
@@ -363,7 +417,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
         if (await _confirmarSaida() && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Relato por áudio')),
+        appBar: AppBar(title: Text(widget.abertura ? 'Falar a OS' : 'Relato por áudio')),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -371,13 +425,18 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: Cores.indigo100, borderRadius: BorderRadius.circular(8)),
-                child: const Text(
-                  'Fale com calma:\n'
-                  '• onde: o local, a sala e o equipamento;\n'
-                  '• o que encontrou e a causa;\n'
-                  '• o que fez, as peças trocadas e as medições;\n'
-                  '• se cobra ou não, e quanto tempo levou.',
-                  style: TextStyle(fontSize: 14, height: 1.4),
+                child: Text(
+                  widget.abertura
+                      ? 'Comece dizendo onde está e o que vai fazer:\n'
+                          '"Estou na Friella da Cacic, trocando a torneira do bebedouro do refeitório."\n\n'
+                          'Se o serviço já foi feito, conte também o que encontrou e o que fez: '
+                          'o mesmo áudio vira o relato.'
+                      : 'Fale com calma:\n'
+                          '• onde: o local, a sala e o equipamento;\n'
+                          '• o que encontrou e a causa;\n'
+                          '• o que fez, as peças trocadas e as medições;\n'
+                          '• se cobra ou não, e quanto tempo levou.',
+                  style: const TextStyle(fontSize: 14, height: 1.4),
                 ),
               ),
               const Spacer(),
