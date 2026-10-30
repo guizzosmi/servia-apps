@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
 import '../servicos/parametros.dart';
+import '../servicos/tutoriais.dart';
+import '../widgets/aviso_plano.dart';
 
 /// Moldura do painel: menu lateral + barra superior com a empresa e "Sair".
 /// Em telas estreitas o menu vira uma gaveta (ícone ☰).
@@ -44,7 +46,13 @@ class Casca extends StatelessWidget {
               ),
               child: menu,
             ),
-          Expanded(child: child),
+          // Faixa do plano (teste acabando, fatura vencida, minutos no fim) acima da tela.
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const AvisoPlano(),
+              Expanded(child: child),
+            ]),
+          ),
         ],
       ),
     );
@@ -102,22 +110,37 @@ class _Menu extends StatelessWidget {
         // Só para quem usa (Configurações > Preventivas).
         if (param.usaPreventivas) item(Icons.event_repeat_outlined, param.nomePlanos, '/planos'),
         grupo('Financeiro'),
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.receipt_long_outlined, 'A cobrar', '/cobrar'),
         item(Icons.handshake_outlined, 'Contratos', '/contratos'),
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.workspace_premium_outlined, 'Plano e consumo', '/assinatura'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
           item(def.icone, def.titulo, '/c/${def.chave}'),
+        if (Sessao.atual?.tem(Papel.gestor) ?? false)
+          item(Icons.upload_file_outlined, 'Importar planilha', '/importar'),
         if (Sessao.atual?.tem(Papel.admin) ?? false) ...[
           grupo('Administração'),
           item(Icons.manage_accounts_outlined, 'Usuários', '/usuarios'),
           item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
           item(Icons.tune_outlined, 'Configurações', '/configuracoes'),
         ],
-        grupo('Em breve'),
-        const ListTile(
+        const Divider(height: 24),
+        // Central de tutoriais (guia 47): abre numa aba nova, com os vídeos do perfil.
+        ListTile(
           dense: true,
-          enabled: false,
-          leading: Icon(Icons.payments_outlined, size: 20),
-          title: Text('Faturamento'),
+          leading: const Icon(Icons.ondemand_video_outlined),
+          title: const Text('Tutoriais'),
+          onTap: () async {
+            try {
+              await abrirTutoriais();
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensagemDeErro(e))));
+              }
+            }
+          },
         ),
       ],
       ),

@@ -8,15 +8,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cadastros/catalogo.dart';
 import 'quadro/quadro_tela.dart';
 import 'telas/aparelhos_tela.dart';
+import 'telas/assinatura_tela.dart';
 import 'telas/cadastro_form_tela.dart';
 import 'telas/cadastro_lista_tela.dart';
 import 'telas/casca.dart';
 import 'telas/configuracoes_tela.dart';
 import 'telas/contrato_tela.dart';
+import 'telas/cobrar_tela.dart';
 import 'telas/contratos_tela.dart';
 import 'telas/empresa_tela.dart';
 import 'telas/etiquetas_tela.dart';
 import 'telas/fila_tela.dart';
+import 'telas/importar_tela.dart';
 import 'telas/inicio_tela.dart';
 import 'telas/login_tela.dart';
 import 'telas/orcamento_tela.dart';
@@ -126,6 +129,7 @@ final rotas = GoRouter(
             ),
           ],
         ),
+        GoRoute(path: '/cobrar', builder: (_, __) => const CobrarTela()),
         GoRoute(
           path: '/contratos',
           builder: (_, __) => const ContratosTela(),
@@ -142,6 +146,11 @@ final rotas = GoRouter(
         ),
         GoRoute(path: '/aparelhos', builder: (_, __) => const AparelhosTela()),
         GoRoute(path: '/configuracoes', builder: (_, __) => const ConfiguracoesTela()),
+        GoRoute(path: '/importar', builder: (_, __) => const ImportarTela()),
+        GoRoute(
+          path: '/assinatura',
+          builder: (_, state) => AssinaturaTela(pagamento: state.uri.queryParameters['pagamento']),
+        ),
         GoRoute(
           path: '/usuarios',
           builder: (_, __) => const UsuariosTela(),

@@ -1,7 +1,11 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/acoes_lider.dart';
 import '../core/acoes_os.dart';
 import '../core/acoes_parte.dart';
 import '../core/acoes_relato.dart';
@@ -24,6 +28,37 @@ class HojeTela extends StatefulWidget {
 class _HojeTelaState extends State<HojeTela> {
   /// Dias a partir de hoje: -1 (ontem) a 2 (depois de amanhã).
   int _deslocamento = 0;
+
+  /// Aviso dos minutos de IA do plano (guia 44). Sem internet, fica sem.
+  Map<String, dynamic>? _avisoPlano;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarAvisoPlano();
+  }
+
+  Future<void> _carregarAvisoPlano() async {
+    try {
+      final r = await Supabase.instance.client.rpc('consumo_aviso');
+      if (mounted && r is Map) setState(() => _avisoPlano = Map<String, dynamic>.from(r));
+    } catch (_) {
+      // Sem internet: sem aviso.
+    }
+  }
+
+  /// Central de tutoriais (guia 47): abre no navegador, com os vídeos do perfil.
+  Future<void> _abrirTutoriais() async {
+    try {
+      final r = await Supabase.instance.client.rpc('tutoriais_link');
+      await abrirLink((r as Map)['url'] as String);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Precisa de internet para abrir os tutoriais.')));
+      }
+    }
+  }
 
   Future<void> _sair() async {
     final estado = EstadoApp.instancia;
@@ -77,9 +112,11 @@ class _HojeTelaState extends State<HojeTela> {
                 onSelected: (op) {
                   if (op == 'sync') sync.sincronizar();
                   if (op == 'sair') _sair();
+                  if (op == 'tutoriais') _abrirTutoriais();
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'sync', child: Text('Sincronizar agora')),
+                  PopupMenuItem(value: 'tutoriais', child: Text('Tutoriais')),
                   PopupMenuItem(value: 'sair', child: Text('Sair')),
                 ],
               ),
@@ -142,6 +179,20 @@ class _HojeTelaState extends State<HojeTela> {
                   deslocamento: _deslocamento,
                   aoMudar: (d) => setState(() => _deslocamento = d),
                 ),
+                if (_avisoPlano != null)
+                  _Aviso(
+                    icone: Icons.data_usage,
+                    texto: '${_avisoPlano!['texto']}',
+                    botao: 'Ok',
+                    aoTocar: () => setState(() => _avisoPlano = null),
+                  ),
+                if (sync.situacao == SituacaoSync.desatualizado)
+                  _Aviso(
+                    icone: Icons.system_update_outlined,
+                    texto: sync.mensagem ?? 'Atualize o app ServPilot para continuar recebendo a parte do dia.',
+                    botao: 'Atualizar',
+                    aoTocar: () => abrirLink(Platform.isIOS ? Config.linkLojaIphone : Config.linkLojaAndroid),
+                  ),
                 if (sync.situacao == SituacaoSync.precisaEntrar)
                   _Aviso(
                     icone: Icons.lock_clock_outlined,
@@ -308,16 +359,34 @@ class _BlocoParte extends StatelessWidget {
           ),
         for (var i = 0; i < itens.length; i++)
           _CartaoServico(banco: banco, item: itens[i], posicao: i + 1, eu: eu),
-        // O líder encerra o dia (hoje ou um dia anterior que ficou aberto).
-        if (AcoesParte.podeEncerrar(parte))
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: () => context.push('/encerrar-dia/${parte['id']}'),
-              icon: const Icon(Icons.nightlight_round),
-              label: const Text('Encerrar o dia'),
+        // O líder conduz a equipe (ordem, quem faz, equipe do dia, pedidos)
+        // e encerra o dia (hoje ou um dia anterior que ficou aberto).
+        if (AcoesLider.podeConduzir(parte))
+          Row(children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/conduzir/${parte['id']}'),
+                  icon: const Icon(Icons.tune),
+                  label: const Text('Conduzir a equipe'),
+                ),
+              ),
             ),
-          ),
+            if (AcoesParte.podeEncerrar(parte)) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/encerrar-dia/${parte['id']}'),
+                    icon: const Icon(Icons.nightlight_round),
+                    label: const Text('Encerrar o dia'),
+                  ),
+                ),
+              ),
+            ],
+          ]),
         if (parte['status'] == 'encerrada' && '${parte['resumo_texto'] ?? ''}'.trim().isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
@@ -400,6 +469,7 @@ class _CartaoServico extends StatelessWidget {
                   if (item['incluido_apos_publicacao'] == true) const Selo('Novo', Cores.coral500),
                   if (item['alterado_apos_publicacao'] == true) const Selo('Alterado', Cores.alerta),
                   if (item['papel_equipe'] == 'apoio') const Selo('Apoio', Cores.andamento),
+                  ?_seloPedido(item['id']),
                   if (paraOutros)
                     Selo('Com ${designados.map(banco.nomeColaborador).join(', ')}', Cores.neutro),
                 ]),
@@ -423,3 +493,10 @@ String _textoOsFalada(RelatoAudio r) {
   };
   return 'OS falada ${horaDe(r.gravadoEm)}: $situacao';
 }
+
+/// Pedido de replanejamento do líder (guia 28): em aberto ou recusado.
+Widget? _seloPedido(Object? itemId) => switch (AcoesLider.pedidoDo(itemId)?['status']) {
+      'pendente' => const Selo('Replanejamento pedido', Cores.alerta),
+      'recusado' => const Selo('Replanejamento recusado', Cores.erro),
+      _ => null,
+    };

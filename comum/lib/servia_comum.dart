@@ -3,6 +3,8 @@ library;
 
 export 'src/config.dart';
 export 'src/erros.dart';
+export 'src/erros_remotos.dart';
+export 'src/links.dart';
 export 'src/marca.dart';
 export 'src/mensagens.dart';
 export 'src/sessao.dart';

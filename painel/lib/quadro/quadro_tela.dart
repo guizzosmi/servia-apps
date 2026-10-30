@@ -49,6 +49,9 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
   /// parte_item_id -> check-ins abertos (quem está no serviço agora)
   Map<String, List<Map<String, dynamic>>> _noServico = {};
 
+  /// parte_item_id -> pedido de replanejamento do líder, em aberto (guia 28)
+  Map<String, Map<String, dynamic>> _pedidos = {};
+
   // Filtros da fila
   final _busca = TextEditingController();
   String? _prioridade;
@@ -134,6 +137,11 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
             .select('colaborador_id, entrada_em, atendimentos(parte_item_id)')
             .isFilter('saida_em', null)
             .isFilter('excluido_em', null),
+        // Pedidos de replanejamento do líder ainda sem resposta.
+        db.from('replanejamentos')
+            .select('id, parte_item_id, motivo, data_sugerida, observacao, pedido_por, criado_em')
+            .eq('status', 'pendente')
+            .isFilter('excluido_em', null),
       ]);
       if (!mounted || geracao != _geracao) return;
       setState(() {
@@ -150,6 +158,7 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
           final item = (pa['atendimentos'] as Map?)?['parte_item_id'] as String?;
           if (item != null) _noServico.putIfAbsent(item, () => []).add(pa);
         }
+        _pedidos = {for (final p in r[8]) p['parte_item_id'] as String: p};
       });
       _abrirEncerramentoPedido();
     } catch (e) {
@@ -227,7 +236,11 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
     final parte = _partePorEquipe[equipe['id']];
     final itens = [
       for (final i in [...?itensPorParte[parte?['id']]])
-        {...i, 'no_servico': _noServico[i['id']] ?? const <Map<String, dynamic>>[]},
+        {
+          ...i,
+          'no_servico': _noServico[i['id']] ?? const <Map<String, dynamic>>[],
+          'pedido': _pedidos[i['id']],
+        },
     ]..sort((a, b) => ((a['ordem'] ?? 0) as int).compareTo((b['ordem'] ?? 0) as int));
     final comp = [...?compPorParte[parte?['id']]]
       ..sort((a, b) {
@@ -624,6 +637,15 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
       return;
     }
     switch (acao) {
+      case 'replanejamento':
+        final pedido = item['pedido'] as Map<String, dynamic>?;
+        if (pedido == null) return;
+        final r = await responderPedido(context, os: '$os', pedido: pedido, nome: nomeColaborador);
+        if (r == null) return;
+        await _executar(
+          () => responderReplanejamento({'pedido_id': pedido['id'], 'decisao': r.decisao, 'resposta': r.resposta}),
+          sucesso: r.decisao == 'aceitar' ? '$os voltou para a fila.' : 'Pedido recusado: o serviço fica na parte.',
+        );
       case 'designar':
         final r = await escolherDesignados(
           context,

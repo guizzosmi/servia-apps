@@ -78,6 +78,10 @@ const nomesOperacoes = {
   'checklist_marcar': 'Checklist da preventiva',
   'relato_gravado': 'Relato por áudio',
   'parte_encerrar': 'Encerrar o dia',
+  'parte_reordenar': 'Ordem dos serviços',
+  'parte_designar': 'Quem faz o serviço',
+  'parte_composicao': 'Equipe do dia',
+  'replanejamento_pedir': 'Pedido de replanejamento',
 };
 
 const statusOrcamento = {

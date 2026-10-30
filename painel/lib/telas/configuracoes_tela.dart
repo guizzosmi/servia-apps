@@ -3,6 +3,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/parametros.dart';
+import '../servicos/status.dart' show dataHoraBr;
 import '../widgets/margem.dart';
 
 /// Configurações da empresa (só o admin altera): preventivas, orçamento no
@@ -57,6 +58,11 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   // IA: relato por áudio e o texto de encerramento das OS.
   bool _relatoAudio = true;
   final _encerramento = TextEditingController();
+  // Privacidade e retenção (guia 38): prazos e a última limpeza.
+  final _audiosDias = TextEditingController();
+  final _localDias = TextEditingController();
+  final _mensagensDias = TextEditingController();
+  Map<String, dynamic> _retencao = {};
   bool _sujo = false;
 
   @override
@@ -73,6 +79,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
     _antecedencia.dispose();
     _tolerancia.dispose();
     _encerramento.dispose();
+    _audiosDias.dispose();
+    _localDias.dispose();
+    _mensagensDias.dispose();
     for (final c in _modelos.values) {
       c.dispose();
     }
@@ -94,6 +103,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
           .eq('empresa_id', Sessao.atual!.empresaId!)
           .single();
       final p = Map<String, dynamic>.from((c['parametros'] as Map?) ?? const {});
+      final ret = Map<String, dynamic>.from((await _db.rpc('retencao_resumo')) as Map? ?? const {});
       final orc = Map<String, dynamic>.from((p['orcamento'] as Map?) ?? const {});
       if (!mounted) return;
       setState(() {
@@ -116,6 +126,10 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         final ia = Map<String, dynamic>.from((p['ia'] as Map?) ?? const {});
         _relatoAudio = ia['relato_audio'] != false;
         _encerramento.text = '${ia['texto_encerramento'] ?? 'Testes realizados, tudo de acordo com os parâmetros.'}';
+        _retencao = ret;
+        _audiosDias.text = _numero(ret['audios_dias'] ?? 30);
+        _localDias.text = _numero(ret['localizacao_dias'] ?? 90);
+        _mensagensDias.text = _numero(ret['mensagens_dias'] ?? 365);
         _sujo = false;
       });
     } catch (e) {
@@ -146,8 +160,27 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       _avisar('Tolerância: de 0 a 90 dias.', erro: true);
       return;
     }
+    final audiosDias = int.tryParse(_audiosDias.text.trim());
+    final localDias = int.tryParse(_localDias.text.trim());
+    final mensagensDias = int.tryParse(_mensagensDias.text.trim());
+    if (audiosDias == null || audiosDias < 7 || audiosDias > 365) {
+      _avisar('Áudios: de 7 a 365 dias.', erro: true);
+      return;
+    }
+    if (localDias == null || localDias < 7 || localDias > 365) {
+      _avisar('Localização: de 7 a 365 dias.', erro: true);
+      return;
+    }
+    if (mensagensDias == null || mensagensDias < 30 || mensagensDias > 1825) {
+      _avisar('Mensagens: de 30 a 1825 dias.', erro: true);
+      return;
+    }
     setState(() => _salvando = true);
     try {
+      final retencao = Map<String, dynamic>.from((_parametros['retencao'] as Map?) ?? const {})
+        ..['audios_dias'] = audiosDias
+        ..['localizacao_dias'] = localDias
+        ..['mensagens_dias'] = mensagensDias;
       final prev = Map<String, dynamic>.from((_parametros['preventivas'] as Map?) ?? const {})
         ..['usa'] = _usaPrev
         ..['pmoc'] = _usaPrev && _pmoc
@@ -185,6 +218,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         'mensagens': mensagens,
         'preventivas': prev,
         'antecedencia_preventivas_dias': antecedencia,
+        'retencao': retencao,
       };
       await _db
           .from('empresa_config')
@@ -483,6 +517,8 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
               ]),
             ),
           ),
+          const SizedBox(height: 12),
+          _cartaoRetencao(admin),
           const SizedBox(height: 16),
           if (admin)
             Align(
@@ -501,6 +537,54 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         ]),
       ),
     ]);
+  }
+}
+
+extension on _ConfiguracoesTelaState {
+  /// Privacidade e retenção: o que é apagado e quando (a limpeza roda todo dia).
+  Widget _cartaoRetencao(bool admin) {
+    String quando(Object? v) => v == null ? 'ainda não rodou' : dataHoraBr(v);
+    Widget prazo(TextEditingController c, String rotulo, String ajuda) => SizedBox(
+          width: 200,
+          child: TextField(
+            controller: c,
+            enabled: admin,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: rotulo, suffixText: 'dias', helperText: ajuda, helperMaxLines: 2),
+            onChanged: (_) => _mudou(),
+          ),
+        );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Privacidade e retenção', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          const Text(
+              'Todo dia, de madrugada, o ServPilot apaga o que passou do prazo. O áudio do relato some, mas o texto '
+              'do relato continua. Fotos e registros ficam 5 anos.',
+              style: TextStyle(color: Cores.neutro)),
+          const SizedBox(height: 12),
+          Wrap(spacing: 16, runSpacing: 8, children: [
+            prazo(_audiosDias, 'Áudios dos relatos', '7 a 365'),
+            prazo(_localDias, 'Localização (check-in e fotos)', '7 a 365'),
+            prazo(_mensagensDias, 'Texto das mensagens', '30 a 1825'),
+          ]),
+          const SizedBox(height: 12),
+          Text('Áudios guardados: ${_retencao['audios_guardados'] ?? 0} · apagados pelo prazo: '
+              '${_retencao['audios_apagados'] ?? 0}'),
+          Text('Última limpeza do banco: ${quando(_retencao['ultima_dados'])} · dos arquivos: '
+              '${quando(_retencao['ultima_arquivos'])}',
+              style: const TextStyle(color: Cores.neutro)),
+          if (_retencao['agendada'] == false)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text('A limpeza dos arquivos ainda não foi ligada (guia 38, Parte 2).',
+                  style: TextStyle(color: Cores.alerta, fontWeight: FontWeight.w600)),
+            ),
+        ]),
+      ),
+    );
   }
 }
 

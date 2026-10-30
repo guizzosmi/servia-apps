@@ -1,0 +1,27 @@
+name: servia_admin
+description: "ServPilot - administração da plataforma (clientes, faturas, cupons e preços). Só para o dono do ServPilot."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  servia_comum:
+    path: ../comum
+  supabase_flutter: ^2.15.0
+  go_router: ^14.8.0
+  # Baixar o CSV para o contador.
+  web: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

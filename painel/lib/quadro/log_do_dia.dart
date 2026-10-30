@@ -65,6 +65,10 @@ class ContextoLog {
           '${d['motivo'] != null ? ' (${motivosNaoRealizado[d['motivo']] ?? d['motivo']})' : ''}',
       'encerrar' => 'Encerrou o dia',
       'reabrir' => 'Reabriu a parte',
+      'replanejamento_pedido' => 'Líder pediu replanejamento de $os '
+          '(${motivosReplanejamento[d['motivo']] ?? d['motivo'] ?? ''}${d['data_sugerida'] != null ? ', para ${dataBr(d['data_sugerida'])}' : ''})',
+      'replanejamento_aceito' => 'Aceitou o replanejamento de $os (voltou para a fila)',
+      'replanejamento_recusado' => 'Recusou o replanejamento de $os',
       _ => '${e['acao']}',
     };
   }

@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Chave de assinatura da loja (guia 41): android/key.properties aponta para o
+// arquivo .jks guardado FORA do projeto. Os dois ficam fora do Git. Sem o
+// arquivo, o release assina com a chave de depuração (só para testes).
+val chaveLoja = Properties().apply {
+    val arquivo = rootProject.file("key.properties")
+    if (arquivo.exists()) arquivo.inputStream().use { load(it) }
 }
 
 android {
@@ -30,11 +40,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (chaveLoja.getProperty("storeFile") != null) {
+            create("loja") {
+                storeFile = file(chaveLoja.getProperty("storeFile"))
+                storePassword = chaveLoja.getProperty("storePassword")
+                keyAlias = chaveLoja.getProperty("keyAlias")
+                keyPassword = chaveLoja.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (chaveLoja.getProperty("storeFile") != null)
+                signingConfigs.getByName("loja") else signingConfigs.getByName("debug")
         }
     }
 }

@@ -178,6 +178,24 @@ Future<Map<String, dynamic>> acaoParte(Map<String, dynamic> p) async {
   return r;
 }
 
+/// Resposta ao pedido de replanejamento do líder (guia 28): aceitar (o
+/// serviço volta para a fila) ou recusar (fica, com a resposta).
+Future<Map<String, dynamic>> responderReplanejamento(Map<String, dynamic> p) async {
+  final r = await _rpc('replanejamento_responder', p);
+  if (p['decisao'] == 'aceitar') unawaited(avisarEquipe());
+  return r;
+}
+
+/// Motivos do pedido de replanejamento (mesmos códigos do banco e do app).
+const motivosReplanejamento = {
+  'cliente_pediu': 'Cliente pediu outro dia',
+  'falta_peca': 'Falta de peça',
+  'tempo': 'Não vai dar tempo',
+  'clima': 'Clima',
+  'outra_equipe': 'Precisa de outra equipe',
+  'outro': 'Outro',
+};
+
 /// Envia os avisos pendentes para os celulares (função "notificar").
 /// Sem configuração ou sem internet, não atrapalha o painel: os avisos
 /// ficam na fila e vão na próxima chamada.

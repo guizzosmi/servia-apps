@@ -311,3 +311,54 @@ class _Opcoes extends StatelessWidget {
     );
   }
 }
+
+/// Pedido de replanejamento do líder (guia 28): o gestor aceita (o serviço
+/// volta para a fila, com a data sugerida) ou recusa (fica na parte, com a
+/// resposta, que o líder vê no app).
+Future<({String decisao, String resposta})?> responderPedido(
+  BuildContext context, {
+  required String os,
+  required Map<String, dynamic> pedido,
+  required String Function(String?) nome,
+}) {
+  final resposta = TextEditingController();
+  return showDialog<({String decisao, String resposta})>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Pedido de replanejamento · $os'),
+      content: SizedBox(
+        width: 480,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('${nome(pedido['pedido_por'] as String?)} pediu em ${dataHoraBr(pedido['criado_em'])}:',
+              style: const TextStyle(color: Cores.neutro)),
+          const SizedBox(height: 4),
+          Text(motivosReplanejamento[pedido['motivo']] ?? '${pedido['motivo']}',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (pedido['data_sugerida'] != null) Text('Sugere: ${dataBr(pedido['data_sugerida'])}'),
+          if (pedido['observacao'] != null) Text('"${pedido['observacao']}"'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: resposta,
+            maxLines: 2,
+            maxLength: 1000,
+            decoration: const InputDecoration(labelText: 'Resposta para o líder (opcional)'),
+          ),
+          const Text('Aceitar tira o serviço da parte e devolve para a fila (com a data sugerida como prevista). '
+              'Para mandar para outra equipe, aceite e programe de novo.',
+              style: TextStyle(fontSize: 12, color: Cores.neutro)),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Depois')),
+        OutlinedButton(
+          onPressed: () => Navigator.of(ctx).pop((decisao: 'recusar', resposta: resposta.text.trim())),
+          child: const Text('Recusar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop((decisao: 'aceitar', resposta: resposta.text.trim())),
+          child: const Text('Aceitar'),
+        ),
+      ],
+    ),
+  );
+}

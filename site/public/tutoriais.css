@@ -1,0 +1,72 @@
+/* ServPilot · central de tutoriais */
+body.tut { background: var(--fundo); }
+.tut-topo { background: var(--indigo-950); color: var(--branco); }
+.tut-topo-dentro { display: flex; align-items: center; gap: 14px; height: 64px; }
+.tut-topo .marca img { height: 32px; width: auto; }
+.tut-selo { background: var(--coral); color: var(--branco); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
+.tut-quem { margin-left: auto; color: rgba(255, 255, 255, .75); font-size: 15px; }
+
+.tut-grade { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; padding-top: 24px; padding-bottom: 48px; align-items: start; }
+.tut-grade[hidden], .tut-aviso[hidden] { display: none; }
+
+.tut-video { position: relative; aspect-ratio: 16 / 9; background: #0B0F1F; border-radius: 18px; overflow: hidden; box-shadow: var(--sombra-forte); }
+.tut-video iframe, #player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.tut-embreve { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--branco); gap: 6px; }
+.tut-embreve[hidden] { display: none; }
+.tut-embreve b { font-size: 28px; }
+.tut-embreve span { color: rgba(255, 255, 255, .7); }
+.tut-proximo { position: absolute; inset: 0; background: rgba(14, 21, 48, .92); color: var(--branco); display: grid; place-content: center; text-align: center; gap: 10px; padding: 20px; }
+.tut-proximo[hidden] { display: none; }
+.tut-proximo p { color: rgba(255, 255, 255, .75); }
+.tut-proximo h3 { font-size: 24px; max-width: 560px; }
+.tut-proximo-acoes { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+
+.tut-info { background: var(--branco); border: 1px solid var(--linha); border-radius: 18px; padding: 22px; margin-top: 16px; }
+.tut-trilha { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--indigo-500); }
+.tut-info h1 { font-size: clamp(22px, 2.6vw, 30px); font-weight: 800; margin-top: 6px; }
+.tut-desc { color: var(--neutro); margin-top: 8px; }
+.tut-nav { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.botao.tut-b { border: 1px solid var(--linha); color: var(--indigo-700); background: var(--branco); }
+.botao.tut-b:hover { background: var(--indigo-100); }
+.botao[disabled] { opacity: .45; pointer-events: none; }
+.tut-nav [hidden] { display: none; }
+
+.tut-lista { background: var(--branco); border: 1px solid var(--linha); border-radius: 18px; padding: 18px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+.tut-resumo { padding-bottom: 14px; border-bottom: 1px solid var(--linha); margin-bottom: 8px; font-size: 15px; }
+.tut-barra { height: 8px; border-radius: 999px; background: var(--linha); overflow: hidden; margin-top: 8px; }
+.tut-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sucesso), #8FD3A9); transition: width .4s ease; }
+.tut-continuar { width: 100%; justify-content: center; margin-top: 14px; }
+.tut-continuar[hidden] { display: none; }
+
+.tut-grupo { margin-top: 14px; }
+.tut-grupo h2 { font-size: 15px; font-weight: 800; display: flex; justify-content: space-between; gap: 8px; }
+.tut-grupo h2 span { color: var(--neutro); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.tut-grupo > p { color: var(--neutro); font-size: 13px; margin: 2px 0 8px; }
+.tut-item { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; text-align: left; background: none; border: 0; border-radius: 12px; padding: 9px 8px; cursor: pointer; font: inherit; color: var(--tinta); }
+.tut-item:hover { background: var(--fundo); }
+.tut-item.atual { background: var(--indigo-100); }
+.tut-item .st { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; border: 2px solid var(--linha); color: var(--neutro); }
+.tut-item.feito .st { background: var(--sucesso); border-color: var(--sucesso); color: var(--branco); }
+.tut-item.parcial .st { border-color: var(--coral); color: var(--coral); }
+.tut-item .tt { font-size: 14.5px; line-height: 1.3; }
+.tut-item .tt small { display: block; color: var(--neutro); font-size: 12px; margin-top: 2px; }
+.tut-item .mini { width: 46px; height: 4px; border-radius: 4px; background: var(--linha); overflow: hidden; }
+.tut-item .mini i { display: block; height: 100%; background: var(--coral); }
+.tut-item.feito .mini i { background: var(--sucesso); }
+.tut-item.breve { opacity: .55; }
+
+.tut-aviso { padding: 64px 24px; }
+.tut-aviso-caixa { max-width: 620px; margin: 0 auto; background: var(--branco); border: 1px solid var(--linha); border-radius: 24px; padding: 36px; text-align: center; box-shadow: var(--sombra); }
+.tut-aviso-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--indigo-100); color: var(--indigo-500); display: grid; place-items: center; font-size: 24px; margin: 0 auto 16px; }
+.tut-aviso-caixa h1 { font-size: 26px; }
+.tut-aviso-caixa p { color: var(--neutro); margin-top: 12px; }
+
+@media (max-width: 980px) {
+  .tut-grade { grid-template-columns: 1fr; }
+  .tut-lista { position: static; max-height: none; }
+}
+@media (max-width: 620px) {
+  .tut-grade { padding-left: 12px; padding-right: 12px; gap: 16px; }
+  .tut-video { border-radius: 12px; margin: 0 -12px; }
+  .tut-quem { display: none; }
+}

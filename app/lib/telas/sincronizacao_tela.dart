@@ -27,6 +27,7 @@ class SincronizacaoTela extends StatelessWidget {
           SituacaoSync.semConexao => ('Sem conexão: tudo fica salvo no aparelho', Cores.alerta),
           SituacaoSync.precisaEntrar => ('Entre de novo para sincronizar', Cores.alerta),
           SituacaoSync.revogado => ('Aparelho desconectado', Cores.erro),
+          SituacaoSync.desatualizado => ('Atualize o app', Cores.erro),
           SituacaoSync.erro => ('Erro na sincronização', Cores.erro),
           SituacaoSync.parado => ('Aguardando', Cores.neutro),
         };

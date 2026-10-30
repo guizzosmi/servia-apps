@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR" class="sem-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutoriais · ServPilot</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#121A2B">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/tutoriais.css">
+</head>
+<body class="tut">
+
+<header class="tut-topo">
+  <div class="faixa tut-topo-dentro">
+    <a href="/" class="marca" aria-label="ServPilot"><img src="/img/logo-escuro.svg" alt="ServPilot" width="150" height="40"></a>
+    <span class="tut-selo">Tutoriais</span>
+    <span class="tut-quem" id="quem"></span>
+  </div>
+</header>
+
+<main class="faixa tut-grade" id="conteudo" hidden>
+  <section class="tut-palco">
+    <div class="tut-video">
+      <div id="player"></div>
+      <div class="tut-embreve" id="emBreve" hidden><b>Em breve</b><span>Este vídeo ainda está sendo publicado.</span></div>
+      <div class="tut-proximo" id="proximoAviso" hidden>
+        <p>Próximo vídeo em <b id="contagem">5</b></p>
+        <h3 id="proximoTitulo"></h3>
+        <div class="tut-proximo-acoes">
+          <button type="button" class="botao coral" id="assistirJa">Assistir agora</button>
+          <button type="button" class="botao contorno-claro" id="cancelarProximo">Ficar aqui</button>
+        </div>
+      </div>
+    </div>
+    <div class="tut-info">
+      <p class="tut-trilha" id="atualTrilha"></p>
+      <h1 id="atualTitulo">Carregando...</h1>
+      <p class="tut-desc" id="atualDesc"></p>
+      <div class="tut-nav">
+        <button type="button" class="botao tut-b" id="anterior">← Anterior</button>
+        <button type="button" class="botao tut-b" id="marcar">Marcar como assistido</button>
+        <button type="button" class="botao primario" id="proximo">Próximo →</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="tut-lista" aria-label="Trilhas de vídeos">
+    <div class="tut-resumo">
+      <div><b id="totalFeitos">0</b> de <b id="totalVideos">0</b> vídeos assistidos</div>
+      <div class="tut-barra"><i id="totalBarra"></i></div>
+      <button type="button" class="botao coral tut-continuar" id="continuar" hidden>Continuar de onde parei</button>
+    </div>
+    <div id="trilhas"></div>
+  </aside>
+</main>
+
+<section class="faixa tut-aviso" id="aviso" hidden>
+  <div class="tut-aviso-caixa">
+    <div class="tut-aviso-ic">▶</div>
+    <h1>Central de tutoriais do ServPilot</h1>
+    <p id="avisoTexto">Abra os tutoriais pelo painel (menu <b>Tutoriais</b>) ou pelo app do técnico (menu <b>⋮ &gt; Tutoriais</b>).
+      Assim mostramos os vídeos do seu perfil e guardamos de onde você parou.</p>
+    <p><a class="botao primario" href="https://painel.servpilot.com.br">Ir para o painel</a></p>
+  </div>
+</section>
+
+<script src="/api.js" defer></script>
+<script src="/tutoriais.js" defer></script>
+</body>
+</html>

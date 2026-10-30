@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/cofre.dart';
 import 'core/estado.dart';
 import 'core/notificacoes.dart';
+import 'core/sincronizacao.dart' show versaoApp;
 import 'rotas.dart';
 
 Future<void> main() async {
@@ -22,6 +25,8 @@ Future<void> main() async {
     // A sessão fica no cofre do aparelho, não nas preferências comuns.
     authOptions: const FlutterAuthClientOptions(localStorage: ArmazenamentoSessao()),
   );
+  // Erros inesperados vão para a plataforma (guia 40).
+  ErrosRemotos.ligar(origem: 'app', versao: versaoApp, plataforma: Platform.isIOS ? 'ios' : 'android');
   // Notificações: com o aviso chegando, o app sincroniza para trazer a mudança.
   await Notificacoes.iniciar(aoChegar: () => EstadoApp.instancia.sync?.pedir());
   try {

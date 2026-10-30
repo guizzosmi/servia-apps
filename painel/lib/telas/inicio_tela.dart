@@ -52,6 +52,19 @@ class _InicioTelaState extends State<InicioTela> {
       .count(CountOption.exact)
       .then((r) => r.count);
 
+  // OS concluídas ainda sem cobrança (guia 31): só para quem cobra.
+  final bool _veCobranca =
+      (Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false);
+  late final Future<int> _aCobrar = Supabase.instance.client
+      .from('ordens_servico')
+      .select('id')
+      .eq('status', 'concluida')
+      .inFilter('cobranca_status', ['pendente', 'calculada', 'revisada'])
+      .isFilter('excluido_em', null)
+      .limit(1)
+      .count(CountOption.exact)
+      .then((r) => r.count);
+
   Widget _cartaoOperacao(IconData icone, String titulo, Future<int> valor, String destino) {
     return SizedBox(
       width: 220,
@@ -115,6 +128,7 @@ class _InicioTelaState extends State<InicioTela> {
             _cartaoOperacao(Icons.inbox_outlined, 'na fila', _naFila, '/fila'),
             _cartaoOperacao(Icons.assignment_outlined, 'OS em aberto', _osAbertas, '/os'),
             _cartaoOperacao(Icons.request_quote_outlined, 'Orçamentos em Aberto', _orcamentosEmAberto, '/orcamentos'),
+            if (_veCobranca) _cartaoOperacao(Icons.receipt_long_outlined, 'OS a cobrar', _aCobrar, '/cobrar'),
           ]),
           // Abrir a Início também gera as OS de preventiva que já podem nascer.
           ListenableBuilder(

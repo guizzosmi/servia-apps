@@ -147,6 +147,8 @@ class _LoginTelaState extends State<LoginTela> {
                         ? 'Use o mesmo usuário: assim as ações que ainda não subiram continuam na fila.'
                         : 'O primeiro acesso precisa de internet. Depois, o app funciona sem sinal.',
                     textAlign: TextAlign.center, style: const TextStyle(color: Cores.neutro, fontSize: 13)),
+                const SizedBox(height: 8),
+                const LinksLegais(),
               ]),
             ),
           ),

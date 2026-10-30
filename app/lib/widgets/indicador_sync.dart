@@ -26,6 +26,7 @@ class IndicadorSync extends StatelessWidget {
           SituacaoSync.ok => (Icons.cloud_done_outlined, Cores.sucesso, 'Sincronizado'),
           SituacaoSync.semConexao => (Icons.cloud_off_outlined, Cores.alerta, 'Sem conexão: tudo fica salvo no aparelho'),
           SituacaoSync.precisaEntrar => (Icons.lock_clock_outlined, Cores.alerta, 'Entre de novo para sincronizar'),
+          SituacaoSync.desatualizado => (Icons.system_update_outlined, Cores.erro, 'Atualize o app'),
           SituacaoSync.erro || SituacaoSync.revogado => (Icons.error_outline, Cores.erro, 'Erro na sincronização'),
           SituacaoSync.parado => (Icons.cloud_outlined, Cores.neutro, 'Sincronização'),
         };

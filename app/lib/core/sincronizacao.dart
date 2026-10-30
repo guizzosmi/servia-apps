@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.11.0';
+const versaoApp = '0.13.0';
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -28,7 +28,7 @@ const tabelasDeCadastro = [
   'equipe_membros',
 ];
 
-enum SituacaoSync { parado, sincronizando, ok, semConexao, precisaEntrar, revogado, erro }
+enum SituacaoSync { parado, sincronizando, ok, semConexao, precisaEntrar, revogado, desatualizado, erro }
 
 class _SemConexao implements Exception {
   const _SemConexao(this.motivo);
@@ -178,6 +178,9 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       } else if (e.hint == 'dispositivo_revogado' || e.hint == 'dispositivo_apagar') {
         await banco.gravarMeta('revogado', e.hint);
         _mudar(SituacaoSync.revogado, e.message);
+      } else if (e.hint == 'app_desatualizado') {
+        // Versão abaixo da mínima (guia 41): o que foi feito já subiu; falta atualizar.
+        _mudar(SituacaoSync.desatualizado, e.message);
       } else {
         _mudar(SituacaoSync.erro, e.message);
       }

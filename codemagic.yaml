@@ -1,0 +1,39 @@
+# ServPilot - build do app do técnico para iPhone (guia 41, Parte B).
+# O Codemagic compila no Mac dele, assina com a conta da Apple (pela chave
+# da App Store Connect, cadastrada no Codemagic com o nome abaixo) e manda
+# para o TestFlight. Nenhuma senha fica neste arquivo.
+workflows:
+  ios-testflight:
+    name: iPhone · TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: app
+    integrations:
+      app_store_connect: ServPilot App Store Connect
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.servia.servia_app
+    triggering:
+      events: []          # só quando você clica em "Start new build"
+    scripts:
+      - name: Dependências
+        script: flutter pub get
+      - name: Assinatura
+        script: xcode-project use-profiles
+      - name: CocoaPods
+        script: cd ios && pod install
+      - name: Build (número do build = número da execução no Codemagic)
+        script: |
+          flutter build ipa --release \
+            --build-number=$((100 + PROJECT_BUILD_NUMBER)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

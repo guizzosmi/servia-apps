@@ -109,6 +109,8 @@ class _LoginTelaState extends State<LoginTela> {
                                 )
                               : const Text('Entrar'),
                         ),
+                        const SizedBox(height: 8),
+                        const LinksLegais(),
                       ],
                     ),
                   ),

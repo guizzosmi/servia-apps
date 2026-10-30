@@ -2,10 +2,25 @@
 ///
 /// A chave publishable é PÚBLICA: pode ficar dentro do app e do painel.
 /// NUNCA coloque aqui a secret key nem a senha do banco.
+///
+/// Ambientes (guia 40): sem nada, o app e o painel usam o projeto de
+/// desenvolvimento (servia-dev). A versão de produção é gerada com
+/// `--dart-define-from-file=ambientes/prod.json` (a esteira faz isso com
+/// `-Ambiente prod`), que troca o endereço e a chave pública.
 class Config {
-  static const supabaseUrl = 'https://srtokvosnwtyewiempyw.supabase.co';
+  static const ambiente = String.fromEnvironment('AMBIENTE', defaultValue: 'dev');
+  static const supabaseUrl =
+      String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://srtokvosnwtyewiempyw.supabase.co');
   static const supabaseChavePublica =
-      'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH';
+      String.fromEnvironment('SUPABASE_CHAVE_PUBLICA', defaultValue: 'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH');
+
+  /// true na versão de produção (sem a faixa "Teste" e com o envio de erros).
+  static bool get producao => ambiente == 'prod';
+
+  /// Lojas (guia 41): onde o técnico atualiza o app quando a versão dele
+  /// fica abaixo da mínima.
+  static const linkLojaAndroid = 'https://play.google.com/store/apps/details?id=app.servia.servia_app';
+  static const linkLojaIphone = 'https://apps.apple.com/app/servpilot/id0000000000';
 
   /// Domínio dos e-mails técnicos do login por matrícula + PIN
   /// (`<matricula>@<codigo-da-conta>.<dominio>`). Igual ao segredo

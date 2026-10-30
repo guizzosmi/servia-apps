@@ -27,6 +27,11 @@ const tabelasDoDia = [
   'aceites',
   'plano_execucoes',
   'audios',
+  // Guia 28: pedidos de replanejamento, as partes de todas as equipes e
+  // quem está em cada uma (para o líder incluir e emprestar).
+  'replanejamentos',
+  'equipes_do_dia',
+  'alocados_do_dia',
 ];
 
 /// Uma ação feita no app, esperando para subir para a plataforma.

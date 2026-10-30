@@ -420,8 +420,11 @@ class CartaoItem extends StatelessWidget {
     ].where((x) => x.isNotEmpty).join(' · ');
     final onde = [local['nome'], local['cidade']].where((x) => x != null && '$x'.isNotEmpty).join(' · ');
 
+    final pedido = item['pedido'] as Map?;
     final opcoes = <PopupMenuEntry<String>>[
       const PopupMenuItem(value: 'abrir_os', child: Text('Abrir OS')),
+      if (acoes.podeEditar && pedido != null)
+        const PopupMenuItem(value: 'replanejamento', child: Text('Responder o pedido do líder')),
       if (acoes.podeEditar && coluna.aceitaMudancas) ...[
         if (!coluna.rascunho && proximosStatus(status).isNotEmpty) ...[
           const PopupMenuDivider(),
@@ -502,7 +505,21 @@ class CartaoItem extends StatelessWidget {
               if (item['incluido_apos_publicacao'] == true) const _Selo('Encaixe', Cores.coral500),
               if (item['alterado_apos_publicacao'] == true) const _Selo('Alterado', Cores.alerta),
               if (atrasado) const _Selo('Atrasado', Cores.erro),
+              if (pedido != null) const _Selo('Pedido do líder', Cores.alerta),
             ]),
+            if (pedido != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: InkWell(
+                  onTap: acoes.podeEditar ? () => acoes.acaoItem('replanejamento', item, coluna) : null,
+                  child: Text(
+                    'Replanejar: ${motivosReplanejamento[pedido['motivo']] ?? pedido['motivo'] ?? ''}'
+                    '${pedido['data_sugerida'] != null ? ' · sugere ${dataBr(pedido['data_sugerida'])}' : ''}'
+                    '${pedido['observacao'] != null ? ' · ${pedido['observacao']}' : ''}',
+                    style: const TextStyle(fontSize: 12, color: Cores.alerta, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             if (designados.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

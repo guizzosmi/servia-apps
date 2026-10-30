@@ -6,6 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'rotas.dart';
 
+/// Versão do painel (aparece nos erros enviados para a plataforma).
+const versaoPainel = '0.13.0';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Abrir uma tela com push (OS, orçamento...) também muda o endereço do
@@ -15,6 +18,8 @@ Future<void> main() async {
     url: Config.supabaseUrl,
     publishableKey: Config.supabaseChavePublica,
   );
+  // Erros inesperados vão para a plataforma (guia 40).
+  ErrosRemotos.ligar(origem: 'painel', versao: versaoPainel, plataforma: 'web');
   runApp(const PainelApp());
 }
 

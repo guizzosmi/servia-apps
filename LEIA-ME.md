@@ -7,6 +7,8 @@ Código Flutter do ServPilot.
 | `comum/` | Pacote compartilhado: tema e cores, endereço do Supabase, sessão (token, papéis, troca de empresa) e mensagens de erro | Não roda sozinho; é usado pelo painel e pelo app |
 | `painel/` | Painel web do gestor (Flutter Web): login, escolha de empresa e cadastros | `cd painel` e `flutter run -d chrome --web-port 5000` |
 | `app/` | App do técnico (Android agora, iPhone depois), offline: parte do dia, serviço e sincronização | Celular no cabo: `cd app` e `flutter run` |
+| `admin/` | Admin da plataforma (só o dono do ServPilot): clientes, faturas, cupons e preços. Publicado em admin.servpilot.com.br | `cd admin` e `flutter run -d chrome --web-port 5001` |
+| `site/` | Página inicial, preços e cadastro com teste grátis (HTML puro) | Publicado pela esteira |
 
 ## Painel: onde fica cada coisa
 

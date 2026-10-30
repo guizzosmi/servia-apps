@@ -1,0 +1,12 @@
+/* Páginas de texto (privacidade e termos). */
+.doc-topo { background:#121A2B; padding:18px 0; }
+.doc-topo .faixa { display:flex; align-items:center; justify-content:space-between; }
+.doc-topo a { color:#E6E9F6; text-decoration:none; font-weight:600; }
+.doc { max-width:760px; margin:0 auto; padding:40px 20px 80px; color:#121A2B; line-height:1.6; font-size:16px; }
+.doc h1 { font-size:34px; line-height:1.2; margin:0 0 6px; }
+.doc .atualizado { color:#5B6474; margin:0 0 32px; }
+.doc h2 { font-size:21px; margin:36px 0 10px; }
+.doc table { width:100%; border-collapse:collapse; margin:12px 0; font-size:15px; }
+.doc th, .doc td { border:1px solid #DCE1EA; padding:8px 10px; text-align:left; vertical-align:top; }
+.doc th { background:#F5F6FA; }
+.doc ul { padding-left:22px; }
