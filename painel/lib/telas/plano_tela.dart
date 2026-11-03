@@ -32,7 +32,8 @@ class _PlanoTelaState extends State<PlanoTela> {
   static const _campoLocal = CampoDef('local_id', 'Local',
       tipo: TipoCampo.lookup,
       obrigatorio: true,
-      lookup: Lookup(tabela: 'locais', colunaDetalhe: 'cidade', colunaFiltro: 'cliente_id', campoPai: 'cliente_id'));
+      lookup: Lookup(tabela: 'locais', colunaDetalhe: 'cidade', colunaFiltro: 'cliente_id', campoPai: 'cliente_id',
+          escolherUnico: true));
 
   final _form = GlobalKey<FormState>();
   final _nome = TextEditingController();

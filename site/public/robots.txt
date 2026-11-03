@@ -1,3 +1,30 @@
+# ServPilot · buscadores e assistentes de IA são bem-vindos no site público.
 User-agent: *
 Allow: /
+Disallow: /tutoriais
+
+# Assistentes de IA (busca e respostas): liberados de forma explícita.
+User-agent: GPTBot
+Allow: /
+Disallow: /tutoriais
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /tutoriais
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
 Sitemap: https://servpilot.com.br/sitemap.xml

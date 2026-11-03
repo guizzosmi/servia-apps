@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://servpilot.com.br/</loc></url>
-  <url><loc>https://servpilot.com.br/precos</loc></url>
-  <url><loc>https://servpilot.com.br/assinar</loc></url>
+  <url><loc>https://servpilot.com.br/</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/sistema-para-refrigeracao</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/software-pmoc</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/app-tecnico-refrigeracao</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/ordem-de-servico-ar-condicionado</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/precos</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/assinar</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/blog</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/blog/pmoc-o-que-e-quem-precisa</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/blog/checklist-manutencao-preventiva-ar-condicionado</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/blog/ordem-de-servico-refrigeracao</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/termos</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/excluir-conta</loc></url>
+  <url><loc>https://servpilot.com.br/privacidade</loc><lastmod>2026-10-30</lastmod></url>
 </urlset>

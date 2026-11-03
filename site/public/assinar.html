@@ -15,6 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/estilo.css">
 <link rel="stylesheet" href="/precos.css">
+<link rel="stylesheet" href="/conteudo.css">
 </head>
 <body>
 
@@ -55,6 +56,17 @@
     <div class="formulario">
       <form id="form" novalidate>
         <h2>Seus dados</h2>
+
+        <fieldset>
+          <legend>Plano</legend>
+          <div class="planos-escolha">
+            <label class="plano-opcao"><input type="radio" name="plano" value="autonomo">
+              <span><b>Autônomo</b><small><span data-p="autonomo" data-c="valor_mensal">R$ 99,99</span>/mês · 1 usuário</small></span></label>
+            <label class="plano-opcao"><input type="radio" name="plano" value="servpilot" checked>
+              <span><b>Equipe</b><small><span data-p="servpilot" data-c="valor_mensal">R$ 199,00</span>/mês · 2 usuários</small></span></label>
+          </div>
+          <small>Os dois têm todos os recursos. Dá para trocar depois, pelo painel.</small>
+        </fieldset>
 
         <fieldset>
           <legend>Empresa</legend>
@@ -127,6 +139,9 @@
         <div class="codigo-empresa" id="okCodigo"></div>
         <p style="margin-top: 22px"><a class="botao coral grande" id="okPainel" href="https://painel.servpilot.com.br">Entrar no painel</a></p>
         <p>Comece por <b>Configurações</b> e <b>Usuários</b>: tem um vídeo curto para cada tela.</p>
+        <p class="aviso-app"><b>App do técnico (Android):</b> ele está em fase final de testes na Play Store. No painel, em
+          <b>Usuários &gt; App do técnico na Play Store</b>, informe o e-mail da conta Google do celular de cada pessoa
+          (normalmente um Gmail). Liberamos a instalação em até 1 dia útil e o link aparece ali mesmo.</p>
       </div>
     </div>
 
@@ -139,8 +154,8 @@
         <li><span class="bola">4</span><div><b>Se não quiser continuar</b><span>É só não pagar. Sem multa e sem cobrança surpresa.</span></div></li>
       </ol>
       <div class="resumo-preco">
-        Depois do teste: <b><span data-v="valor_mensal">R$ 199,00</span>/mês</b> com <span data-v="usuarios_incluidos">2</span> usuários,
-        e <b><span data-v="valor_usuario_extra">R$ 69,00</span></b> por usuário a mais.
+        Depois do teste, no plano <b id="resumoNome">Equipe</b>: <b id="resumoValor">R$ 199,00/mês</b> com <span id="resumoUsuarios">2 usuários</span><span id="resumoExtra">,
+        e <b>R$ 69,00</b> por usuário a mais</span>.
         <a href="/precos">Ver todos os detalhes</a>.
       </div>
     </aside>
@@ -167,6 +182,7 @@
 </footer>
 
 <script src="/site.js" defer></script>
+<script src="/rastreio.js" defer></script>
 <script src="/api.js" defer></script>
 <script src="/assinar.js" defer></script>
 </body>

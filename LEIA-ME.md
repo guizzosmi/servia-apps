@@ -8,7 +8,7 @@ Código Flutter do ServPilot.
 | `painel/` | Painel web do gestor (Flutter Web): login, escolha de empresa e cadastros | `cd painel` e `flutter run -d chrome --web-port 5000` |
 | `app/` | App do técnico (Android agora, iPhone depois), offline: parte do dia, serviço e sincronização | Celular no cabo: `cd app` e `flutter run` |
 | `admin/` | Admin da plataforma (só o dono do ServPilot): clientes, faturas, cupons e preços. Publicado em admin.servpilot.com.br | `cd admin` e `flutter run -d chrome --web-port 5001` |
-| `site/` | Página inicial, preços e cadastro com teste grátis (HTML puro) | Publicado pela esteira |
+| `site/` | Página inicial, preços, cadastro com teste grátis, páginas de assunto, blog, central de tutoriais e medição com aviso de cookies (HTML puro). Os geradores das páginas de SEO ficam em `site/ferramentas-seo` (guia 48) | Publicado pela esteira |
 
 ## Painel: onde fica cada coisa
 

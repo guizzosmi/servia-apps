@@ -304,7 +304,7 @@ final List<CadastroDef> catalogo = [
     colunaTitulo: 'codigo',
     acoes: [AcaoCadastro('Etiquetas QR', Icons.qr_code_2, '/etiquetas')],
     colunas: [
-      ColunaDef('codigo', 'Código', flex: 1),
+      ColunaDef('codigo', 'Código'),
       ColunaDef('descricao', 'Descrição', flex: 3),
       ColunaDef('clientes.nome', 'Cliente'),
       ColunaDef('locais.nome', 'Local'),
@@ -325,7 +325,7 @@ final List<CadastroDef> catalogo = [
           tipo: TipoCampo.lookup, obrigatorio: true, metade: true,
           lookup: Lookup(
               tabela: 'locais', colunaDetalhe: 'cidade',
-              colunaFiltro: 'cliente_id', campoPai: 'cliente_id')),
+              colunaFiltro: 'cliente_id', campoPai: 'cliente_id', escolherUnico: true)),
       CampoDef('ambiente_id', 'Ambiente',
           tipo: TipoCampo.lookup, metade: true,
           lookup: Lookup(

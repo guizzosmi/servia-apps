@@ -38,6 +38,7 @@ class Lookup {
     this.colunaAtivo = 'ativo',
     this.colunaFiltro,
     this.campoPai,
+    this.escolherUnico = false,
   });
 
   final String tabela;
@@ -53,6 +54,9 @@ class Lookup {
   /// ex.: local_id só mostra locais onde cliente_id = valor do campo cliente_id.
   final String? colunaFiltro;
   final String? campoPai;
+
+  /// Guia 51: se o "pai" só tem uma opção (ex.: cliente com um local só), já vem escolhida.
+  final bool escolherUnico;
 }
 
 class CampoDef {

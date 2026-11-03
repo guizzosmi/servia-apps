@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/servico.dart';
 import '../servicos/funcoes.dart';
+import '../widgets/app_na_loja.dart';
 import '../widgets/margem.dart';
 
 /// Lista dos usuários da conta (só o admin). A leitura vem direto do banco:
@@ -105,6 +106,7 @@ class _UsuariosTelaState extends State<UsuariosTela> {
             style: TextStyle(color: Cores.neutro),
           ),
           const SizedBox(height: 12),
+          const AppNaLoja(),
           if (_carregando) const LinearProgressIndicator(minHeight: 2),
           Card(
             margin: EdgeInsets.zero,

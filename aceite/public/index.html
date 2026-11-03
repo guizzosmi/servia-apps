@@ -107,6 +107,11 @@ function cabecalho() {
 }
 
 async function carregar() {
+  // Endereço sem link (ex.: aceite.servpilot.com.br aberto direto): só explica para que serve a página.
+  if (!/^\/(a|r)\//.test(location.pathname)) {
+    return mensagem('🧾', 'Orçamentos e relatórios', 'Aqui o cliente aprova orçamentos e vê os relatórios de serviço pelo link que a empresa enviou. '
+      + 'Para usar o sistema, entre em <a href="https://painel.servpilot.com.br">painel.servpilot.com.br</a>.');
+  }
   if (!token) return mensagem('🔗', 'Link inválido', 'Confira se o endereço chegou inteiro ou peça um novo link à empresa.');
   try {
     // O token vai no corpo (não no endereço), para não ficar em registros de acesso.

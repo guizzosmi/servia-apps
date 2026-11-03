@@ -102,14 +102,21 @@ class _ListaCadastroState extends State<ListaCadastro> {
     final def = widget.def;
     final editar = podeEditarCadastros();
     final largo = MediaQuery.sizeOf(context).width >= 760;
+    // Guia 51: na largura média, os botões extras viram só ícone (o título não quebra).
+    final compacto = MediaQuery.sizeOf(context).width < 1280;
 
     final barra = Row(
       children: [
         if (!widget.embutida)
           Expanded(
-            child: Text(def.titulo,
-                style: Theme.of(context).textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700)),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(def.titulo,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+            ),
           )
         else
           Expanded(
@@ -132,11 +139,17 @@ class _ListaCadastroState extends State<ListaCadastro> {
         if (!widget.embutida && largo)
           for (final a in def.acoes) ...[
             const SizedBox(width: 8),
-            OutlinedButton.icon(
-              onPressed: () => context.push(a.rota),
-              icon: Icon(a.icone),
-              label: Text(a.rotulo),
-            ),
+            compacto
+                ? IconButton.outlined(
+                    onPressed: () => context.push(a.rota),
+                    icon: Icon(a.icone),
+                    tooltip: a.rotulo,
+                  )
+                : OutlinedButton.icon(
+                    onPressed: () => context.push(a.rota),
+                    icon: Icon(a.icone),
+                    label: Text(a.rotulo),
+                  ),
           ],
         if (editar) ...[
           const SizedBox(width: 8),

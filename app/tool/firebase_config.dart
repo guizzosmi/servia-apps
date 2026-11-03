@@ -9,7 +9,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-const pacote = 'app.servia.servia_app';
+const pacote = 'br.com.servpilot.app';
 const destino = 'lib/core/firebase_opcoes.dart';
 
 Never falhar(String mensagem) {

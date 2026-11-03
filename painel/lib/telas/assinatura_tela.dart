@@ -21,10 +21,26 @@ class AssinaturaTela extends StatefulWidget {
 class _AssinaturaTelaState extends State<AssinaturaTela> {
   late Future<Map<String, dynamic>> _dados = _carregar();
   bool _ocupado = false;
+  String? _planoAtual;
+  Map<String, dynamic>? _cupomAtivo;
 
   Future<Map<String, dynamic>> _carregar() async {
-    final r = await Supabase.instance.client.rpc('consumo_atual');
-    return r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
+    final cliente = Supabase.instance.client;
+    final r = await cliente.rpc('consumo_atual');
+    final d = r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
+    // Guia 49: plano que sai mais em conta para os usuários de agora (ex.: Autônomo com 2+ usuários).
+    try {
+      final s = await cliente.rpc('plano_sugestao');
+      if (s is Map) d['sugestao'] = Map<String, dynamic>.from(s);
+    } catch (_) {/* sem sugestão */}
+    // Guia 51: o cupom que vale na conta (mostra e desconta a estimativa e os pacotes).
+    try {
+      final cp = await cliente.rpc('cupom_ativo');
+      if (cp is Map) d['cupom'] = Map<String, dynamic>.from(cp);
+    } catch (_) {/* sem cupom */}
+    _planoAtual = d['plano'] is Map ? '${(d['plano'] as Map)['nome']}' : null;
+    _cupomAtivo = d['cupom'] as Map<String, dynamic>?;
+    return d;
   }
 
   void _recarregar() {
@@ -82,15 +98,24 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
       });
 
   Future<void> _comprar(Map<String, dynamic> pacote) async {
+    final cupom = _cupomAtivo;
+    final valor = _comCupom(pacote['valor'], cupom, 'pacote');
+    final temDesconto = valor < _n(pacote['valor']);
+    final gratis = valor <= 0;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Comprar ${pacote['nome']}?'),
-        content: Text('${_moeda(pacote['valor'])}, pago agora pelo Mercado Pago (Pix, boleto ou cartão). '
-            'Vale até o fim do ciclo; comprado na última semana, vale também o ciclo seguinte.'),
+        content: Text(gratis
+            ? 'Com o cupom ${cupom?['codigo']}, este pacote sai de graça e é liberado na hora. '
+                'Vale até o fim do ciclo; liberado na última semana, vale também o ciclo seguinte.'
+            : '${_moeda(valor)}${temDesconto ? ' (de ${_moeda(pacote['valor'])}, com o cupom ${cupom?['codigo']})' : ''}, '
+                'pago agora pelo Mercado Pago (Pix, boleto ou cartão). '
+                'Vale até o fim do ciclo; comprado na última semana, vale também o ciclo seguinte.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
-          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Ir para o pagamento')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(gratis ? 'Liberar pacote' : 'Ir para o pagamento')),
         ],
       ),
     );
@@ -98,7 +123,7 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
     await _acao(() async {
       final r = await chamarFuncao('cobranca', {'acao': 'comprar_pacote', 'pacote': pacote['codigo']});
       if (r['pago'] == true) {
-        if (mounted) _avisar('Pacote liberado (cupom de 100%).');
+        if (mounted) _avisar('Pacote liberado com o cupom.');
         if (mounted) _recarregar();
       } else {
         _irPara(r['link'] as String);
@@ -128,6 +153,70 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
     });
   }
 
+  /// Troca de plano pelo próprio cliente (guia 49). Vale a partir da próxima mensalidade.
+  Future<void> _trocarPlano([String? sugerido]) async {
+    var planos = <Map<String, dynamic>>[];
+    try {
+      final r = await Supabase.instance.client.rpc('precos_publicos');
+      planos = lista((r as Map)['planos']);
+    } catch (e) {
+      if (mounted) _avisar(mensagemDeErro(e), erro: true);
+      return;
+    }
+    if (!mounted) return;
+    String? codigoAtual;
+    for (final p in planos) {
+      if (p['nome'] == _planoAtual) codigoAtual = p['codigo'] as String?;
+    }
+    String? escolhido = sugerido ?? codigoAtual;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, definir) => AlertDialog(
+          title: const Text('Trocar de plano'),
+          content: SizedBox(
+            width: 460,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final p in planos)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(escolhido == p['codigo'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      color: escolhido == p['codigo'] ? Cores.indigo500 : Cores.neutro),
+                  title: Text.rich(TextSpan(text: '${p['nome']} · ${_moeda(p['valor_mensal'])}/mês', children: [
+                    if (p['codigo'] == codigoAtual)
+                      const TextSpan(text: '  (plano atual)', style: TextStyle(color: Cores.indigo700, fontWeight: FontWeight.w700)),
+                  ])),
+                  subtitle: Text('${_usuarios(p['usuarios_incluidos'])}, ${p['minutos_incluidos']} minutos de IA e '
+                      '${p['mensagens_incluidas']} mensagens. Usuário a mais: ${_moeda(p['valor_usuario_extra'])}/mês.'),
+                  onTap: () => definir(() => escolhido = p['codigo'] as String),
+                ),
+              const SizedBox(height: 8),
+              const Text('Vale a partir da próxima mensalidade. A que já foi gerada não muda, e os dados continuam todos aqui.',
+                  style: TextStyle(color: Cores.neutro)),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+            FilledButton(
+                onPressed: escolhido == null || escolhido == codigoAtual ? null : () => Navigator.of(ctx).pop(true),
+                child: const Text('Trocar')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || escolhido == null) return;
+    await _acao(() async {
+      final r = await Supabase.instance.client.rpc('plano_trocar', params: {'p_codigo': escolhido});
+      final m = Map<String, dynamic>.from(r as Map);
+      if (mounted) {
+        _avisar(m['mudou'] == true
+            ? 'Plano trocado para ${m['plano']}. Vale a partir da próxima mensalidade.'
+            : 'Você já está no plano ${m['plano']}.');
+      }
+      if (mounted) _recarregar();
+    });
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
         future: _dados,
@@ -145,16 +234,29 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
             return const Center(child: Text('Esta conta ainda não tem assinatura. Fale com o suporte do ServPilot.'));
           }
           final financeiro = Sessao.atual?.tem(Papel.financeiro) ?? false;
+          // Pacotes em destaque; com 80% ou mais de consumo, sobem para logo abaixo do plano.
+          final c = d['consumo'] is Map ? Map<String, dynamic>.from(d['consumo'] as Map) : <String, dynamic>{};
+          num pct(String usado, String total) => _n(c[total]) > 0 ? _n(c[usado]) * 100 / _n(c[total]) : 0;
+          final minutosPct = pct('minutos_usados', 'minutos_incluidos');
+          final mensagensPct = pct('mensagens_usadas', 'mensagens_incluidas');
+          final urgente = minutosPct >= 80 || mensagensPct >= 80;
+          final pacotes = _Pacotes(lista(d['pacotes']), cupom: d['cupom'] as Map<String, dynamic>?,
+              aoComprar: _ocupado ? null : _comprar, minutosPct: minutosPct, mensagensPct: mensagensPct);
           return ListView(padding: const EdgeInsets.all(24), children: [
             Row(children: [
               Expanded(child: Text('Plano e consumo', style: Theme.of(context).textTheme.headlineSmall)),
+              if (financeiro) TextButton.icon(onPressed: _ocupado ? null : () => _trocarPlano(), icon: const Icon(Icons.swap_horiz), label: const Text('Trocar de plano')),
               if (financeiro) TextButton.icon(onPressed: _cupom, icon: const Icon(Icons.local_offer_outlined), label: const Text('Tenho um cupom')),
               IconButton(onPressed: _recarregar, icon: const Icon(Icons.refresh), tooltip: 'Atualizar'),
             ]),
             const SizedBox(height: 12),
             _Situacao(d),
+            if (d['sugestao'] is Map)
+              _Sugestao(Map<String, dynamic>.from(d['sugestao'] as Map),
+                  aoTrocar: financeiro && !_ocupado ? (codigo) => _trocarPlano(codigo) : null),
+            if (urgente) pacotes,
             _Consumo(d),
-            _Pacotes(lista(d['pacotes']), aoComprar: _ocupado ? null : _comprar),
+            if (!urgente) pacotes,
             _Usuarios(d),
             _Faturas(lista(d['faturas']), aoPagar: _ocupado ? null : _pagar, aoConferir: _ocupado ? null : _conferir),
             const SizedBox(height: 8),
@@ -169,6 +271,17 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
 List<Map<String, dynamic>> lista(dynamic v) =>
     v is List ? v.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
 num _n(dynamic v) => v is num ? v : num.tryParse('${v ?? ''}') ?? 0;
+/// Valor depois do cupom (o mesmo cálculo da fatura). [tipo]: mensalidade ou pacote.
+num _comCupom(dynamic valor, Map<String, dynamic>? cupom, String tipo) {
+  final v = _n(valor);
+  if (cupom == null || cupom['vale_$tipo'] != true || v <= 0) return v;
+  final desconto = cupom['tipo'] == 'percentual'
+      ? (v * _n(cupom['valor'])).round() / 100
+      : _n(cupom['valor']);
+  return v - (desconto > v ? v : desconto);
+}
+
+String _usuarios(dynamic v) => _n(v) == 1 ? '1 usuário' : '${_n(v)} usuários';
 
 String _moeda(dynamic v) {
   final partes = _n(v).toDouble().toStringAsFixed(2).split('.');
@@ -213,6 +326,9 @@ class _Situacao extends StatelessWidget {
     final p = Map<String, dynamic>.from(d['plano'] as Map);
     final c = Map<String, dynamic>.from(d['consumo'] as Map);
     final est = Map<String, dynamic>.from(d['estimativa'] as Map);
+    final cupom = d['cupom'] as Map<String, dynamic>?;
+    final estimado = _comCupom(est['valor'], cupom, 'mensalidade');
+    final restantes = cupom?['mensalidades_restantes'];
     final (texto, cor) = switch (d['situacao']) {
       _ when d['cobrar'] == false => ('Cortesia: sem mensalidade', Cores.andamento),
       'teste' => ('Teste grátis: faltam ${d['dias_teste_restantes']} dia(s), até ${_data(d['teste_ate'])}', Cores.info),
@@ -225,21 +341,64 @@ class _Situacao extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(texto, style: TextStyle(color: cor, fontWeight: FontWeight.w700, fontSize: 16)),
         const SizedBox(height: 8),
-        Text('${_moeda(p['valor_mensal'])}/mês com ${p['usuarios_incluidos']} usuários, ${p['minutos_incluidos']} minutos de IA '
+        Text('${_moeda(p['valor_mensal'])}/mês com ${_usuarios(p['usuarios_incluidos'])}, ${p['minutos_incluidos']} minutos de IA '
             'e ${p['mensagens_incluidas']} mensagens de WhatsApp. Usuário a mais: ${_moeda(p['valor_usuario_extra'])}/mês, '
             'com +${p['minutos_por_usuario_extra']} minutos e +${p['mensagens_por_usuario_extra']} mensagens.'
             '${_n(p['desconto_pct']) > 0 ? ' Desconto de ${_n(p['desconto_pct'])}%.' : ''}'),
         const SizedBox(height: 4),
         Text('Ciclo atual: ${_data(c['ciclo_inicio'])} a ${_data(c['ciclo_fim'])}.', style: const TextStyle(color: Cores.neutro)),
+        if (cupom != null) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            const Icon(Icons.local_offer, size: 18, color: Cores.sucesso),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text('Cupom ${cupom['codigo']}: ${cupom['resumo']}'
+                  '${restantes != null && cupom['aplica_em'] != 'pacote' ? ' (falta(m) ${_n(restantes)} mensalidade(s) com desconto)' : ''}.',
+                  style: const TextStyle(color: Cores.sucesso, fontWeight: FontWeight.w600)),
+            ),
+          ]),
+        ],
         if (d['cobrar'] != false && d['situacao'] != 'cancelada') ...[
           const SizedBox(height: 8),
-          Text('Próxima mensalidade estimada: ${_moeda(est['valor'])} '
-              '(${est['usuarios_cobrados']} usuário(s) contando a regra dos ${_n(d['dias_minimos'])} dias, se nada mudar).',
+          Text('Próxima mensalidade estimada: ${_moeda(estimado)}'
+              '${estimado < _n(est['valor']) ? ' (${_moeda(est['valor'])} menos o cupom ${cupom?['codigo']})' : ''} · '
+              '${est['usuarios_cobrados']} usuário(s) contando a regra dos ${_n(d['dias_minimos'])} dias, se nada mudar.',
               style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ]),
     );
   }
+}
+
+/// Guia 49: outro plano sai mais em conta para os usuários de agora.
+class _Sugestao extends StatelessWidget {
+  const _Sugestao(this.s, {required this.aoTrocar});
+
+  final Map<String, dynamic> s;
+  final void Function(String codigo)? aoTrocar;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        color: Cores.indigo100,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            const Icon(Icons.savings_outlined, color: Cores.indigo700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text('Com ${_usuarios(s['usuarios'])}, o plano ${s['nome']} sai por ${_moeda(s['valor_sugerido'])}/mês, '
+                  '${_moeda(s['economia'])} a menos que no ${s['plano_atual']} (${_moeda(s['valor_atual'])}), '
+                  'com ${s['minutos']} minutos de IA e ${s['mensagens']} mensagens.'),
+            ),
+            if (aoTrocar != null) ...[
+              const SizedBox(width: 12),
+              FilledButton(onPressed: () => aoTrocar!(s['codigo'] as String), child: Text('Mudar para o ${s['nome']}')),
+            ],
+          ]),
+        ),
+      );
 }
 
 class _Consumo extends StatelessWidget {
@@ -276,7 +435,9 @@ class _Consumo extends StatelessWidget {
             'Hoje há ${c['usuarios_ativos']} usuário(s) com login.'),
         _barra('Minutos de IA (relato e OS por áudio)', _n(c['minutos_usados']), _n(c['minutos_incluidos']),
             '${_n(c['minutos_pacotes']) > 0 ? 'Inclui ${c['minutos_pacotes']} de pacotes. ' : ''}'
-            'Passou de 100%: tolerância de 20%. Depois disso os áudios esperam um pacote (dá para digitar).'),
+            '${_n(c['minutos_usados']) >= _n(c['minutos_incluidos']) && _n(c['minutos_incluidos']) > 0
+                ? 'Passou de 100%: há uma tolerância de 20%. Depois disso, os áudios esperam um pacote (dá para digitar).'
+                : 'Se passar de 100%, há uma tolerância de 20%; depois, os áudios esperam um pacote (dá para digitar).'}'),
         _barra('Mensagens automáticas de WhatsApp', _n(c['mensagens_usadas']), _n(c['mensagens_incluidas']),
             'As mensagens que o técnico envia pelo próprio WhatsApp não contam.'),
       ]),
@@ -284,31 +445,140 @@ class _Consumo extends StatelessWidget {
   }
 }
 
+/// Pacotes extras em destaque (é venda): cartões grandes com preço e "Comprar agora".
+/// Com o consumo a partir de 80%, a moldura fica coral e o pacote que falta ganha "Recomendado".
 class _Pacotes extends StatelessWidget {
-  const _Pacotes(this.pacotes, {required this.aoComprar});
+  const _Pacotes(this.pacotes, {required this.aoComprar, this.minutosPct = 0, this.mensagensPct = 0, this.cupom});
 
   final List<Map<String, dynamic>> pacotes;
+  final Map<String, dynamic>? cupom;
+  final void Function(Map<String, dynamic>)? aoComprar;
+  final num minutosPct;
+  final num mensagensPct;
+
+  bool _recomendado(Map<String, dynamic> k) =>
+      (k['tipo'] == 'minutos' && minutosPct >= 80) || (k['tipo'] == 'mensagens' && mensagensPct >= 80);
+
+  @override
+  Widget build(BuildContext context) {
+    if (pacotes.isEmpty) return const SizedBox.shrink();
+    final urgente = minutosPct >= 80 || mensagensPct >= 80;
+    final tema = Theme.of(context).textTheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: urgente ? Cores.coral500 : Cores.indigo500, width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.bolt, color: urgente ? Cores.coral500 : Cores.indigo500, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(urgente ? 'Seu consumo passou de 80%: garanta mais antes de acabar' : 'Precisa de mais? Compre um pacote extra',
+                  style: tema.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          const Text('Libera na hora, com Pix, boleto ou cartão. Vale até o fim do ciclo; comprado na última semana, vale também o próximo.',
+              style: TextStyle(color: Cores.neutro)),
+          const SizedBox(height: 16),
+          // Lado a lado com a mesma altura (botões alinhados); na tela estreita, um embaixo do outro.
+          LayoutBuilder(builder: (context, limites) {
+            const largura = 300.0, espaco = 16.0;
+            final cartoes = [
+              for (final k in pacotes)
+                _CartaoPacote(k, recomendado: _recomendado(k), aoComprar: aoComprar,
+                    valorFinal: _comCupom(k['valor'], cupom, 'pacote')),
+            ];
+            if (limites.maxWidth < pacotes.length * largura + (pacotes.length - 1) * espaco) {
+              return Column(children: [
+                for (final c in cartoes) Padding(padding: const EdgeInsets.only(bottom: espaco), child: c),
+              ]);
+            }
+            return IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                for (var i = 0; i < cartoes.length; i++) ...[
+                  if (i > 0) const SizedBox(width: espaco),
+                  SizedBox(width: largura, child: cartoes[i]),
+                ],
+              ]),
+            );
+          }),
+        ]),
+      ),
+    );
+  }
+}
+
+class _CartaoPacote extends StatelessWidget {
+  const _CartaoPacote(this.k, {required this.recomendado, required this.aoComprar, required this.valorFinal});
+
+  final Map<String, dynamic> k;
+  final num valorFinal;
+  final bool recomendado;
   final void Function(Map<String, dynamic>)? aoComprar;
 
   @override
-  Widget build(BuildContext context) => _Cartao(
-        titulo: 'Pacotes extras',
-        child: Wrap(spacing: 12, runSpacing: 12, children: [
-          for (final k in pacotes)
-            SizedBox(
-              width: 260,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16), alignment: Alignment.centerLeft),
-                onPressed: aoComprar == null ? null : () => aoComprar!(k),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${k['nome']}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text('${_moeda(k['valor'])} · comprar'),
-                ]),
-              ),
+  Widget build(BuildContext context) {
+    final minutos = k['tipo'] == 'minutos';
+    final qtd = _n(k['quantidade']);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: recomendado ? const Color(0xFFFFF1EC) : Cores.indigo100,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: recomendado ? Cores.coral500 : Cores.linha, width: recomendado ? 2 : 1),
+      ),
+      // Em cima: ícone, nome e descrição; embaixo: preço e botão (alinhados entre os cartões).
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: Icon(minutos ? Icons.mic : Icons.chat_outlined, color: minutos ? Cores.coral500 : Cores.indigo500, size: 28),
+          ),
+          const Spacer(),
+          if (recomendado)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: Cores.coral500, borderRadius: BorderRadius.circular(999)),
+              child: const Text('RECOMENDADO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
             ),
         ]),
-      );
+        const SizedBox(height: 14),
+        Text('${k['nome']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(minutos ? 'Uns ${(qtd / 2).round()} relatos por áudio a mais.' : 'Para meses de muito atendimento.',
+            style: const TextStyle(color: Cores.neutro)),
+        ]),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 14),
+        if (valorFinal < _n(k['valor']))
+          Text(_moeda(k['valor']),
+              style: const TextStyle(color: Cores.neutro, decoration: TextDecoration.lineThrough, fontSize: 14)),
+        Text(_moeda(valorFinal),
+            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Cores.indigo700, height: 1)),
+        Text(valorFinal < _n(k['valor']) ? 'com o seu cupom' : 'pagamento único',
+            style: const TextStyle(color: Cores.neutro, fontSize: 12)),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Cores.coral500, padding: const EdgeInsets.symmetric(vertical: 16)),
+            onPressed: aoComprar == null ? null : () => aoComprar!(k),
+            icon: const Icon(Icons.shopping_cart_outlined),
+            label: const Text('Comprar agora', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ),
+        ]),
+      ]),
+    );
+  }
 }
 
 class _Usuarios extends StatelessWidget {

@@ -13,6 +13,7 @@ import 'telas/faturas_tela.dart';
 import 'telas/login_tela.dart';
 import 'telas/precos_tela.dart';
 import 'telas/resumo_tela.dart';
+import 'telas/testadores_tela.dart';
 
 class _SessaoMudou extends ChangeNotifier {
   _SessaoMudou() {
@@ -65,6 +66,7 @@ final rotas = GoRouter(
         ),
         GoRoute(path: '/cupons', builder: (_, __) => const CuponsTela()),
         GoRoute(path: '/precos', builder: (_, __) => const PrecosTela()),
+        GoRoute(path: '/testadores', builder: (_, __) => const TestadoresTela()),
       ],
     ),
   ],

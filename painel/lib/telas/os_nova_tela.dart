@@ -23,7 +23,8 @@ class _OsNovaTelaState extends State<OsNovaTela> {
   static const _campoLocal = CampoDef('local_id', 'Local',
       tipo: TipoCampo.lookup,
       obrigatorio: true,
-      lookup: Lookup(tabela: 'locais', colunaDetalhe: 'cidade', colunaFiltro: 'cliente_id', campoPai: 'cliente_id'));
+      lookup: Lookup(tabela: 'locais', colunaDetalhe: 'cidade', colunaFiltro: 'cliente_id', campoPai: 'cliente_id',
+          escolherUnico: true));
   static const _campoSolicitante = CampoDef('solicitante_contato_id', 'Quem pediu (contato)',
       tipo: TipoCampo.lookup,
       lookup: Lookup(tabela: 'contatos', colunaDetalhe: 'cargo', colunaFiltro: 'cliente_id', campoPai: 'cliente_id'));

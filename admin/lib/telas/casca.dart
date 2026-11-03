@@ -15,6 +15,7 @@ class Casca extends StatelessWidget {
     (Icons.receipt_long_outlined, 'Faturas', '/faturas'),
     (Icons.local_offer_outlined, 'Cupons', '/cupons'),
     (Icons.sell_outlined, 'Preços e regras', '/precos'),
+    (Icons.android, 'Testadores do app', '/testadores'),
   ];
 
   @override

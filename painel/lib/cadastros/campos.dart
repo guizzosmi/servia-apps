@@ -46,11 +46,38 @@ class _CampoLookupState extends State<CampoLookup> {
   void initState() {
     super.initState();
     _buscarRotulo();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _escolherSeUnico());
+  }
+
+  /// Com o "pai" escolhido e uma opção só (ex.: o único local do cliente), escolhe sozinho.
+  Future<void> _escolherSeUnico() async {
+    final pai = widget.valorPai;
+    if (!mounted || !_lk.escolherUnico || _lk.colunaFiltro == null || pai == null ||
+        widget.valor != null || !widget.habilitado) {
+      return;
+    }
+    try {
+      var q = Supabase.instance.client
+          .from(_lk.tabela)
+          .select('id, ${_lk.colunaRotulo}')
+          .isFilter('excluido_em', null)
+          .eq(_lk.colunaFiltro!, pai);
+      if (_lk.colunaAtivo != null) q = q.eq(_lk.colunaAtivo!, true);
+      final r = await q.limit(2);
+      if (!mounted || r.length != 1 || widget.valor != null || widget.valorPai != pai) return;
+      final id = r.first['id'] as String;
+      _idDoTexto = id;
+      _texto.text = (r.first[_lk.colunaRotulo] ?? '').toString();
+      widget.aoMudar(id);
+    } catch (_) {/* fica para escolher na mão */}
   }
 
   @override
   void didUpdateWidget(CampoLookup oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.valorPai != oldWidget.valorPai && widget.valorPai != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _escolherSeUnico());
+    }
     if (widget.valor != _idDoTexto) {
       // Trocar o texto aqui (no meio do build do formulário) faria o Form
       // se redesenhar durante o build; por isso fica para depois do quadro.

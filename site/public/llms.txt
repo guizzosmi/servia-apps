@@ -1,0 +1,32 @@
+# ServPilot
+
+> ServPilot é um sistema de gestão de serviços de campo para empresas de refrigeração e climatização (ar-condicionado, câmaras frias, refrigeração comercial) no Brasil. Junta ordem de serviço, programação das equipes, app do técnico que funciona sem internet, relato por áudio com inteligência artificial, orçamento com assinatura do cliente, preventivas e PMOC. Preço aberto: plano Autônomo R$ 99,99 por mês (1 usuário) e plano Equipe R$ 199 por mês (2 usuários; usuário extra R$ 69); 7 dias grátis sem cartão.
+
+## O que é
+- Painel web do gestor: ordens de serviço, fila de pendentes, quadro do dia das equipes ao vivo, fechamento do dia, orçamentos, contratos e "a cobrar".
+- App do técnico (Android; iPhone em breve): parte do dia, a caminho, check-in, fotos, medições (pressão, corrente, tensão, temperatura), checklist, orçamento e assinatura do cliente. Funciona sem internet.
+- Relato por áudio: o técnico fala; a IA organiza o relato, as peças, as medições e a mão de obra; o técnico confere antes de salvar.
+- Preventivas e PMOC: plano por aparelho, atividades padrão, visitas geradas no prazo, etiquetas QR e histórico por equipamento.
+- Aceite do cliente: orçamento aprovado na tela ou por link no WhatsApp, com registro de data, nome e conteúdo aprovado.
+- Para quem: técnicos autônomos e empresas de refrigeração e climatização de 1 a dezenas de técnicos, contratos de PMOC (clínicas, escolas, lojas, escritórios), refrigeração comercial.
+
+## Preços (novembro de 2026)
+- Plano ServPilot: A partir de R$ 99,99/mês, 600 minutos de IA e 500 mensagens automáticas de WhatsApp.
+- Usuário extra: R$ 69/mês (+300 minutos e +250 mensagens).
+- Pacotes: 500 minutos de IA por R$ 59,90; 1.000 mensagens por R$ 69.
+- 7 dias grátis sem cartão, sem fidelidade, pagamento por Pix, boleto ou cartão, nota fiscal em todo pagamento.
+- Detalhes e simulador: https://servpilot.com.br/precos
+
+## Páginas
+- [Início](https://servpilot.com.br/)
+- [Sistema para empresas de refrigeração](https://servpilot.com.br/sistema-para-refrigeracao)
+- [Software de PMOC](https://servpilot.com.br/software-pmoc)
+- [App para técnico de refrigeração](https://servpilot.com.br/app-tecnico-refrigeracao)
+- [Ordem de serviço para ar-condicionado](https://servpilot.com.br/ordem-de-servico-ar-condicionado)
+- [Preços](https://servpilot.com.br/precos)
+- [Teste grátis](https://servpilot.com.br/assinar)
+- [Blog](https://servpilot.com.br/blog)
+
+## Empresa
+- ServPilot é oferecido por Ana DG Tecnologia da Informação Ltda (CNPJ 43.904.201/0001-26), São Miguel do Iguaçu, PR, Brasil.
+- Contato: anadgtec@gmail.com

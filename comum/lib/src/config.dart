@@ -19,7 +19,7 @@ class Config {
 
   /// Lojas (guia 41): onde o técnico atualiza o app quando a versão dele
   /// fica abaixo da mínima.
-  static const linkLojaAndroid = 'https://play.google.com/store/apps/details?id=app.servia.servia_app';
+  static const linkLojaAndroid = 'https://play.google.com/store/apps/details?id=br.com.servpilot.app';
   static const linkLojaIphone = 'https://apps.apple.com/app/servpilot/id0000000000';
 
   /// Domínio dos e-mails técnicos do login por matrícula + PIN

@@ -555,10 +555,10 @@ class _OsTelaState extends State<OsTela> {
                       ? TextButton.icon(onPressed: _editarDados, icon: const Icon(Icons.edit_outlined), label: const Text('Editar'))
                       : null,
                   children: [
-                    _Info('Cliente', '${cliente['nome'] ?? ''}${cliente['telefone'] != null ? ' · ${cliente['telefone']}' : ''}'),
+                    _Info('Cliente', '${cliente['nome'] ?? ''}${cliente['telefone'] != null ? ' · ${telefoneBr(cliente['telefone'] as String?)}' : ''}'),
                     _Info('Local', '${local['nome'] ?? ''}${endereco.isEmpty ? '' : ' · $endereco'}'),
                     if (local['instrucoes_acesso'] != null) _Info('Acesso', '${local['instrucoes_acesso']}'),
-                    if (contato != null) _Info('Quem pediu', '${contato['nome']}${contato['telefone'] != null ? ' · ${contato['telefone']}' : ''}'),
+                    if (contato != null) _Info('Quem pediu', '${contato['nome']}${contato['telefone'] != null ? ' · ${telefoneBr(contato['telefone'] as String?)}' : ''}'),
                     _Info('Problema relatado', (os['problema_relatado'] ?? '—') as String),
                     if (os['prevista_para'] != null) _Info('Prevista para', dataBr(os['prevista_para'])),
                     if (os['requer_orcamento'] == true) const _Info('Orçamento', 'Precisa de orçamento antes de executar'),

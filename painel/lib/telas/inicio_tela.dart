@@ -43,6 +43,15 @@ class _InicioTelaState extends State<InicioTela> {
       .count(CountOption.exact)
       .then((r) => r.count);
 
+  // Primeiro nome de quem entrou, para o "Olá, Fulano!".
+  late final Future<String?> _primeiroNome = () async {
+    final id = Sessao.atual?.usuarioId;
+    if (id == null) return null;
+    final r = await Supabase.instance.client.from('usuarios').select('nome').eq('id', id).maybeSingle();
+    final nome = (r?['nome'] as String?)?.trim() ?? '';
+    return nome.isEmpty ? null : nome.split(RegExp(r'\s+')).first;
+  }();
+
   late final Future<int> _orcamentosEmAberto = Supabase.instance.client
       .from('orcamentos')
       .select('id')
@@ -116,9 +125,12 @@ class _InicioTelaState extends State<InicioTela> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Olá!',
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700)),
+          FutureBuilder<String?>(
+            future: _primeiroNome,
+            builder: (context, snap) => Text(snap.data == null ? 'Olá!' : 'Olá, ${snap.data}!',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+          ),
           Text('${sessao?.email ?? ''} · ${sessao?.papeis.join(', ') ?? ''}',
               style: const TextStyle(color: Cores.neutro)),
           // Dias anteriores sem fechar (só o gestor vê; nunca hoje nem futuro).

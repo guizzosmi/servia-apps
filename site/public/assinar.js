@@ -9,15 +9,37 @@
   const cupomUrl = new URLSearchParams(location.search).get('cupom');
   if (cupomUrl) $('cupom').value = cupomUrl.toUpperCase();
 
-  // Preços do lado (mesmos da página de preços).
-  S.rpc('precos_publicos').then((d) => {
-    const p = d && d.planos && d.planos[0];
-    if (!p) return;
-    document.querySelectorAll('[data-v]').forEach((el) => {
-      const v = p[el.dataset.v];
-      if (v === undefined) return;
-      el.textContent = el.dataset.v.startsWith('valor') ? S.moeda(v) : String(v);
+  // Plano: vem da página de preços (/assinar?plano=autonomo) ou fica o Equipe.
+  const planos = {
+    autonomo: { nome: 'Autônomo', valor_mensal: 99.99, usuarios_incluidos: 1, valor_usuario_extra: 99.99 },
+    servpilot: { nome: 'Equipe', valor_mensal: 199, usuarios_incluidos: 2, valor_usuario_extra: 69 },
+  };
+  const radios = () => Array.from(document.querySelectorAll('input[name="plano"]'));
+  const planoEscolhido = () => (radios().find((r) => r.checked) || {}).value || 'servpilot';
+  const planoUrl = new URLSearchParams(location.search).get('plano');
+  radios().forEach((r) => { if (r.value === planoUrl) r.checked = true; r.addEventListener('change', resumo); });
+
+  function resumo() {
+    document.querySelectorAll('[data-p]').forEach((el) => {
+      const p = planos[el.dataset.p];
+      if (p && p[el.dataset.c] !== undefined) el.textContent = S.moeda(p[el.dataset.c]);
     });
+    const p = planos[planoEscolhido()];
+    if (!p) return;
+    $('resumoNome').textContent = p.nome;
+    $('resumoValor').textContent = S.moeda(p.valor_mensal) + '/mês';
+    $('resumoUsuarios').textContent = p.usuarios_incluidos === 1 ? '1 usuário' : `${p.usuarios_incluidos} usuários`;
+    $('resumoExtra').innerHTML = p.usuarios_incluidos === 1 ? ' (contratou alguém? troque para o Equipe pelo painel)'
+      : `, e <b>${S.moeda(p.valor_usuario_extra)}</b> por usuário a mais`;
+  }
+  resumo();
+
+  // Preços atualizados (mesmos da página de preços).
+  S.rpc('precos_publicos').then((d) => {
+    ((d && d.planos) || []).forEach((p) => {
+      if (planos[p.codigo]) Object.assign(planos[p.codigo], p, { valor_mensal: Number(p.valor_mensal), valor_usuario_extra: Number(p.valor_usuario_extra) });
+    });
+    resumo();
   }).catch(() => {});
 
   // Máscara simples do CNPJ/CPF.
@@ -72,6 +94,7 @@
       const r = await S.funcao('assinar', {
         empresa: { razao_social: v('razao'), nome_fantasia: v('fantasia'), documento: v('documento'), cidade: v('cidade'), uf: v('uf') },
         dono: { nome: v('nome'), email: v('email'), telefone: v('whatsapp'), senha: $('senha').value },
+        plano: planoEscolhido(),
         cupom: v('cupom'),
         aceite: true,
         site: $('site').value,
@@ -81,6 +104,7 @@
       $('okPainel').href = r.painel || S.PAINEL;
       form.style.display = 'none';
       $('sucesso').classList.add('ver');
+      if (window.ServPilotRastreio) window.ServPilotRastreio.evento('cadastro');   // conversão (guia 48)
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       mostrarErro(err.message);

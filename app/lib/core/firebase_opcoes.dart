@@ -8,7 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 const FirebaseOptions? opcoesFirebase = FirebaseOptions(
   apiKey: 'AIzaSyDLDq5Iu4889sKMCN2jvaIKWszdimXbKXo',
-  appId: '1:904603233185:android:1e443f19037100b1ad39e0',
+  appId: '1:904603233185:android:71a5533a4b5ff46ead39e0',
   messagingSenderId: '904603233185',
   projectId: 'servia-ccdda',
   storageBucket: 'servia-ccdda.firebasestorage.app',

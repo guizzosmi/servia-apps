@@ -16,7 +16,7 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: app.servia.servia_app
+        bundle_identifier: br.com.servpilot.app
     triggering:
       events: []          # só quando você clica em "Start new build"
     scripts:
