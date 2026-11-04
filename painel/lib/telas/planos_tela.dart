@@ -79,9 +79,10 @@ class _PlanosTelaState extends State<PlanosTela> {
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
         if (podeEditar)
           FilledButton.icon(
-            onPressed: () => _abrir('/planos/novo'),
+            key: const ValueKey('novoPlano'),
+            onPressed: () => _abrir('/planos/assistente'),
             icon: const Icon(Icons.add),
-            label: const Text('Novo plano'),
+            label: Text(ParametrosEmpresa.instancia.atendePmoc ? 'Novo plano ou PMOC' : 'Novo plano'),
           ),
         OutlinedButton.icon(
           onPressed: () => context.push('/c/modelos-atividade'),

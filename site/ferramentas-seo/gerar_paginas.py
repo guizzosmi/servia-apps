@@ -25,7 +25,7 @@ def pagina(arquivo, caminho, titulo, descricao, trilha, h1, h1_destaque, lead, g
       <tbody>
 {linhas}      </tbody>
     </table>
-    <div class="lp-cta"><a class="botao coral grande" href="/assinar">Testar 7 dias grátis</a>
+    <div class="lp-cta"><a class="botao coral grande" href="/assinar">Testar 14 dias grátis</a>
       <a class="botao primario grande" href="/precos">Ver preços e simulador</a></div>
   </div>
 </section>
@@ -40,7 +40,7 @@ def pagina(arquivo, caminho, titulo, descricao, trilha, h1, h1_destaque, lead, g
       <h1>{e(h1)} <span class="destaque">{e(h1_destaque)}</span></h1>
       <p class="lead">{e(lead)}</p>
       <div class="abertura-acoes">
-        <a class="botao coral grande" href="/assinar">Testar 7 dias grátis</a>
+        <a class="botao coral grande" href="/assinar">Testar 14 dias grátis</a>
         <a class="botao contorno-claro grande" href="/precos">Ver preços</a>
       </div>
       <ul class="abertura-garantias">{gar}</ul>
@@ -53,12 +53,12 @@ def pagina(arquivo, caminho, titulo, descricao, trilha, h1, h1_destaque, lead, g
              + perguntas_html(perguntas) + veja_html + CHAMADA + RODAPE)
     gravar(arquivo, html_)
 
-GAR = ['7 dias grátis, sem cartão', 'A partir de R$ 99,99/mês', 'Sem fidelidade', 'Funciona sem internet']
+GAR = ['14 dias grátis, sem cartão', 'A partir de R$ 99,99/mês', 'Sem fidelidade', 'Funciona sem internet']
 
 # ================================================================= sistema para refrigeração
 pagina('sistema-para-refrigeracao.html', '/sistema-para-refrigeracao',
   'Sistema para empresa de refrigeração e ar-condicionado | ServPilot',
-  'Sistema para empresas de refrigeração e climatização: ordem de serviço, app do técnico sem internet, relato por áudio com IA, orçamento com assinatura, PMOC e preventivas. 7 dias grátis.',
+  'Sistema para empresas de refrigeração e climatização: ordem de serviço, app do técnico sem internet, relato por áudio com IA, orçamento com assinatura, PMOC e preventivas. 14 dias grátis.',
   'Sistema para refrigeração',
   'Sistema para empresas de refrigeração', 'e ar-condicionado.',
   'Feito para quem instala e mantém ar-condicionado e câmaras frias: a ordem de serviço nasce no escritório ou no '
@@ -94,7 +94,7 @@ pagina('sistema-para-refrigeracao.html', '/sistema-para-refrigeracao',
    ]},
   [
     ('Qual é o melhor sistema para empresa de refrigeração?',
-     'O que atende o trabalho de campo: OS no celular que funciona sem internet, histórico por equipamento, PMOC e orçamento com aceite do cliente. O ServPilot foi feito para refrigeração e climatização e pode ser testado 7 dias grátis.'),
+     'O que atende o trabalho de campo: OS no celular que funciona sem internet, histórico por equipamento, PMOC e orçamento com aceite do cliente. O ServPilot foi feito para refrigeração e climatização e pode ser testado 14 dias grátis.'),
     ('Quanto custa um sistema para refrigeração?',
      'No ServPilot, o plano Autônomo custa R$ 99,99 por mês (1 usuário, 300 minutos de IA e 250 mensagens de WhatsApp) e o plano Equipe, R$ 199 por mês (2 usuários, 600 minutos e 500 mensagens; cada usuário a mais custa R$ 69). Os valores completos estão na página de preços.'),
     ('O app do técnico funciona sem internet?',
@@ -110,7 +110,7 @@ pagina('sistema-para-refrigeracao.html', '/sistema-para-refrigeracao',
 # ================================================================= software de PMOC
 pagina('software-pmoc.html', '/software-pmoc',
   'Software de PMOC para ar-condicionado | ServPilot',
-  'Software de PMOC: plano por aparelho, atividades padrão, visitas geradas sozinhas, checklist no app do técnico, fotos e histórico de cada equipamento. Teste 7 dias grátis.',
+  'Software de PMOC: plano por aparelho, atividades padrão, visitas geradas sozinhas, checklist no app do técnico, fotos e histórico de cada equipamento. Teste 14 dias grátis.',
   'Software de PMOC',
   'Software de PMOC', 'que se organiza sozinho.',
   'Cadastre os aparelhos do cliente, escolha as atividades do plano e o ServPilot gera as visitas no prazo, '
@@ -163,7 +163,7 @@ pagina('app-tecnico-refrigeracao.html', '/app-tecnico-refrigeracao',
   'App para técnico de refrigeração:', 'o técnico fala, a OS se escreve.',
   'No telhado, na casa de máquinas ou no subsolo sem sinal: o app do ServPilot funciona offline e envia tudo quando a '
   'internet volta. O técnico grava o relato falando e a IA organiza peças, medições e o texto da OS.',
-  ['Android (iPhone em breve)', 'Funciona sem internet', 'Login por matrícula e PIN', '7 dias grátis'],
+  ['Android (iPhone em breve)', 'Funciona sem internet', 'Login por matrícula e PIN', '14 dias grátis'],
   [
     {'sobre': 'No celular do técnico', 'titulo': 'Do "a caminho" à assinatura do cliente',
      'cartoes': [

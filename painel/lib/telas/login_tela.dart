@@ -40,6 +40,54 @@ class _LoginTelaState extends State<LoginTela> {
     }
   }
 
+  /// Guia 58: manda o link para criar uma senha nova.
+  Future<void> _esqueci() async {
+    final email = TextEditingController(text: _email.text.trim());
+    final enviar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Esqueci minha senha'),
+        content: SizedBox(
+          width: 380,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Informe o seu e-mail. Mandamos um link para você criar uma senha nova '
+                '(abra o link neste mesmo navegador).'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: email,
+              autofocus: true,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'E-mail'),
+              onSubmitted: (_) => Navigator.of(ctx).pop(true),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Mandar o link')),
+        ],
+      ),
+    );
+    final texto = email.text.trim();
+    email.dispose();
+    if (enviar != true || !mounted) return;
+    if (!texto.contains('@')) {
+      setState(() => _erro = 'Informe o e-mail para recuperar a senha.');
+      return;
+    }
+    try {
+      await Sessao.recuperarSenha(texto, voltarPara: '${Uri.base.origin}/nova-senha');
+      if (!mounted) return;
+      setState(() => _erro = null);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 8),
+        content: Text('Se $texto tiver acesso ao ServPilot, o link chega em instantes. Confira também o spam.'),
+      ));
+    } catch (e) {
+      if (mounted) setState(() => _erro = mensagemDeErro(e));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,7 +157,12 @@ class _LoginTelaState extends State<LoginTela> {
                                 )
                               : const Text('Entrar'),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          key: const ValueKey('esqueciSenha'),
+                          onPressed: _entrando ? null : _esqueci,
+                          child: const Text('Esqueci minha senha'),
+                        ),
                         const LinksLegais(),
                       ],
                     ),

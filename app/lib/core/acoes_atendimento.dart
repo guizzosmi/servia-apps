@@ -306,6 +306,8 @@ class AcoesAtendimento {
     String? unidade,
     required num quantidade,
     String? itemId,
+    String? numeroSerie,
+    String? numeroSerieRetirado,
   }) async {
     final id = itemId ?? novoId();
     // Como na plataforma: o preço e o desconto que o gestor deu ficam; item
@@ -328,6 +330,9 @@ class AcoesAtendimento {
         if (tipo != null) 'tipo': tipo,
         if (unidade != null) 'unidade': unidade,
         'quantidade': quantidade,
+        // Guia 59: peça com número de série (a nova e a retirada).
+        if (numeroSerie != null) 'numero_serie': numeroSerie,
+        if (numeroSerieRetirado != null) 'numero_serie_retirado': numeroSerieRetirado,
       },
       aplicarLocal: () => _banco.gravar('os_itens', [
         {
@@ -344,6 +349,8 @@ class AcoesAtendimento {
           'total': (quantidade * preco * 100).round() / 100 - desconto,
           'origem': 'manual',
           'confirmado': true,
+          if (numeroSerie != null) 'numero_serie': numeroSerie,
+          if (numeroSerieRetirado != null) 'numero_serie_retirado': numeroSerieRetirado,
         }
       ]),
     );

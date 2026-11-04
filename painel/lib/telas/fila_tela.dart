@@ -5,6 +5,7 @@ import 'package:servia_comum/servia_comum.dart';
 import '../servicos/status.dart';
 import '../widgets/fila.dart';
 import '../widgets/margem.dart';
+import '../widgets/montar_dia.dart';
 
 /// Fila de pendentes: tudo o que precisa ir para a parte de alguma equipe.
 /// (No guia 07 esta mesma fila vira a coluna da esquerda do quadro.)
@@ -103,6 +104,15 @@ class _FilaTelaState extends State<FilaTela> {
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
             ),
             IconButton(tooltip: 'Atualizar', onPressed: _carregando ? null : _carregar, icon: const Icon(Icons.refresh)),
+            const SizedBox(width: 8),
+            // Guia 76: distribui a fila entre as equipes (vai para o quadro em rascunho).
+            OutlinedButton.icon(
+              onPressed: () async {
+                if (await montarODia(context, publicar: false)) _carregar();
+              },
+              icon: const Icon(Icons.auto_fix_high_outlined),
+              label: const Text('Montar o dia'),
+            ),
             const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: _novaOs,

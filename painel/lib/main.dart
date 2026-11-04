@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +12,9 @@ const versaoPainel = '0.13.0';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Endereço sem "#": painel.servpilot.com.br/assinatura abre a própria tela (o Firebase
+  // devolve o index.html para qualquer caminho). Sem isso, links diretos caíam no Início.
+  usePathUrlStrategy();
   // Abrir uma tela com push (OS, orçamento...) também muda o endereço do
   // navegador: recarregar a página (F5) volta para a mesma tela.
   GoRouter.optionURLReflectsImperativeAPIs = true;

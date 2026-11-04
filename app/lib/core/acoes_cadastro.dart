@@ -15,6 +15,9 @@ class EquipamentoNovo {
     this.modelo = '',
     this.numeroSerie = '',
     this.fluido = '',
+    this.capacidadeValor,
+    this.capacidadeUnidade,
+    this.qrToken,
     this.ambienteId,
     this.ambienteNovo,
     this.tipoId,
@@ -41,6 +44,13 @@ class EquipamentoNovo {
   final String modelo;
   final String numeroSerie;
   final String fluido;
+
+  /// Capacidade (guia 57: lida da plaqueta pela IA ou digitada) e a unidade (btu_h, tr, kw).
+  final num? capacidadeValor;
+  final String? capacidadeUnidade;
+
+  /// Etiqueta QR em branco colada na hora (impressa no painel).
+  final String? qrToken;
   final String? ambienteId;
   final String? ambienteNovo; // nome do ambiente novo
   final String? tipoId;
@@ -65,6 +75,9 @@ class EquipamentoNovo {
       if (v(modelo) != null) 'modelo': v(modelo),
       if (v(numeroSerie) != null) 'numero_serie': v(numeroSerie),
       if (v(fluido) != null) 'fluido_refrigerante': v(fluido),
+      if (capacidadeValor != null) 'capacidade_valor': capacidadeValor,
+      if (capacidadeValor != null) 'capacidade_unidade': capacidadeUnidade ?? 'btu_h',
+      if (qrToken != null) 'qr_token': qrToken,
       if (ambienteNovo != null)
         'ambiente_novo': {'id': ambienteNovoId, 'nome': ambienteNovo!.trim()}
       else if (ambienteId != null)
@@ -104,6 +117,9 @@ class EquipamentoNovo {
         'modelo': v(modelo),
         'numero_serie': v(numeroSerie),
         'fluido_refrigerante': v(fluido),
+        'capacidade_valor': capacidadeValor,
+        'capacidade_unidade': capacidadeValor == null ? null : (capacidadeUnidade ?? 'btu_h'),
+        if (qrToken != null) 'qr_token': qrToken,
         'situacao': 'ativo',
         'origem': 'app',
         'criado_em': agora,

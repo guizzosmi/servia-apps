@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'telas/api_tela.dart';
+import 'telas/aplicacoes_tela.dart';
 import 'telas/casca.dart';
 import 'telas/conta_tela.dart';
 import 'telas/contas_tela.dart';
@@ -67,6 +69,8 @@ final rotas = GoRouter(
         GoRoute(path: '/cupons', builder: (_, __) => const CuponsTela()),
         GoRoute(path: '/precos', builder: (_, __) => const PrecosTela()),
         GoRoute(path: '/testadores', builder: (_, __) => const TestadoresTela()),
+        GoRoute(path: '/aplicacoes', builder: (_, __) => const AplicacoesTela()),
+        GoRoute(path: '/api', builder: (_, __) => const ApiTela()),
       ],
     ),
   ],

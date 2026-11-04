@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
@@ -8,6 +9,7 @@ import '../cadastros/definicoes.dart';
 import '../cadastros/lista.dart';
 import '../cadastros/servico.dart';
 import '../widgets/margem.dart';
+import '../widgets/portal_cliente.dart';
 
 /// Formulário genérico de cadastro (incluir, alterar, excluir) com as
 /// listas filhas embaixo (ex.: locais e contatos do cliente).
@@ -256,6 +258,8 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
           _criadoAqui = true;
           _preencher(salvo);
         });
+        // Guia 58: o endereço deixa de ser ".../novo" (F5 abre este registro, não um novo).
+        SystemNavigator.routeInformationUpdated(uri: Uri.parse('/c/${def.chave}/${salvo['id']}'), replace: true);
         _avisar('Salvo. Agora você pode incluir os itens abaixo.');
       } else {
         if (eraNovo) {
@@ -563,6 +567,14 @@ class _CadastroFormTelaState extends State<CadastroFormTela> {
                   ],
                 ],
               ),
+              // Guia 72: o link do portal do cliente.
+              if (!_novo && def.tabela == 'clientes' && (Sessao.atual?.tem(Papel.gestor) ?? false)) ...[
+                const SizedBox(height: 24),
+                PortalDoCliente(
+                  clienteId: _id!,
+                  clienteNome: '${_registro?['nome_fantasia'] ?? _registro?['nome'] ?? ''}',
+                ),
+              ],
               if (!_novo)
                 for (final f in def.filhos) ...[
                   const SizedBox(height: 32),

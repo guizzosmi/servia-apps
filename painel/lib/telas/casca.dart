@@ -102,22 +102,47 @@ class _Menu extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       children: [
         item(Icons.home_outlined, 'Início', '/'),
+        // Guia 75: perguntas do dono respondidas pela IA.
+        if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.auto_awesome_outlined, 'Assistente', '/assistente'),
         grupo('Operação'),
-        item(Icons.view_kanban_outlined, 'Quadro do dia', '/quadro'),
-        item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
+        // Guia 62: no modo simples, a Agenda (lista) no lugar do quadro e da fila.
+        if (param.modoSimples)
+          item(Icons.event_note_outlined, 'Agenda', '/agenda')
+        else ...[
+          item(Icons.view_kanban_outlined, 'Quadro do dia', '/quadro'),
+          item(Icons.inbox_outlined, 'Fila de pendentes', '/fila'),
+        ],
         item(Icons.assignment_outlined, 'Ordens de serviço', '/os'),
         item(Icons.request_quote_outlined, 'Orçamentos', '/orcamentos'),
         // Só para quem usa (Configurações > Preventivas).
         if (param.usaPreventivas) item(Icons.event_repeat_outlined, param.nomePlanos, '/planos'),
+        // Guia 63: estoque do almoxarifado e dos carros.
+        if (param.usaEstoque) item(Icons.inventory_outlined, 'Estoque', '/estoque'),
+        if (param.usaLembretes) item(Icons.notifications_active_outlined, 'Lembretes', '/lembretes'),
+        // Guia 68: clientes sem serviço há meses.
+        if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.person_search_outlined, 'Clientes parados', '/parados'),
+        // Guia 65: pedidos que chegam pelo WhatsApp oficial (ou simulados).
+        if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.chat_outlined, 'Pedidos do WhatsApp', '/whatsapp'),
         grupo('Financeiro'),
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.receipt_long_outlined, 'A cobrar', '/cobrar'),
         item(Icons.handshake_outlined, 'Contratos', '/contratos'),
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.workspace_premium_outlined, 'Plano e consumo', '/assinatura'),
+        // Guia 67: caixa simples e margem.
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.account_balance_wallet_outlined, 'Caixa', '/caixa'),
+        // Guia 81: notas fiscais (o módulo é contratado na própria tela).
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.request_quote_outlined, 'Notas fiscais', '/notas'),
+        // Guia 61: o período em números.
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.insights_outlined, 'Indicadores', '/indicadores'),
         grupo('Cadastros'),
         for (final def in cadastrosDoMenu)
-          item(def.icone, def.titulo, '/c/${def.chave}'),
+          // Modo simples: a biblioteca de atividades (planos) e os tipos ficam fora da frente.
+          if (!param.modoSimples || !const {'modelos_atividade', 'tipos_equipamento'}.contains(def.tabela))
+            item(def.icone, def.titulo, '/c/${def.chave}'),
         if (Sessao.atual?.tem(Papel.gestor) ?? false)
           item(Icons.upload_file_outlined, 'Importar planilha', '/importar'),
         if (Sessao.atual?.tem(Papel.admin) ?? false) ...[
@@ -125,6 +150,7 @@ class _Menu extends StatelessWidget {
           item(Icons.manage_accounts_outlined, 'Usuários', '/usuarios'),
           item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
           item(Icons.tune_outlined, 'Configurações', '/configuracoes'),
+          if (!param.modoSimples) item(Icons.hub_outlined, 'Integrações (API)', '/integracoes'),
         ],
         const Divider(height: 24),
         // Central de tutoriais (guia 47): abre numa aba nova, com os vídeos do perfil.

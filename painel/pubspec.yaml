@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # Endereços sem "#" (painel.../assinatura): links de volta do Mercado Pago e F5 (guia 51).
+  flutter_web_plugins:
+    sdk: flutter
   servia_comum:
     path: ../comum
   # 2.15+: links assinados das fotos (createSignedUrlsResult).
@@ -21,6 +24,11 @@ dependencies:
   printing: ^5.13.0
   # Escolher arquivo e abrir aba no navegador (relato por áudio de teste).
   web: ^1.1.0
+  # Ler a planilha .xlsx do PMOC no navegador (guia 55): já vêm com o pdf.
+  archive: any
+  xml: any
+  # QR Code do Pix na tela (guia 73): já vem com o pdf.
+  qr: any
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Portal do cliente</title>
+<style>
+  :root {
+    --indigo: #1E2A5A; --indigo-medio: #3A4FA8; --indigo-claro: #E6E9F6;
+    --tinta: #121A2B; --neutro: #5B6474; --linha: #DCE1EA; --fundo: #F5F6FA;
+    --sucesso: #1E8E5A; --erro: #C8372D; --alerta: #B96A00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { background: var(--indigo); color: #fff; padding: 18px 16px 16px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .cartao { background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .cartao h2 { margin: 0 0 10px; font-size: 15px; color: var(--indigo); text-transform: uppercase; letter-spacing: .4px; }
+  .rotulo { color: var(--neutro); font-size: 13px; }
+  .item { padding: 10px 0; border-top: 1px solid var(--linha); }
+  .item:first-of-type { border-top: 0; padding-top: 0; }
+  .item b { display: block; }
+  .item small { display: block; color: var(--neutro); }
+  .item .feito { margin-top: 4px; white-space: pre-wrap; font-size: 15px; }
+  .selo { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 2px 9px; margin-left: 6px;
+          background: var(--indigo-claro); color: var(--indigo); vertical-align: 1px; }
+  .selo.alerta { background: #FFF1DD; color: #8A4F00; }
+  .vazio { color: var(--neutro); font-size: 14px; }
+  .valor { font-size: 20px; font-weight: 800; color: var(--indigo); font-variant-numeric: tabular-nums; }
+  .pix { font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: var(--fundo);
+         border: 1px solid var(--linha); border-radius: 8px; padding: 8px; margin-top: 6px; }
+  .secundario { background: #fff; color: var(--indigo); border: 1px solid var(--indigo); }
+  label { display: block; font-size: 14px; margin: 12px 0 4px; }
+  input[type=text], input[type=tel], textarea { width: 100%; font: inherit; padding: 12px; border: 1px solid var(--linha); border-radius: 10px; background: #fff; }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--indigo-medio); border-color: transparent; }
+  button { display: block; width: 100%; min-height: 50px; border-radius: 12px; font: inherit; font-weight: 700;
+           cursor: pointer; padding: 13px; margin-top: 12px; }
+  .primario { background: var(--indigo); color: #fff; border: 0; }
+  .primario:disabled { background: #9aa2b8; cursor: default; }
+  .aviso { border-radius: 12px; padding: 14px; margin-top: 12px; font-size: 15px; }
+  .aviso.ok { background: #E3F3EB; color: #155F3D; }
+  .aviso.erro { background: #FBE7E5; color: #8E241C; }
+  .centro { text-align: center; padding: 40px 8px; }
+  .centro .icone { font-size: 46px; line-height: 1; }
+  footer { text-align: center; color: var(--neutro); font-size: 12px; padding: 8px 16px 28px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="empresa">&nbsp;</h1>
+  <p id="empresa-info"></p>
+</header>
+<main id="tela">
+  <div class="centro"><p class="rotulo">Carregando…</p></div>
+</main>
+<footer id="rodape"></footer>
+
+<script>
+// Portal do cliente (guia 72): /p/<token>. Fala só com a função aceite-publico.
+const API = 'https://srtokvosnwtyewiempyw.supabase.co/functions/v1/aceite-publico';
+const CHAVE = 'sb_publishable_qUKXkM5nd3KhUgOc8Auk9A_g9K2xxrH'; // chave pública (não é segredo)
+const token = (location.pathname.match(/\/p\/([A-Za-z0-9_-]{43})/) || [])[1];
+const tela = document.getElementById('tela');
+let doc = null;
+
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const moeda = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dataBr = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso)) ? iso.slice(0, 10).split('-').reverse().join('/') : '';
+const fone = (t) => {
+  const d = String(t || '').replace(/\D/g, '');
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return t || '';
+};
+const TIPOS = { corretiva: 'Conserto', preventiva: 'Manutenção preventiva', pmoc: 'PMOC', instalacao: 'Instalação',
+                visita_tecnica: 'Visita técnica', orcamento: 'Orçamento' };
+const tipo = (t) => TIPOS[t] || (t ? String(t).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : 'Serviço');
+const STATUS = { aberta: ['Recebida', ''], agendada: ['Agendada', ''], em_atendimento: ['Em atendimento', ''],
+                 aguardando_aprovacao: ['Aguardando sua aprovação', 'alerta'], aguardando_orcamento: ['Preparando o orçamento', ''],
+                 aguardando_peca: ['Aguardando peça', 'alerta'], pausada: ['Pausada', 'alerta'] };
+const status = (s) => {
+  const [t, c] = STATUS[s] || [s ? String(s).replace(/_/g, ' ').replace(/^./, (x) => x.toUpperCase()) : '', ''];
+  return t ? `<span class="selo ${c}">${esc(t)}</span>` : '';
+};
+
+function mensagem(icone, titulo, texto) {
+  const e = (doc && doc.empresa) || {};
+  const contato = [e.telefone ? fone(e.telefone) : '', e.email || ''].filter(Boolean).join(' · ');
+  tela.innerHTML = `<div class="centro"><div class="icone">${icone}</div><h2>${esc(titulo)}</h2><p>${texto}</p>
+    ${contato ? `<p class="rotulo">${esc(e.nome || 'Empresa')} · ${esc(contato)}</p>` : ''}</div>`;
+}
+
+function lista(itens, vazio, linha) {
+  return itens && itens.length ? itens.map(linha).join('') : `<p class="vazio">${esc(vazio)}</p>`;
+}
+
+function mostrar() {
+  const e = doc.empresa || {};
+  document.getElementById('empresa').textContent = e.nome || 'Portal do cliente';
+  document.getElementById('empresa-info').textContent = [e.telefone ? fone(e.telefone) : '', e.email || ''].filter(Boolean).join(' · ');
+  document.getElementById('rodape').textContent = e.endereco || '';
+  document.title = `${doc.cliente || 'Portal'} · ${e.nome || ''}`;
+
+  tela.innerHTML = `
+    <p class="rotulo">Olá, <b>${esc(doc.cliente)}</b>. Aqui você acompanha os serviços e pede um novo atendimento.</p>
+    <section class="cartao">
+      <h2>Pedir um serviço</h2>
+      <label for="texto">O que está acontecendo?</label>
+      <textarea id="texto" maxlength="2000" placeholder="Ex.: o ar da sala de reunião está pingando água"></textarea>
+      <label for="nome">Seu nome</label>
+      <input type="text" id="nome" maxlength="80" autocomplete="name">
+      <label for="telefone">Telefone para contato (opcional)</label>
+      <input type="tel" id="telefone" maxlength="20" autocomplete="tel">
+      <button class="primario" id="enviar">Enviar o pedido</button>
+      <div id="retorno"></div>
+    </section>
+    ${doc.a_pagar && doc.a_pagar.length ? `<section class="cartao">
+      <h2>Para pagar</h2>
+      ${doc.a_pagar.map((c, i) => `<div class="item"><span class="valor">${moeda(c.valor)}</span>
+        <small>cobrado em ${dataBr(c.cobrado_em)}${c.nf ? ' · NF ' + esc(c.nf) : ''}</small>
+        ${c.pix ? `<small>Pix copia e cola (abra o app do banco, Pix, "copia e cola"):</small>
+          <div class="pix">${esc(c.pix)}</div>
+          <button class="secundario" data-pix="${i}">Copiar o Pix</button>`
+          : '<small>Fale com a empresa para combinar o pagamento.</small>'}</div>`).join('')}
+      <p class="rotulo">Já pagou? A empresa confere e dá baixa; pode levar um dia útil para sair daqui.</p>
+    </section>` : ''}
+    <section class="cartao">
+      <h2>Próximas visitas</h2>
+      ${lista(doc.visitas, 'Nenhuma visita marcada.', (v) => `<div class="item"><b>${dataBr(v.data)} · ${esc(tipo(v.tipo))}</b>
+        <small>${esc(v.local || '')}${v.os ? ' · ' + esc(v.os) : ''}</small>
+        ${v.problema ? `<small>${esc(v.problema)}</small>` : ''}</div>`)}
+    </section>
+    <section class="cartao">
+      <h2>Em andamento</h2>
+      ${lista(doc.abertas, 'Nenhum serviço em aberto.', (o) => `<div class="item"><b>${esc(tipo(o.tipo))}${status(o.status)}</b>
+        <small>${esc(o.os)} · ${esc(o.local || '')} · aberta em ${dataBr(o.aberta_em)}</small>
+        ${o.problema ? `<small>${esc(o.problema)}</small>` : ''}</div>`)}
+    </section>
+    <section class="cartao">
+      <h2>Serviços feitos (12 meses)</h2>
+      ${lista(doc.concluidas, 'Nenhum serviço concluído nos últimos 12 meses.', (o) => `<div class="item"><b>${dataBr(o.data)} · ${esc(tipo(o.tipo))}</b>
+        <small>${esc(o.os)} · ${esc(o.local || '')}</small>
+        ${o.problema ? `<small>Pedido: ${esc(o.problema)}</small>` : ''}
+        ${o.feito ? `<div class="feito">${esc(o.feito)}</div>` : ''}</div>`)}
+    </section>
+    ${doc.planos && doc.planos.length ? `<section class="cartao">
+      <h2>Planos de manutenção</h2>
+      ${doc.planos.map((p) => `<div class="item"><b>${esc(p.nome)}${p.tipo === 'pmoc' ? '<span class="selo">PMOC</span>' : ''}</b>
+        <small>${esc(p.local || '')}${p.proxima ? ' · próxima: ' + dataBr(p.proxima) : ''}</small></div>`).join('')}
+    </section>` : ''}`;
+  document.getElementById('enviar').addEventListener('click', enviar);
+  document.querySelectorAll('[data-pix]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(doc.a_pagar[Number(b.dataset.pix)].pix);
+      b.textContent = 'Copiado! Cole no app do banco';
+    } catch (e) {
+      b.textContent = 'Não deu para copiar: segure o texto acima e copie';
+    }
+  }));
+}
+
+async function enviar() {
+  const b = document.getElementById('enviar');
+  const ret = document.getElementById('retorno');
+  const texto = document.getElementById('texto').value.trim();
+  if (texto.length < 5) {
+    ret.innerHTML = '<div class="aviso erro">Conte em poucas palavras o que está acontecendo.</div>';
+    return;
+  }
+  b.disabled = true;
+  b.textContent = 'Enviando…';
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CHAVE },
+      body: JSON.stringify({ acao: 'portal_chamado', t: token, texto,
+        nome: document.getElementById('nome').value.trim(), telefone: document.getElementById('telefone').value.trim() }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      ret.innerHTML = `<div class="aviso erro">${esc(j.message || 'Não deu para enviar agora. Tente de novo.')}</div>`;
+      return;
+    }
+    document.getElementById('texto').value = '';
+    ret.innerHTML = '<div class="aviso ok">Pedido enviado. A empresa já recebeu e entra em contato para combinar a visita.</div>';
+  } catch (e) {
+    ret.innerHTML = '<div class="aviso erro">Sem conexão. Confira a internet e tente de novo.</div>';
+  } finally {
+    b.disabled = false;
+    b.textContent = 'Enviar o pedido';
+  }
+}
+
+async function carregar() {
+  if (!token) return mensagem('🔗', 'Link inválido', 'Confira se o endereço chegou inteiro ou peça um novo link à empresa.');
+  try {
+    // O token vai no corpo (não no endereço da função), para não ficar em registros de acesso.
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CHAVE },
+      body: JSON.stringify({ acao: 'portal', t: token }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (j.code === 'link_invalido') return mensagem('🔗', 'Link inválido', 'Confira se o endereço chegou inteiro ou peça um novo link à empresa.');
+      return mensagem('⚠️', 'Não deu para abrir agora', esc(j.message || 'Tente de novo em instantes.'));
+    }
+    doc = j;
+    if (doc.estado === 'link_vencido') {
+      return mensagem('⏳', 'Link vencido', 'Este link não vale mais. Peça um novo à empresa.');
+    }
+    mostrar();
+  } catch (e) {
+    mensagem('📶', 'Sem conexão', 'Confira a internet do celular e abra o link de novo.');
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>

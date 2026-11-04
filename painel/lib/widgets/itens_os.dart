@@ -110,13 +110,32 @@ class _ItensDaOsState extends State<ItensDaOs> {
       context: context,
       builder: (_) => DialogoItem(item: item, equipamentos: _equipamentos),
     );
-    if (r == null) return;
-    await _executar({
-      'acao': 'item_salvar',
-      'os_id': widget.osId,
-      if (item != null) 'item_id': item['id'],
-      ...r,
-    }, item == null ? 'Item incluído.' : 'Item salvo.');
+    if (r == null || !mounted) return;
+    // Guia 59: o número de série (peça nova e retirada) vai depois, no item salvo.
+    final serie = r.containsKey('numero_serie')
+        ? {'numero_serie': r.remove('numero_serie'), 'numero_serie_retirado': r.remove('numero_serie_retirado')}
+        : null;
+    setState(() => _ocupado = true);
+    try {
+      final res = await acaoAtendimento({
+        'acao': 'item_salvar',
+        'os_id': widget.osId,
+        if (item != null) 'item_id': item['id'],
+        ...r,
+      });
+      final itemId = res['item_id'] ?? item?['id'];
+      if (serie != null && itemId != null) {
+        await Supabase.instance.client.rpc('os_item_serie', params: {
+          'p': {'item_id': itemId, ...serie}
+        });
+      }
+      _avisar(item == null ? 'Item incluído.' : 'Item salvo.');
+      widget.aoMudar?.call();
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
   }
 
   Future<void> _excluir(Map<String, dynamic> item) async {
@@ -204,6 +223,8 @@ class _ItensDaOsState extends State<ItensDaOs> {
                           i['tipo'] == 'servico' ? 'Serviço' : 'Peça',
                           if (i['produto_id'] == null) 'sem cadastro',
                           if ((i['equipamentos'] as Map?)?['codigo'] != null) 'equip. ${(i['equipamentos'] as Map)['codigo']}',
+                          if (i['numero_serie'] != null) 'nº série ${i['numero_serie']}',
+                          if (i['numero_serie_retirado'] != null) 'saiu ${i['numero_serie_retirado']}',
                         ].join(' · '),
                         style: const TextStyle(fontSize: 12, color: Cores.neutro),
                       ),
@@ -280,6 +301,18 @@ class _DialogoItemState extends State<DialogoItem> {
   late final _unidade = TextEditingController(text: '${widget.item?['unidade'] ?? 'un'}');
   late final _preco = TextEditingController(
       text: widget.item == null ? '' : (num.tryParse('${widget.item!['preco_unitario']}') ?? 0).toStringAsFixed(2).replaceAll('.', ','));
+  late final _serie = TextEditingController(text: '${widget.item?['numero_serie'] ?? ''}');
+  late final _serieRetirada = TextEditingController(text: '${widget.item?['numero_serie_retirado'] ?? ''}');
+
+  /// Peça com número de série (cadastro do produto) ou que já tinha um.
+  String get _controlaSerie {
+    final id = _produto?['id'];
+    final p = _produtos.where((x) => x['id'] == id).firstOrNull ?? _produto;
+    final c = '${p?['controla_serie'] ?? 'nao'}';
+    if (c != 'nao') return c;
+    return (widget.item?['numero_serie'] ?? widget.item?['numero_serie_retirado']) != null ? 'opcional' : 'nao';
+  }
+
   late final _desconto = TextEditingController(
       text: (num.tryParse('${widget.item?['desconto'] ?? 0}') ?? 0) == 0
           ? ''
@@ -309,7 +342,7 @@ class _DialogoItemState extends State<DialogoItem> {
     try {
       final r = await Supabase.instance.client
           .from('produtos')
-          .select('id, codigo, descricao, tipo, unidade, preco_venda')
+          .select('id, codigo, descricao, tipo, unidade, preco_venda, controla_serie')
           .eq('ativo', true)
           .isFilter('excluido_em', null)
           .order('descricao')
@@ -327,6 +360,8 @@ class _DialogoItemState extends State<DialogoItem> {
     _unidade.dispose();
     _preco.dispose();
     _desconto.dispose();
+    _serie.dispose();
+    _serieRetirada.dispose();
     super.dispose();
   }
 
@@ -476,6 +511,27 @@ class _DialogoItemState extends State<DialogoItem> {
                   ),
                 ),
               ]),
+              if (_controlaSerie != 'nao') ...[
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _serie,
+                      decoration: InputDecoration(
+                          labelText: 'Nº de série da peça nova${_controlaSerie == 'obrigatorio' ? ' *' : ''}'),
+                      validator: (v) =>
+                          _controlaSerie == 'obrigatorio' && (v ?? '').trim().isEmpty ? 'Informe o número de série' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _serieRetirada,
+                      decoration: const InputDecoration(labelText: 'Nº de série da peça retirada'),
+                    ),
+                  ),
+                ]),
+              ],
               const SizedBox(height: 12),
               InputDecorator(
                 decoration: const InputDecoration(labelText: 'Equipamento (opcional)'),
@@ -522,6 +578,10 @@ class _DialogoItemState extends State<DialogoItem> {
               'preco_unitario': _preco.text.trim(),
               'desconto': _desconto.text.trim().isEmpty ? '0' : _desconto.text.trim(),
               'equipamento_id': _equipamento ?? '',
+              if (_controlaSerie != 'nao') ...{
+                'numero_serie': _serie.text.trim(),
+                'numero_serie_retirado': _serieRetirada.text.trim(),
+              },
             });
           },
           child: const Text('Salvar'),

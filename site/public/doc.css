@@ -10,3 +10,6 @@
 .doc th, .doc td { border:1px solid #DCE1EA; padding:8px 10px; text-align:left; vertical-align:top; }
 .doc th { background:#F5F6FA; }
 .doc ul { padding-left:22px; }
+.doc code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px; background:#F5F6FA; padding:1px 5px; border-radius:4px; }
+.doc pre { background:#121A2B; color:#E6E9F6; padding:14px 16px; border-radius:8px; overflow-x:auto; font-size:13.5px; line-height:1.5; }
+.doc pre code { background:none; padding:0; color:inherit; font-size:inherit; }

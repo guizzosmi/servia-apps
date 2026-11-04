@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:go_router/go_router.dart';
 
+import '../servicos/parametros.dart';
 import 'catalogo.dart';
 import 'definicoes.dart';
 import 'servico.dart';
@@ -208,6 +209,14 @@ class _DialogoLookup extends StatefulWidget {
   State<_DialogoLookup> createState() => _DialogoLookupState();
 }
 
+/// Segunda linha da escolha: campo de opções aparece com o rótulo ("Líder", não "lider").
+String? _detalhe(Lookup lk, Object? valor) {
+  if (valor == null) return null;
+  final campo = cadastroPorTabela(lk.tabela)?.campos.where((c) => c.nome == lk.colunaDetalhe).firstOrNull;
+  if (campo != null && campo.tipo == TipoCampo.opcoes) return formatarValor(valor, campo.tipo, campo.opcoes);
+  return valor.toString();
+}
+
 class _DialogoLookupState extends State<_DialogoLookup> {
   final _busca = TextEditingController();
   Timer? _espera;
@@ -242,6 +251,7 @@ class _DialogoLookupState extends State<_DialogoLookup> {
           .isFilter('excluido_em', null);
       if (lk.colunaAtivo != null) q = q.eq(lk.colunaAtivo!, true);
       if (lk.colunaFiltro != null) q = q.eq(lk.colunaFiltro!, widget.valorPai!);
+      if (lk.tabela == 'clientes' && !ParametrosEmpresa.instancia.manutencaoPropria) q = q.eq('interno', false);
       final b = CadastroServico.limparBusca(_busca.text);
       if (b.isNotEmpty) q = q.ilike(lk.colunaRotulo, '%$b%');
       final dados = await q.order(lk.colunaRotulo, ascending: true).limit(30);
@@ -287,9 +297,7 @@ class _DialogoLookupState extends State<_DialogoLookup> {
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (_, i) {
                             final r = _itens[i];
-                            final detalhe = lk.colunaDetalhe == null
-                                ? null
-                                : r[lk.colunaDetalhe!]?.toString();
+                            final detalhe = lk.colunaDetalhe == null ? null : _detalhe(lk, r[lk.colunaDetalhe!]);
                             return ListTile(
                               title: Text((r[lk.colunaRotulo] ?? '').toString()),
                               subtitle: (detalhe == null || detalhe.isEmpty)

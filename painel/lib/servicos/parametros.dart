@@ -28,6 +28,19 @@ class ParametrosEmpresa extends ChangeNotifier {
   /// PMOC (climatização): tipo PMOC, responsável técnico e o padrão da Portaria.
   bool get atendePmoc => usaPreventivas && _preventivas['pmoc'] == true;
 
+  /// Guia 58: faz manutenção própria? (sem: o cliente "interno" some das buscas e da lista).
+  bool _manutencaoPropria = false;
+  bool get manutencaoPropria => _manutencaoPropria;
+
+  /// Guia 62: modo simples (Agenda no lugar do quadro e da fila, sem fechar o dia).
+  bool get modoSimples => _p['modo_simples'] == true;
+
+  /// Guia 63: controla estoque (menu Estoque e baixa automática pela OS).
+  bool get usaEstoque => (_p['estoque'] as Map?)?['usa'] == true;
+
+  /// Guia 64: lembrete de limpeza (menu Lembretes).
+  bool get usaLembretes => (_p['lembrete_limpeza'] as Map?)?['usa'] == true;
+
   /// Nome do menu conforme a empresa.
   String get nomePlanos => atendePmoc ? 'Planos e PMOC' : 'Planos de preventiva';
 
@@ -53,6 +66,11 @@ class ParametrosEmpresa extends ChangeNotifier {
           .eq('empresa_id', emp)
           .maybeSingle();
       _p = Map<String, dynamic>.from((c?['parametros'] as Map?) ?? const {});
+      try {
+        _manutencaoPropria = await Supabase.instance.client.rpc('manutencao_propria') == true;
+      } catch (_) {
+        _manutencaoPropria = true; // banco sem a função: mostra (como antes)
+      }
       _empresaId = emp;
       notifyListeners();
     } catch (e) {

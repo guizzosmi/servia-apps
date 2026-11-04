@@ -11,6 +11,7 @@ import '../core/consultas.dart';
 import '../core/conteudos.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../core/impressao.dart';
 import '../widgets/aba_checklist.dart';
 import '../widgets/aba_orcamento.dart';
 import '../widgets/abas_atendimento.dart';
@@ -152,16 +153,29 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
     // Assinatura do cliente na conclusão (conforme a empresa).
     String? semAssinatura;
     var assinou = false;
+    Decisao? assinatura;
     final modo = AcoesOrcamento.config.aceiteConclusao;
+    final atual = EstadoApp.instancia.banco?.um('atendimentos', atd['id']) ?? atd;
+    // Valores no recibo (Configurações > Impressão da OS): com, sem ou perguntar na hora.
+    var comValores = false;
+    if (presente && Conteudos.temValores(atual)) {
+      final cfg = AcoesOrcamento.config.osValores;
+      if (cfg == 'perguntar') {
+        final r = await Impressao.perguntarValores(context);
+        if (!mounted || r == null) return;
+        comValores = r;
+      } else {
+        comValores = cfg == 'com';
+      }
+    }
+    // O mesmo conteúdo na tela de assinatura, no PDF guardado e na impressão.
+    final conteudo = Conteudos.conclusao(atual, comValores: comValores);
     try {
       if (presente && modo != 'desligado') {
-        final atual = EstadoApp.instancia.banco?.um('atendimentos', atd['id']) ?? atd;
         final colher = modo == 'obrigatorio' ? true : await _perguntarAssinatura();
         if (!mounted) return;
         if (colher == null) return;
         if (colher) {
-          // O mesmo conteúdo na tela e no PDF.
-          final conteudo = Conteudos.conclusao(atual);
           final decisao = await AssinaturaTela.abrir(
             context,
             AssinaturaTela(
@@ -175,6 +189,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
           if (decisao != null) {
             await AcoesOrcamento.registrarConclusao(atd: atual, conteudo: conteudo, decisao: decisao);
             assinou = true;
+            assinatura = decisao;
           } else if (modo == 'obrigatorio') {
             semAssinatura = await _motivoSemAssinatura();
             if (semAssinatura == null) return;
@@ -195,6 +210,12 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(assinou ? 'Atendimento concluído, com a assinatura do cliente.' : 'Atendimento concluído.')));
+    // Imprimir ou mandar o recibo ali mesmo (com a assinatura, se colheu).
+    if (presente) {
+      final os = EstadoApp.instancia.banco?.um('ordens_servico', atual['os_id']);
+      await Impressao.oferecer(context, conteudo, assinatura, 'Recibo ${codigoOs(os)}'.trim());
+      if (!mounted) return;
+    }
     await _avisarConclusao(atd);
     if (!mounted) return;
     context.go('/hoje');
@@ -344,7 +365,16 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
                   Text(os.isEmpty ? 'Atendimento' : codigoOs(os), style: const TextStyle(fontWeight: FontWeight.w800)),
                   Text('${cliente['nome'] ?? ''}', style: const TextStyle(fontSize: 13, color: Cores.neutro)),
                 ]),
-                actions: const [IndicadorSync()],
+                actions: [
+                  // Guia 74: diagnóstico assistido pela IA (precisa de internet).
+                  IconButton(
+                    tooltip: 'Diagnóstico (IA)',
+                    icon: const Icon(Icons.psychology_alt_outlined),
+                    onPressed: () => abrirDiagnostico(context,
+                        osId: '${atd['os_id']}', sintoma: os['problema_relatado'] as String?),
+                  ),
+                  const IndicadorSync(),
+                ],
                 bottom: TabBar(
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,

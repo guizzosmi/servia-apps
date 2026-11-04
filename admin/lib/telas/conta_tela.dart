@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../api.dart';
+import '../widgets/aplicacoes_conta.dart';
 import '../widgets/comuns.dart';
 import '../widgets/fatura_acoes.dart';
 import 'conta_formularios.dart';
@@ -154,6 +155,7 @@ class _ContaTelaState extends State<ContaTela> {
                 ),
                 _Usuarios(lista(d['usuarios'])),
                 _Empresas(lista(d['empresas'])),
+                AplicacoesDaConta(contaId: widget.id),
               ];
               return duas
                   ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

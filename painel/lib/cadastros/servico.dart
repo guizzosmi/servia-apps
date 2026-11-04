@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../servicos/parametros.dart';
 import 'definicoes.dart';
 
 class Pagina {
@@ -45,6 +46,8 @@ class CadastroServico {
     filtros.forEach((coluna, valor) {
       q = valor == null ? q.isFilter(coluna, null) : q.eq(coluna, valor);
     });
+    // Guia 58: sem manutenção própria, o cliente "interno" (a própria empresa) não aparece.
+    if (def.tabela == 'clientes' && !ParametrosEmpresa.instancia.manutencaoPropria) q = q.eq('interno', false);
     final b = limparBusca(busca);
     if (b.isNotEmpty && def.colunasBusca.isNotEmpty) {
       q = q.or(def.colunasBusca.map((c) => '$c.ilike."*$b*"').join(','));

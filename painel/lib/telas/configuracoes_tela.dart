@@ -33,6 +33,19 @@ const _aceiteConclusao = {
   'obrigatorio': 'Obrigatória quando o cliente acompanhou',
 };
 
+// Guia 54: impressão da OS (recibo no app e PDF da OS).
+const _osValores = {
+  'perguntar': 'Perguntar na hora (o técnico escolhe no app)',
+  'com': 'Sempre com os valores (preço de cada item e total)',
+  'sem': 'Sempre sem os valores (só o serviço, as peças e as quantidades)',
+};
+
+const _osPapel = {
+  'a4': 'Folha A4 (impressora comum ou PDF)',
+  '80mm': 'Bobina de 80 mm (impressora térmica)',
+  '58mm': 'Bobina de 58 mm (impressora térmica portátil)',
+};
+
 class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   SupabaseClient get _db => Supabase.instance.client;
 
@@ -43,6 +56,8 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
 
   String _quem = 'gestor_lider';
   String _conclusao = 'opcional';
+  String _valoresOs = 'perguntar';
+  String _papelOs = 'a4';
   String _avulsos = 'desligado';
   final _desconto = TextEditingController();
   final _validade = TextEditingController();
@@ -52,8 +67,36 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   // Preventivas: menu, PMOC e os números da geração e dos cards.
   bool _usaPrev = true;
   bool _pmoc = false;
+  bool _manutencaoPropria = false;
+  bool _modoSimples = false;
+  bool _usaEstoque = false;
+  // Guia 60: garantia padrão e numeração (próximo número da OS, orçamento e contrato).
+  final _garantiaDias = TextEditingController();
+  final _numeros = {for (final t in const ['os', 'orcamento', 'contrato']) t: TextEditingController()};
+  Map<String, dynamic> _numerosAtuais = {};
+  bool _gravandoNumeros = false;
   final _antecedencia = TextEditingController();
+  // Guia 64: lembrete de limpeza.
+  bool _lembUsa = false;
+  bool _lembAuto = false;
+  final _lembMeses = TextEditingController();
+  final _lembAntec = TextEditingController();
+  // Guia 65: WhatsApp oficial.
+  final _waPhoneId = TextEditingController();
+  final _waNumero = TextEditingController();
+  final _waModelo = TextEditingController();
+  bool _waResposta = true;
+  bool _waAssistente = true; // Guia 78: o dono pergunta pelo WhatsApp.
+  // Guia 73: Pix para receber.
+  String _pixTipo = 'cpf_cnpj';
+  final _pixChave = TextEditingController();
+  final _pixNome = TextEditingController();
+  final _pixCidade = TextEditingController();
   final _tolerancia = TextEditingController();
+  // PMOC: o responsável técnico padrão (o assistente do plano já preenche).
+  final _rtNome = TextEditingController();
+  final _rtRegistro = TextEditingController();
+  final _rtArt = TextEditingController();
   bool _fotoObrigatoria = true;
   // IA: relato por áudio e o texto de encerramento das OS.
   bool _relatoAudio = true;
@@ -77,7 +120,22 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
     _validade.dispose();
     _termo.dispose();
     _antecedencia.dispose();
+    _lembMeses.dispose();
+    _lembAntec.dispose();
+    _waPhoneId.dispose();
+    _waNumero.dispose();
+    _waModelo.dispose();
+    _pixChave.dispose();
+    _pixNome.dispose();
+    _pixCidade.dispose();
     _tolerancia.dispose();
+    _garantiaDias.dispose();
+    for (final c in _numeros.values) {
+      c.dispose();
+    }
+    _rtNome.dispose();
+    _rtRegistro.dispose();
+    _rtArt.dispose();
     _encerramento.dispose();
     _audiosDias.dispose();
     _localDias.dispose();
@@ -105,12 +163,19 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       final p = Map<String, dynamic>.from((c['parametros'] as Map?) ?? const {});
       final ret = Map<String, dynamic>.from((await _db.rpc('retencao_resumo')) as Map? ?? const {});
       final orc = Map<String, dynamic>.from((p['orcamento'] as Map?) ?? const {});
+      var numeros = <String, dynamic>{};
+      try {
+        numeros = Map<String, dynamic>.from(await _db.rpc('numeracao') as Map);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _parametros = p;
         _quem = _quemMonta.containsKey(orc['quem_monta']) ? orc['quem_monta'] as String : 'gestor_lider';
         _avulsos = _itensAvulsos.containsKey(orc['itens_avulsos_app']) ? orc['itens_avulsos_app'] as String : 'desligado';
         _conclusao = _aceiteConclusao.containsKey(p['aceite_conclusao']) ? p['aceite_conclusao'] as String : 'opcional';
+        final imp = Map<String, dynamic>.from((p['os_impressao'] as Map?) ?? const {});
+        _valoresOs = _osValores.containsKey(imp['valores']) ? imp['valores'] as String : 'perguntar';
+        _papelOs = _osPapel.containsKey(imp['papel']) ? imp['papel'] as String : 'a4';
         _desconto.text = _numero(orc['desconto_max_app_pct'] ?? 10);
         _validade.text = _numero(orc['validade_dias'] ?? 15);
         _termo.text = '${orc['termo_aceite'] ?? ''}';
@@ -120,6 +185,29 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         final prev = Map<String, dynamic>.from((p['preventivas'] as Map?) ?? const {});
         _usaPrev = prev['usa'] != false;
         _pmoc = prev['pmoc'] == true;
+        _manutencaoPropria = ParametrosEmpresa.instancia.manutencaoPropria;
+        _modoSimples = p['modo_simples'] == true;
+        _usaEstoque = (p['estoque'] as Map?)?['usa'] == true;
+        final lemb = Map<String, dynamic>.from((p['lembrete_limpeza'] as Map?) ?? const {});
+        _lembUsa = lemb['usa'] == true;
+        _lembAuto = lemb['automatico'] == true;
+        _lembMeses.text = _numero(lemb['meses'] ?? 6);
+        _lembAntec.text = _numero(lemb['antecedencia_dias'] ?? 7);
+        final wa = Map<String, dynamic>.from((p['whatsapp'] as Map?) ?? const {});
+        _waPhoneId.text = '${wa['phone_number_id'] ?? ''}';
+        _waNumero.text = '${wa['numero'] ?? ''}';
+        _waModelo.text = '${wa['template_lembrete'] ?? 'lembrete_limpeza'}';
+        _waResposta = wa['resposta_automatica'] != false;
+        _waAssistente = wa['assistente_dono'] != false;
+        final pix = Map<String, dynamic>.from((p['pix'] as Map?) ?? const {});
+        _pixTipo = '${pix['tipo'] ?? 'cpf_cnpj'}';
+        _pixChave.text = '${pix['chave'] ?? ''}';
+        _pixNome.text = '${pix['nome'] ?? ''}';
+        _pixCidade.text = '${pix['cidade'] ?? ''}';
+        final pmoc = Map<String, dynamic>.from((p['pmoc'] as Map?) ?? const {});
+        _rtNome.text = '${pmoc['rt_nome'] ?? ''}';
+        _rtRegistro.text = '${pmoc['rt_registro'] ?? ''}';
+        _rtArt.text = '${pmoc['art_numero'] ?? ''}';
         _antecedencia.text = _numero(p['antecedencia_preventivas_dias'] ?? 15);
         _tolerancia.text = _numero(prev['tolerancia_dias'] ?? 15);
         _fotoObrigatoria = prev['foto_obrigatoria'] != false;
@@ -128,6 +216,11 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         _encerramento.text = '${ia['texto_encerramento'] ?? 'Testes realizados, tudo de acordo com os parâmetros.'}';
         _retencao = ret;
         _audiosDias.text = _numero(ret['audios_dias'] ?? 30);
+        _garantiaDias.text = _numero((p['garantia'] as Map?)?['dias'] ?? 90);
+        _numerosAtuais = numeros;
+        for (final e in _numeros.entries) {
+          e.value.text = '${numeros[e.key] ?? ''}';
+        }
         _localDias.text = _numero(ret['localizacao_dias'] ?? 90);
         _mensagensDias.text = _numero(ret['mensagens_dias'] ?? 365);
         _sujo = false;
@@ -215,10 +308,45 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         'ia': ia,
         'orcamento': orc,
         'aceite_conclusao': _conclusao,
+        'os_impressao': {'valores': _valoresOs, 'papel': _papelOs},
         'mensagens': mensagens,
         'preventivas': prev,
+        'manutencao_propria': _manutencaoPropria,
+        'modo_simples': _modoSimples,
+        'whatsapp': {
+          ...Map<String, dynamic>.from((_parametros['whatsapp'] as Map?) ?? const {}),
+          'phone_number_id': _waPhoneId.text.trim(),
+          'numero': _waNumero.text.trim(),
+          'template_lembrete': _waModelo.text.trim().isEmpty ? 'lembrete_limpeza' : _waModelo.text.trim(),
+          'resposta_automatica': _waResposta,
+          'assistente_dono': _waAssistente,
+        },
+        'lembrete_limpeza': {
+          ...Map<String, dynamic>.from((_parametros['lembrete_limpeza'] as Map?) ?? const {}),
+          'usa': _lembUsa,
+          'automatico': _lembAuto,
+          'meses': (int.tryParse(_lembMeses.text.trim()) ?? 6).clamp(1, 36),
+          'antecedencia_dias': (int.tryParse(_lembAntec.text.trim()) ?? 7).clamp(0, 60),
+        },
+        'estoque': {...Map<String, dynamic>.from((_parametros['estoque'] as Map?) ?? const {}), 'usa': _usaEstoque},
+        'pix': {
+          'tipo': _pixTipo,
+          'chave': _pixChave.text.trim(),
+          'nome': _pixNome.text.trim(),
+          'cidade': _pixCidade.text.trim(),
+        },
+        'pmoc': {
+          ...Map<String, dynamic>.from((_parametros['pmoc'] as Map?) ?? const {}),
+          'rt_nome': _rtNome.text.trim(),
+          'rt_registro': _rtRegistro.text.trim(),
+          'art_numero': _rtArt.text.trim(),
+        },
         'antecedencia_preventivas_dias': antecedencia,
         'retencao': retencao,
+        'garantia': {
+          ...Map<String, dynamic>.from((_parametros['garantia'] as Map?) ?? const {}),
+          'dias': int.tryParse(_garantiaDias.text.trim()) ?? 90,
+        },
       };
       await _db
           .from('empresa_config')
@@ -258,6 +386,236 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // Guia 62: modo simples para a empresa pequena.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Modo simples', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                subtitle: const Text('Para quem tem poucos técnicos: a Agenda (uma lista do que agendar e dos próximos '
+                    'dias) no lugar do quadro e da fila, sem "fechar o dia" (os dias passados se fecham sozinhos e o '
+                    'que não foi feito volta para agendar). Desligue para usar o quadro com equipes e líder.'),
+                value: _modoSimples,
+                onChanged: admin ? (v) => setState(() {
+                      _modoSimples = v;
+                      _sujo = true;
+                    }) : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 73: Pix para receber (QR Code e copia e cola em Caixa > A receber).
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Pix para receber', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('A chave onde o cliente paga. Em Caixa > A receber, cada cobrança ganha o QR Code e o Pix '
+                    'copia e cola com o valor dentro. O dinheiro cai direto nesta chave, sem taxa.',
+                    style: TextStyle(color: Cores.neutro)),
+                const SizedBox(height: 12),
+                Wrap(spacing: 16, runSpacing: 12, children: [
+                  SizedBox(
+                    width: 200,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'Tipo da chave'),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _pixTipo,
+                          isDense: true,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'cpf_cnpj', child: Text('CPF ou CNPJ')),
+                            DropdownMenuItem(value: 'telefone', child: Text('Telefone')),
+                            DropdownMenuItem(value: 'email', child: Text('E-mail')),
+                            DropdownMenuItem(value: 'aleatoria', child: Text('Aleatória')),
+                          ],
+                          onChanged: admin ? (v) => setState(() {
+                                _pixTipo = v ?? 'cpf_cnpj';
+                                _sujo = true;
+                              }) : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 320,
+                    child: TextField(
+                      controller: _pixChave,
+                      enabled: admin,
+                      decoration: const InputDecoration(labelText: 'Chave Pix'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 260,
+                    child: TextField(
+                      controller: _pixNome,
+                      enabled: admin,
+                      maxLength: 25,
+                      decoration: const InputDecoration(labelText: 'Nome do recebedor', helperText: 'Vazio = razão social'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 200,
+                    child: TextField(
+                      controller: _pixCidade,
+                      enabled: admin,
+                      maxLength: 15,
+                      decoration: const InputDecoration(labelText: 'Cidade', helperText: 'Vazio = a da empresa'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                ]),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 64: lembrete recorrente de limpeza.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Lembrete de limpeza', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Aparelho com a última limpeza há N meses vira um lembrete para mandar ao cliente '
+                      'pelo WhatsApp (menu Lembretes). Aparelho em plano de preventiva fica de fora.'),
+                  value: _lembUsa,
+                  onChanged: admin ? (v) => setState(() {
+                        _lembUsa = v;
+                        _sujo = true;
+                      }) : null,
+                ),
+                if (_lembUsa) ...[
+                  Wrap(spacing: 16, runSpacing: 12, children: [
+                    SizedBox(
+                      width: 200,
+                      child: TextField(
+                        controller: _lembMeses,
+                        enabled: admin,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Lembrar a cada', suffixText: 'meses'),
+                        onChanged: (_) => _mudou(),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 200,
+                      child: TextField(
+                        controller: _lembAntec,
+                        enabled: admin,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Avisar antes', suffixText: 'dias'),
+                        onChanged: (_) => _mudou(),
+                      ),
+                    ),
+                  ]),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enviar sozinho pelo WhatsApp oficial'),
+                    subtitle: const Text('Quando a empresa tiver o WhatsApp oficial conectado (guia 65), o lembrete sai '
+                        'sem ninguém tocar. Sem ele, os lembretes ficam na lista para mandar com um toque.'),
+                    value: _lembAuto,
+                    onChanged: admin ? (v) => setState(() {
+                          _lembAuto = v;
+                          _sujo = true;
+                        }) : null,
+                  ),
+                  const Text('O texto da mensagem fica em Mensagens do WhatsApp > Lembrete de limpeza.',
+                      style: TextStyle(color: Cores.neutro, fontSize: 12)),
+                ],
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 65: WhatsApp oficial (API da Meta).
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('WhatsApp oficial', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('O número da empresa no WhatsApp Business da Meta (guia 65). Conectado, o que o cliente '
+                    'mandar vira pedido em "Pedidos do WhatsApp" e o lembrete de limpeza pode sair sozinho.',
+                    style: TextStyle(color: Cores.neutro)),
+                const SizedBox(height: 8),
+                Wrap(spacing: 16, runSpacing: 12, children: [
+                  SizedBox(
+                    width: 260,
+                    child: TextField(
+                      controller: _waPhoneId,
+                      enabled: admin,
+                      decoration: const InputDecoration(labelText: 'ID do número (phone_number_id)',
+                          helperText: 'Meta > WhatsApp > Configuração da API'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 200,
+                    child: TextField(
+                      controller: _waNumero,
+                      enabled: admin,
+                      decoration: const InputDecoration(labelText: 'Número', hintText: '(45) 3000-0000'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 220,
+                    child: TextField(
+                      controller: _waModelo,
+                      enabled: admin,
+                      decoration: const InputDecoration(labelText: 'Modelo do lembrete na Meta',
+                          helperText: 'Nome do modelo aprovado'),
+                      onChanged: (_) => _mudou(),
+                    ),
+                  ),
+                ]),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Responder o cliente na hora'),
+                  subtitle: const Text('"Recebemos seu pedido... em breve entramos em contato."'),
+                  value: _waResposta,
+                  onChanged: admin ? (v) => setState(() {
+                        _waResposta = v;
+                        _sujo = true;
+                      }) : null,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Assistente do dono pelo WhatsApp'),
+                  subtitle: const Text('Mensagem (ou áudio) do celular de um gestor da empresa não vira pedido: é pergunta '
+                      'para o assistente ("quem me deve?"), respondida na mesma conversa.'),
+                  value: _waAssistente,
+                  onChanged: admin ? (v) => setState(() {
+                        _waAssistente = v;
+                        _sujo = true;
+                      }) : null,
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 63: estoque.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Controla estoque', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                subtitle: const Text('Menu Estoque (almoxarifado, carro de cada equipe e cilindros de gás). A peça usada '
+                    'na OS sai sozinha do carro da equipe que atendeu e o gás, do cilindro do carro.'),
+                value: _usaEstoque,
+                onChanged: admin ? (v) => setState(() {
+                      _usaEstoque = v;
+                      _sujo = true;
+                    }) : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -276,6 +634,17 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                         _sujo = true;
                       }) : null,
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Faz manutenção própria'),
+                  subtitle: const Text('Equipamentos da própria empresa: o cliente "interno" aparece nas buscas de '
+                      'cliente (painel e app). Desligado, ele fica escondido.'),
+                  value: _manutencaoPropria,
+                  onChanged: admin ? (v) => setState(() {
+                        _manutencaoPropria = v;
+                        _sujo = true;
+                      }) : null,
+                ),
                 if (_usaPrev) ...[
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -288,6 +657,28 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                           _sujo = true;
                         }) : null,
                   ),
+                  if (_pmoc) ...[
+                    const Text('Responsável técnico padrão do PMOC (o assistente do plano já preenche):',
+                        style: TextStyle(color: Cores.neutro)),
+                    const SizedBox(height: 4),
+                    Wrap(spacing: 16, runSpacing: 12, children: [
+                      for (final (c, r, w) in [
+                        (_rtNome, 'Nome do RT (engenheiro ou técnico)', 300.0),
+                        (_rtRegistro, 'CREA / CFT', 160.0),
+                        (_rtArt, 'ART / TRT', 160.0),
+                      ])
+                        SizedBox(
+                          width: w,
+                          child: TextField(
+                            controller: c,
+                            enabled: admin,
+                            decoration: InputDecoration(labelText: r),
+                            onChanged: (_) => _mudou(),
+                          ),
+                        ),
+                    ]),
+                    const SizedBox(height: 8),
+                  ],
                   const SizedBox(height: 8),
                   Wrap(spacing: 16, runSpacing: 12, children: [
                     SizedBox(
@@ -469,6 +860,44 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Impressão da OS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text(
+                    'No app, ao concluir com o cliente presente, o técnico pode imprimir o recibo (com a assinatura, se '
+                    'colheu) ou mandar ao cliente. Imprime pela impressora Wi-Fi do celular ou pela térmica bluetooth '
+                    '(pelo app dela, ex.: RawBT). Os valores valem também para o PDF da OS no painel e no link do cliente '
+                    '(no painel dá para escolher na hora).',
+                    style: TextStyle(color: Cores.neutro)),
+                const SizedBox(height: 8),
+                const Text('Valores no recibo e na OS', style: TextStyle(fontWeight: FontWeight.w600)),
+                for (final e in _osValores.entries)
+                  _Opcao(
+                    texto: e.value,
+                    marcada: _valoresOs == e.key,
+                    aoEscolher: admin ? () => setState(() {
+                          _valoresOs = e.key;
+                          _sujo = true;
+                        }) : null,
+                  ),
+                const SizedBox(height: 8),
+                const Text('Papel da impressão no app', style: TextStyle(fontWeight: FontWeight.w600)),
+                for (final e in _osPapel.entries)
+                  _Opcao(
+                    texto: e.value,
+                    marcada: _papelOs == e.key,
+                    aoEscolher: admin ? () => setState(() {
+                          _papelOs = e.key;
+                          _sujo = true;
+                        }) : null,
+                  ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Mensagens do WhatsApp', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 const Text(
@@ -518,6 +947,8 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
             ),
           ),
           const SizedBox(height: 12),
+          _cartaoNumeracao(admin),
+          const SizedBox(height: 16),
           _cartaoRetencao(admin),
           const SizedBox(height: 16),
           if (admin)
@@ -537,6 +968,76 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         ]),
       ),
     ]);
+  }
+
+  Future<void> _gravarNumeros() async {
+    setState(() => _gravandoNumeros = true);
+    try {
+      for (final e in _numeros.entries) {
+        final novo = int.tryParse(e.value.text.trim());
+        if (novo != null && novo != _numerosAtuais[e.key]) {
+          await _db.rpc('numeracao_definir', params: {
+            'p': {'tipo': e.key, 'proximo': novo}
+          });
+        }
+      }
+      _numerosAtuais = Map<String, dynamic>.from(await _db.rpc('numeracao') as Map);
+      _avisar('Numeração gravada.');
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _gravandoNumeros = false);
+    }
+  }
+
+  /// Guia 60: garantia padrão (salva com as configurações) e numeração (grava na hora).
+  Widget _cartaoNumeracao(bool admin) {
+    const nomes = {'os': 'Próxima OS', 'orcamento': 'Próximo orçamento', 'contrato': 'Próximo contrato'};
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Garantia e numeração', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 260,
+            child: TextField(
+              controller: _garantiaDias,
+              enabled: admin,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Garantia dos serviços',
+                suffixText: 'dias',
+                helperText: 'Conta da conclusão da OS (salva com as configurações)',
+                helperMaxLines: 2,
+              ),
+              onChanged: (_) => _mudou(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Veio de outro sistema? Continue a numeração de lá (só para a frente).',
+              style: TextStyle(color: Cores.neutro)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 16, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.end, children: [
+            for (final e in _numeros.entries)
+              SizedBox(
+                width: 170,
+                child: TextField(
+                  controller: e.value,
+                  enabled: admin,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: nomes[e.key]),
+                ),
+              ),
+            if (admin)
+              OutlinedButton(
+                onPressed: _gravandoNumeros ? null : _gravarNumeros,
+                child: const Text('Gravar numeração'),
+              ),
+          ]),
+        ]),
+      ),
+    );
   }
 }
 

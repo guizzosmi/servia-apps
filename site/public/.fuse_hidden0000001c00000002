@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR" class="sem-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste grátis · ServPilot</title>
+<meta name="description" content="Crie a conta da sua empresa no ServPilot e use tudo por 7 dias grátis, sem cartão.">
+<meta name="theme-color" content="#121A2B">
+<link rel="canonical" href="https://servpilot.com.br/assinar">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/precos.css">
+<link rel="stylesheet" href="/conteudo.css">
+</head>
+<body>
+
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="topo" id="topo">
+  <div class="faixa topo-dentro">
+    <a href="/" class="marca" aria-label="ServPilot, início">
+      <img class="marca-escura" src="/img/logo-escuro.svg" alt="ServPilot" width="150" height="40">
+      <img class="marca-clara" src="/img/logo.svg" alt="" width="150" height="40">
+    </a>
+    <nav class="menu" aria-label="Seções">
+      <a href="/">Início</a>
+      <a href="/precos">Preços</a>
+    </nav>
+    <div class="topo-acoes">
+      <a class="botao fantasma" href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
+    </div>
+  </div>
+</header>
+
+<main id="conteudo">
+
+<section class="abertura curta">
+  <div class="abertura-fundo" aria-hidden="true"></div>
+  <div class="faixa">
+    <div class="abertura-texto">
+      <p class="selo"><span class="ponto-vivo verde"></span> 7 dias grátis · sem cartão</p>
+      <h1>Crie a conta da sua empresa <span class="destaque">em 2 minutos.</span></h1>
+      <p class="lead">Você entra no painel logo em seguida, cadastra a equipe e já pode testar com um serviço de verdade.</p>
+    </div>
+  </div>
+</section>
+
+<section class="secao" style="padding-top: 0">
+  <div class="faixa assinar-grade">
+
+    <div class="formulario">
+      <form id="form" novalidate>
+        <h2>Seus dados</h2>
+
+        <fieldset>
+          <legend>Plano</legend>
+          <div class="planos-escolha">
+            <label class="plano-opcao"><input type="radio" name="plano" value="autonomo">
+              <span><b>Autônomo</b><small><span data-p="autonomo" data-c="valor_mensal">R$ 99,99</span>/mês · 1 usuário</small></span></label>
+            <label class="plano-opcao"><input type="radio" name="plano" value="servpilot" checked>
+              <span><b>Equipe</b><small><span data-p="servpilot" data-c="valor_mensal">R$ 199,00</span>/mês · 2 usuários</small></span></label>
+          </div>
+          <small>Os dois têm todos os recursos. Dá para trocar depois, pelo painel.</small>
+        </fieldset>
+
+        <fieldset>
+          <legend>Empresa</legend>
+          <div class="campos">
+            <div class="campo largo"><label for="razao">Razão social (ou seu nome, se for autônomo)</label>
+              <input id="razao" name="razao_social" autocomplete="organization" required maxlength="150"></div>
+            <div class="campo"><label for="fantasia">Nome fantasia</label>
+              <input id="fantasia" name="nome_fantasia" maxlength="80">
+              <small>Vira o código da empresa para o login dos técnicos.</small></div>
+            <div class="campo"><label for="documento">CNPJ ou CPF</label>
+              <input id="documento" name="documento" inputmode="numeric" required maxlength="18" placeholder="00.000.000/0000-00">
+              <small>Vai na nota fiscal.</small></div>
+            <div class="campo"><label for="cidade">Cidade</label>
+              <input id="cidade" name="cidade" autocomplete="address-level2" required maxlength="80"></div>
+            <div class="campo"><label for="uf">UF</label>
+              <select id="uf" name="uf" required>
+                <option value="">Escolha</option>
+                <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option>
+                <option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+                <option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option>
+                <option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+                <option>SP</option><option>SE</option><option>TO</option>
+              </select></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Você (administrador da conta)</legend>
+          <div class="campos">
+            <div class="campo largo"><label for="nome">Seu nome</label>
+              <input id="nome" name="nome" autocomplete="name" required maxlength="100"></div>
+            <div class="campo"><label for="email">E-mail (é o seu login)</label>
+              <input id="email" name="email" type="email" autocomplete="email" required maxlength="120"></div>
+            <div class="campo"><label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" name="telefone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="(45) 99999-0000"></div>
+            <div class="campo"><label for="senha">Crie uma senha</label>
+              <input id="senha" name="senha" type="password" autocomplete="new-password" required minlength="8">
+              <small>Pelo menos 8 caracteres.</small></div>
+            <div class="campo"><label for="senha2">Repita a senha</label>
+              <input id="senha2" type="password" autocomplete="new-password" required minlength="8"></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Cupom (opcional)</legend>
+          <div class="campo">
+            <div class="cupom-linha">
+              <input id="cupom" name="cupom" maxlength="30" aria-label="Cupom de desconto" style="text-transform: uppercase">
+              <button type="button" class="botao" id="conferirCupom">Aplicar</button>
+            </div>
+            <small id="cupomMsg"></small>
+          </div>
+        </fieldset>
+
+        <div class="isca" aria-hidden="true"><label for="site">Site</label><input id="site" name="site" tabindex="-1" autocomplete="off"></div>
+
+        <label class="aceite"><input type="checkbox" id="aceite" required>
+          <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">termos de uso</a> e a
+            <a href="/privacidade" target="_blank" rel="noopener">política de privacidade</a>.</span></label>
+
+        <button class="botao coral grande" type="submit" id="enviar">Criar conta e começar o teste</button>
+        <div class="erro-form" id="erro" role="alert"></div>
+      </form>
+
+      <div class="sucesso" id="sucesso" aria-live="polite">
+        <div class="ic">✓</div>
+        <h2>Conta criada!</h2>
+        <p>Seu teste grátis vai até <b id="okTeste"></b>. Entre no painel com o seu e-mail e a senha que você criou.</p>
+        <p>Código da empresa (os técnicos usam no login do app, com matrícula e PIN):</p>
+        <div class="codigo-empresa" id="okCodigo"></div>
+        <p style="margin-top: 22px"><a class="botao coral grande" id="okPainel" href="https://painel.servpilot.com.br">Entrar no painel</a></p>
+        <p>Comece por <b>Configurações</b> e <b>Usuários</b>: tem um vídeo curto para cada tela.</p>
+        <p class="aviso-app"><b>App do técnico (Android):</b> ele está em fase final de testes na Play Store. No painel, em
+          <b>Usuários &gt; App do técnico na Play Store</b>, informe o e-mail da conta Google do celular de cada pessoa
+          (normalmente um Gmail). Liberamos a instalação em até 1 dia útil e o link aparece ali mesmo.</p>
+      </div>
+    </div>
+
+    <aside class="resumo-lado">
+      <h3>Como funciona</h3>
+      <ol class="linha-tempo-simples">
+        <li><span class="bola">1</span><div><b>Hoje</b><span>Você cria a conta e entra no painel. Tudo liberado, sem cartão.</span></div></li>
+        <li><span class="bola">2</span><div><b>Durante o teste</b><span>Cadastre a equipe, instale o app nos celulares e use num serviço de verdade.</span></div></li>
+        <li><span class="bola">3</span><div><b>2 dias antes do fim</b><span>A primeira mensalidade aparece no painel, em Plano e consumo, com o botão de pagar (Pix, boleto ou cartão).</span></div></li>
+        <li><span class="bola">4</span><div><b>Se não quiser continuar</b><span>É só não pagar. Sem multa e sem cobrança surpresa.</span></div></li>
+      </ol>
+      <div class="resumo-preco">
+        Depois do teste, no plano <b id="resumoNome">Equipe</b>: <b id="resumoValor">R$ 199,00/mês</b> com <span id="resumoUsuarios">2 usuários</span><span id="resumoExtra">,
+        e <b>R$ 69,00</b> por usuário a mais</span>.
+        <a href="/precos">Ver todos os detalhes</a>.
+      </div>
+    </aside>
+  </div>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <div class="faixa rodape-dentro">
+    <div>
+      <img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38">
+      <p>Gestão inteligente de serviços de campo.</p>
+    </div>
+    <nav aria-label="Rodapé">
+      <a href="/">Início</a>
+      <a href="/precos">Preços</a>
+      <a href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
+      <a href="/termos">Termos de uso</a>
+      <a href="/privacidade">Privacidade</a>
+    </nav>
+    <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+<script src="/rastreio.js" defer></script>
+<script src="/api.js" defer></script>
+<script src="/assinar.js" defer></script>
+</body>
+</html>

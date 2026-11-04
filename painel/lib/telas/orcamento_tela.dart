@@ -9,6 +9,7 @@ import '../cadastros/lista.dart';
 import '../servicos/documentos.dart';
 import '../servicos/status.dart';
 import '../servicos/whatsapp.dart';
+import '../widgets/carga_termica.dart';
 import '../widgets/assinatura_cliente.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/itens_os.dart';
@@ -250,7 +251,7 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
           'Enquanto o cliente não responde, o serviço sai da fila (fica suspenso, aguardando orçamento) '
           'e a OS fica "Aguardando aprovação".\n\n'
           'O PDF fica pronto no botão PDF (no alto): baixe e mande ao cliente pelo seu canal de sempre. '
-          'O link para ele aprovar sozinho chega no próximo passo.',
+          'Depois, em "Link para o cliente aprovar" (mais abaixo), gere o link: ele aprova ou recusa sozinho pelo celular.',
       botao: 'Marcar como enviado',
     );
     if (ok != true) return;
@@ -536,6 +537,20 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
                         onPressed: () => _editarItem(),
                         icon: const Icon(Icons.add),
                         label: const Text('Adicionar item'),
+                      ),
+                    // Guia 69: carga térmica (orçamento de instalação).
+                    if (editar)
+                      TextButton.icon(
+                        onPressed: () async {
+                          final itens = await calcularCargaTermica(context,
+                              localId: (o['ordens_servico'] as Map?)?['local_id'] as String?);
+                          if (itens == null) return;
+                          for (final it in itens) {
+                            await _acao({'acao': 'item_salvar', ...it}, 'Item adicionado.');
+                          }
+                        },
+                        icon: const Icon(Icons.ac_unit),
+                        label: const Text('Carga térmica'),
                       ),
                     const Spacer(),
                     _totais(o),

@@ -1,6 +1,6 @@
 // ServPilot · central de tutoriais
 // Entra pelo link do painel ou do app (#c=código de 10 minutos), troca por uma chave própria
-// (guardada neste navegador por 90 dias) e mostra as trilhas do perfil. O player do YouTube
+// (guardada neste navegador por 90 dias) e mostra as trilhas do perfil. O player (youtube-nocookie)
 // informa onde a pessoa está: o progresso é gravado a cada 10 segundos, ao pausar e ao terminar.
 (function () {
   const S = window.ServPilot;
@@ -155,33 +155,68 @@
     }
   }
 
+  // Player sem a biblioteca iframe_api: o iframe do youtube-nocookie.com conversa com a página
+  // por postMessage (o mesmo protocolo que a biblioteca usa). Assim o vídeo não depende de
+  // www.youtube.com, que algumas redes e provedores bloqueiam (a tela ficava preta).
+  const YT_ORIGEM = 'https://www.youtube-nocookie.com';
+  const ESTADO = { TERMINOU: 0, TOCANDO: 1, PAUSADO: 2 };
+
   function criarPlayer(id, inicio) {
-    const criar = () => {
-      player = new window.YT.Player('player', {
-        host: 'https://www.youtube-nocookie.com',
-        videoId: id,
-        playerVars: { start: inicio, rel: 0, modestbranding: 1, playsinline: 1, hl: 'pt-BR', cc_lang_pref: 'pt' },
-        events: {
-          onReady: () => { pronto = true; },
-          onStateChange: aoMudarEstado,
-        },
-      });
+    const q = new URLSearchParams({
+      enablejsapi: '1', origin: location.origin, start: String(inicio || 0), rel: '0',
+      modestbranding: '1', playsinline: '1', hl: 'pt-BR', cc_lang_pref: 'pt',
+    });
+    const f = document.createElement('iframe');
+    f.id = 'player';
+    f.title = 'Vídeo do tutorial';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    f.src = `${YT_ORIGEM}/embed/${encodeURIComponent(id)}?${q}`;
+    $('player').replaceWith(f);
+
+    let tempo = 0;
+    let estado = -1;
+    let chamando = null;
+    const postar = (m) => { if (f.contentWindow) f.contentWindow.postMessage(JSON.stringify(m), YT_ORIGEM); };
+    const enviar = (func, args) => postar({ event: 'command', func, args: args || [], id: 1, channel: 'widget' });
+    const ouvir = () => postar({ event: 'listening', id: 1, channel: 'widget' });
+    window.addEventListener('message', (e) => {
+      if (e.origin !== YT_ORIGEM || e.source !== f.contentWindow) return;
+      let m;
+      try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (_) { return; }
+      if (!m || !m.event) return;
+      if (m.event === 'onReady') { pronto = true; clearInterval(chamando); }
+      const info = m.info && typeof m.info === 'object' ? m.info : {};
+      if (typeof info.currentTime === 'number') tempo = info.currentTime;
+      const novoEstado = typeof info.playerState === 'number' ? info.playerState
+        : (m.event === 'onStateChange' && typeof m.info === 'number' ? m.info : null);
+      if (novoEstado !== null && novoEstado !== estado) {
+        estado = novoEstado;
+        aoMudarEstado({ data: estado });
+      }
+    });
+    f.addEventListener('load', () => {
+      ouvir();
+      clearInterval(chamando);
+      chamando = setInterval(ouvir, 400);
+      setTimeout(() => clearInterval(chamando), 15000);
+    });
+    player = {
+      loadVideoById: (o) => enviar('loadVideoById', [o]),
+      cueVideoById: (o) => enviar('cueVideoById', [o]),
+      stopVideo: () => enviar('stopVideo'),
+      getCurrentTime: () => tempo,
     };
-    if (window.YT && window.YT.Player) return criar();
-    window.onYouTubeIframeAPIReady = criar;
-    const s = document.createElement('script');
-    s.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(s);
   }
 
   function aoMudarEstado(e) {
-    const YT = window.YT;
-    if (e.data === YT.PlayerState.PLAYING) {
+    if (e.data === ESTADO.TOCANDO) {
       if (!tique) tique = setInterval(aCadaSegundo, 1000);
     } else {
       clearInterval(tique); tique = null;
-      if (e.data === YT.PlayerState.PAUSED) gravar(true);
-      if (e.data === YT.PlayerState.ENDED) terminou();
+      if (e.data === ESTADO.PAUSADO) gravar(true);
+      if (e.data === ESTADO.TERMINOU) terminou();
     }
   }
 

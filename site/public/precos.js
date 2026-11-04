@@ -8,11 +8,11 @@
   const planos = {
     servpilot: {
       codigo: 'servpilot', nome: 'Equipe', valor_mensal: 199, usuarios_incluidos: 2, minutos_incluidos: 600, mensagens_incluidas: 500,
-      valor_usuario_extra: 69, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 7,
+      valor_usuario_extra: 69, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 14,
     },
     autonomo: {
       codigo: 'autonomo', nome: 'Autônomo', valor_mensal: 99.99, usuarios_incluidos: 1, minutos_incluidos: 300, mensagens_incluidas: 250,
-      valor_usuario_extra: 99.99, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 7,
+      valor_usuario_extra: 99.99, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 14,
     },
   };
   const equipe = () => planos.servpilot;

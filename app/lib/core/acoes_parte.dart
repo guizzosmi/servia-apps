@@ -1,3 +1,4 @@
+import 'acoes_orcamento.dart';
 import 'banco_local.dart';
 import 'consultas.dart';
 import 'estado.dart';
@@ -21,7 +22,9 @@ class AcoesParte {
   /// Publicada ou em andamento, de hoje ou de antes (dia futuro não).
   static bool podeEncerrar(Map<String, dynamic> parte) {
     final status = parte['status'];
-    return souLider(parte) &&
+    // Guia 62: no modo simples os dias se fecham sozinhos (sem "Encerrar o dia").
+    return !AcoesOrcamento.config.modoSimples &&
+        souLider(parte) &&
         (status == 'publicada' || status == 'em_andamento') &&
         '${parte['data']}'.compareTo(_sync.hoje) <= 0;
   }

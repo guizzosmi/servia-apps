@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:web/web.dart' as web;
@@ -240,7 +241,11 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
           final minutosPct = pct('minutos_usados', 'minutos_incluidos');
           final mensagensPct = pct('mensagens_usadas', 'mensagens_incluidas');
           final urgente = minutosPct >= 80 || mensagensPct >= 80;
-          final pacotes = _Pacotes(lista(d['pacotes']), cupom: d['cupom'] as Map<String, dynamic>?,
+          // Guia 81: o pacote de notas só aparece para quem contratou a emissão de notas.
+          final notas = d['notas'] is Map ? Map<String, dynamic>.from(d['notas'] as Map) : <String, dynamic>{};
+          final listaPacotes =
+              lista(d['pacotes']).where((k) => k['tipo'] != 'notas' || _n(notas['empresas']) > 0).toList();
+          final pacotes = _Pacotes(listaPacotes, cupom: d['cupom'] as Map<String, dynamic>?,
               aoComprar: _ocupado ? null : _comprar, minutosPct: minutosPct, mensagensPct: mensagensPct);
           return ListView(padding: const EdgeInsets.all(24), children: [
             Row(children: [
@@ -256,6 +261,7 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
                   aoTrocar: financeiro && !_ocupado ? (codigo) => _trocarPlano(codigo) : null),
             if (urgente) pacotes,
             _Consumo(d),
+            _Notas(notas),
             if (!urgente) pacotes,
             _Usuarios(d),
             _Faturas(lista(d['faturas']), aoPagar: _ocupado ? null : _pagar, aoConferir: _ocupado ? null : _conferir),
@@ -540,7 +546,8 @@ class _CartaoPacote extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: Icon(minutos ? Icons.mic : Icons.chat_outlined, color: minutos ? Cores.coral500 : Cores.indigo500, size: 28),
+            child: Icon(minutos ? Icons.mic : (k['tipo'] == 'notas' ? Icons.request_quote_outlined : Icons.chat_outlined),
+                color: minutos ? Cores.coral500 : Cores.indigo500, size: 28),
           ),
           const Spacer(),
           if (recomendado)
@@ -553,7 +560,11 @@ class _CartaoPacote extends StatelessWidget {
         const SizedBox(height: 14),
         Text('${k['nome']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        Text(minutos ? 'Uns ${(qtd / 2).round()} relatos por áudio a mais.' : 'Para meses de muito atendimento.',
+        Text(minutos
+                ? 'Uns ${(qtd / 2).round()} relatos por áudio a mais.'
+                : k['tipo'] == 'notas'
+                    ? 'Notas fiscais além das incluídas no mês.'
+                    : 'Para meses de muito atendimento.',
             style: const TextStyle(color: Cores.neutro)),
         ]),
         Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -645,4 +656,51 @@ class _Faturas extends StatelessWidget {
                   ),
               ]),
       );
+}
+
+/// Guia 81: notas fiscais no ciclo (ou o convite para contratar).
+class _Notas extends StatelessWidget {
+  const _Notas(this.n);
+
+  final Map<String, dynamic> n;
+
+  @override
+  Widget build(BuildContext context) {
+    if (n.isEmpty) return const SizedBox.shrink();
+    final contratado = _n(n['empresas']) > 0;
+    if (!contratado) {
+      return _Cartao(
+        titulo: 'Notas fiscais',
+        child: Row(children: [
+          Expanded(
+            child: Text('NFS-e dos serviços e NF-e das peças direto das OS, uma a uma ou o mês inteiro. '
+                '${_moeda(n['valor_modulo'])} por mês com ${_n(n['notas_por_empresa'])} notas; '
+                'nota extra ${_moeda(n['valor_extra'])}.'),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(onPressed: () => context.go('/notas/configuracao'), child: const Text('Conhecer')),
+        ]),
+      );
+    }
+    final usadas = _n(n['usadas']);
+    final incluidas = _n(n['incluidas']);
+    final pct = incluidas > 0 ? (usadas / incluidas).clamp(0, 1).toDouble() : 0.0;
+    return _Cartao(
+      titulo: 'Notas fiscais',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: Text('$usadas de $incluidas notas neste ciclo')),
+          TextButton(onPressed: () => context.go('/notas'), child: const Text('Ver as notas')),
+        ]),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(value: pct, minHeight: 8, borderRadius: BorderRadius.circular(8)),
+        const SizedBox(height: 6),
+        Text(
+            _n(n['excedente']) > 0
+                ? '${_n(n['excedente'])} notas além das incluídas: ${_moeda(_n(n['excedente']) * _n(n['valor_extra']))} na próxima mensalidade.'
+                : 'Módulo: ${_moeda(_n(n['valor_modulo']) * _n(n['empresas']))} por mês. As notas de teste não contam.',
+            style: const TextStyle(color: Cores.neutro)),
+      ]),
+    );
+  }
 }

@@ -9,9 +9,11 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
 import '../core/acoes_cadastro.dart';
+import '../core/acoes_levantamento.dart';
 import '../core/arquivos.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
+import 'aba_checklist.dart';
 import 'cadastros_rapidos.dart';
 import 'status_chip.dart';
 
@@ -73,7 +75,10 @@ class AbaEquipamentos extends StatelessWidget {
       return;
     }
     await AcoesAtendimento.identificarEquipamento(atd, lidoEquip, leitura: 'qr', valorLido: lido);
-    if (context.mounted) _aviso(context, 'Identificado: ${_rotuloEquipamento(lidoEquip)}');
+    if (!context.mounted) return;
+    _aviso(context, 'Identificado: ${_rotuloEquipamento(lidoEquip)}');
+    // Guia 55: com checklist (preventiva/PMOC), a etiqueta já abre o checklist do aparelho.
+    await abrirChecklistDoAparelho(context, atd, lidoEquip['id'] as String, habilitado: habilitado);
   }
 
   Future<void> _escolherDoLocal(BuildContext context, List<Map<String, dynamic>> jaNaLista) async {
@@ -559,8 +564,87 @@ class AbaItens extends StatelessWidget {
     if (escolha == null || !context.mounted) return;
     final livre = escolha['_livre'] as String?;
     final qtd = await _pedirQuantidade(context, livre ?? '${escolha['descricao']}', '${escolha['unidade'] ?? 'un'}');
-    if (qtd == null) return;
-    await AcoesAtendimento.salvarItem(atd, produto: livre == null ? escolha : null, descricao: livre, quantidade: qtd);
+    if (qtd == null || !context.mounted) return;
+    // Guia 59: peça com número de série (compressor, placa...): a nova e a retirada.
+    final controla = livre == null ? '${escolha['controla_serie'] ?? 'nao'}' : 'nao';
+    (String, String)? serie;
+    if (controla != 'nao') {
+      serie = await _pedirSerie(context, '${escolha['descricao']}', obrigatorio: controla == 'obrigatorio');
+      if (serie == null) return;
+    }
+    await AcoesAtendimento.salvarItem(atd,
+        produto: livre == null ? escolha : null,
+        descricao: livre,
+        quantidade: qtd,
+        numeroSerie: serie?.$1,
+        numeroSerieRetirado: serie?.$2);
+  }
+
+  /// Número de série da peça nova (dá para ler pela foto da etiqueta) e da retirada.
+  Future<(String, String)?> _pedirSerie(BuildContext context, String nome, {required bool obrigatorio}) {
+    final nova = TextEditingController();
+    final retirada = TextEditingController();
+    var lendo = false;
+    String? erro;
+    return showDialog<(String, String)>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, definir) {
+        return AlertDialog(
+          title: Text(nome),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: nova,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Nº de série da peça nova${obrigatorio ? ' *' : ''}',
+                  errorText: erro,
+                  suffixIcon: IconButton(
+                    tooltip: 'Ler pela foto da etiqueta',
+                    icon: const Icon(Icons.document_scanner_outlined),
+                    onPressed: lendo
+                        ? null
+                        : () async {
+                            final foto = await ImagePicker()
+                                .pickImage(source: ImageSource.camera, maxWidth: 1600, maxHeight: 1600, imageQuality: 80);
+                            if (foto == null) return;
+                            definir(() => lendo = true);
+                            try {
+                              final r = await AcoesLevantamento.lerPlaqueta(await foto.readAsBytes());
+                              if (r['numero_serie'] != null) nova.text = '${r['numero_serie']}';
+                            } catch (_) {
+                              definir(() => erro = 'Não deu para ler: digite o número.');
+                            } finally {
+                              definir(() => lendo = false);
+                            }
+                          },
+                  ),
+                ),
+              ),
+              TextField(
+                controller: retirada,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: 'Nº de série da peça retirada (se houver)'),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () {
+                if (obrigatorio && nova.text.trim().isEmpty) {
+                  definir(() => erro = 'Informe o número de série');
+                  return;
+                }
+                Navigator.of(ctx).pop((nova.text.trim(), retirada.text.trim()));
+              },
+              child: const Text('Adicionar'),
+            ),
+          ],
+        );
+      }),
+    );
   }
 
   Future<num?> _pedirQuantidade(BuildContext context, String nome, String unidade) async {

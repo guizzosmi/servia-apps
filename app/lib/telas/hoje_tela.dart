@@ -113,11 +113,15 @@ class _HojeTelaState extends State<HojeTela> {
                   if (op == 'sync') sync.sincronizar();
                   if (op == 'sair') _sair();
                   if (op == 'tutoriais') _abrirTutoriais();
+                  if (op == 'levantamento') context.push('/levantamento');
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'sync', child: Text('Sincronizar agora')),
-                  PopupMenuItem(value: 'tutoriais', child: Text('Tutoriais')),
-                  PopupMenuItem(value: 'sair', child: Text('Sair')),
+                itemBuilder: (_) => [
+                  // Guia 57: cadastrar ambientes e aparelhos do cliente, sem OS.
+                  if (AcoesOs.possoAbrir)
+                    const PopupMenuItem(value: 'levantamento', child: Text('Levantamento do local')),
+                  const PopupMenuItem(value: 'sync', child: Text('Sincronizar agora')),
+                  const PopupMenuItem(value: 'tutoriais', child: Text('Tutoriais')),
+                  const PopupMenuItem(value: 'sair', child: Text('Sair')),
                 ],
               ),
             ],
@@ -191,7 +195,7 @@ class _HojeTelaState extends State<HojeTela> {
                     icone: Icons.system_update_outlined,
                     texto: sync.mensagem ?? 'Atualize o app ServPilot para continuar recebendo a parte do dia.',
                     botao: 'Atualizar',
-                    aoTocar: () => abrirLink(Platform.isIOS ? Config.linkLojaIphone : Config.linkLojaAndroid),
+                    aoTocar: () => abrirLink(Platform.isIOS ? linkAtualizarIphone : Config.linkLojaAndroid),
                   ),
                 if (sync.situacao == SituacaoSync.precisaEntrar)
                   _Aviso(
@@ -359,6 +363,20 @@ class _BlocoParte extends StatelessWidget {
           ),
         for (var i = 0; i < itens.length; i++)
           _CartaoServico(banco: banco, item: itens[i], posicao: i + 1, eu: eu),
+        // Guia 77: as visitas que faltam no Google Maps (precisa de internet).
+        if (itens.isNotEmpty && parte['status'] != 'encerrada')
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => abrirRotaDoDia(context, parteId: '${parte['id']}'),
+                icon: const Icon(Icons.route_outlined),
+                label: const Text('Rota do dia no mapa'),
+              ),
+            ),
+          ),
         // O líder conduz a equipe (ordem, quem faz, equipe do dia, pedidos)
         // e encerra o dia (hoje ou um dia anterior que ficou aberto).
         if (AcoesLider.podeConduzir(parte))
@@ -500,3 +518,8 @@ Widget? _seloPedido(Object? itemId) => switch (AcoesLider.pedidoDo(itemId)?['sta
       'recusado' => const Selo('Replanejamento recusado', Cores.erro),
       _ => null,
     };
+
+/// Guia 66: no iPhone, enquanto o app está só no TestFlight (sem o endereço da
+/// App Store), "Atualizar" abre o TestFlight.
+String get linkAtualizarIphone =>
+    Config.linkLojaIphone.contains('id0000000000') ? 'itms-beta://' : Config.linkLojaIphone;

@@ -53,7 +53,7 @@ def cabeca(titulo, descricao, caminho, jsonld, extra_css='conteudo.css', tipo='w
     </nav>
     <div class="topo-acoes">
       <a class="botao fantasma" href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
-      <a class="botao primario so-largo" href="/assinar">Testar 7 dias grátis</a>
+      <a class="botao primario so-largo" href="/assinar">Testar 14 dias grátis</a>
     </div>
   </div>
 </header>
@@ -103,9 +103,9 @@ APP = {"@context": "https://schema.org", "@type": "SoftwareApplication", "name":
                        "equipes, app do técnico que funciona sem internet, relato por áudio com inteligência artificial, "
                        "orçamento com assinatura do cliente, preventivas e PMOC."),
        "offers": [{"@type": "Offer", "name": "Plano Autônomo", "price": "99.99", "priceCurrency": "BRL", "url": f"{SITE}/precos",
-                   "description": "1 usuário, 300 minutos de IA e 250 mensagens; tudo incluso, inclusive PMOC; 7 dias grátis."},
+                   "description": "1 usuário, 300 minutos de IA e 250 mensagens; tudo incluso, inclusive PMOC; 14 dias grátis."},
                   {"@type": "Offer", "name": "Plano Equipe", "price": "199.00", "priceCurrency": "BRL", "url": f"{SITE}/precos",
-                   "description": "Plano mensal com 2 usuários, 600 minutos de IA e 500 mensagens; usuário extra R$ 69/mês; 7 dias grátis."}],
+                   "description": "Plano mensal com 2 usuários, 600 minutos de IA e 500 mensagens; usuário extra R$ 69/mês; 14 dias grátis."}],
        "publisher": {"@type": "Organization", "name": "ServPilot", "url": SITE}}
 
 def faq_jsonld(perguntas):
@@ -133,7 +133,7 @@ CHAMADA = '''<section class="chamada">
   <div class="faixa chamada-dentro revelar">
     <img src="/img/simbolo-escuro.svg" alt="" width="72" height="72" class="chamada-simbolo">
     <h2>Teste com a sua equipe, num serviço de verdade.</h2>
-    <p>7 dias grátis, sem cartão. Depois, R$ 99,99 por mês para quem trabalha sozinho ou R$ 199 com 2 usuários, com preço aberto para o resto.</p>
+    <p>14 dias grátis, sem cartão. Depois, R$ 99,99 por mês para quem trabalha sozinho ou R$ 199 com 2 usuários, com preço aberto para o resto.</p>
     <div class="abertura-acoes centro">
       <a class="botao coral grande" href="/assinar">Começar o teste grátis</a>
       <a class="botao contorno-claro grande" href="/precos">Ver preços</a>

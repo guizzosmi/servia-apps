@@ -6,14 +6,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cadastros/lista.dart';
 import '../servicos/contratos.dart';
 import '../servicos/documentos.dart';
+import '../servicos/parametros.dart';
 import '../servicos/status.dart';
 import '../servicos/whatsapp.dart';
+import '../widgets/sla.dart';
+import '../widgets/agenda_simples.dart';
 import '../widgets/atendimentos_os.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/checklist_da_os.dart';
 import '../widgets/escolha_equipamentos.dart';
+import '../widgets/financeiro_os.dart';
 import '../widgets/itens_os.dart';
 import '../widgets/margem.dart';
+import '../widgets/nota_os.dart';
 import '../widgets/orcamentos_os.dart';
 import '../widgets/relatos_os.dart';
 import '../widgets/status_chip.dart';
@@ -38,6 +43,7 @@ class _OsTelaState extends State<OsTela> {
   String? _erro;
   Map<String, dynamic>? _os;
   String? _codigoOrigemGarantia;
+  String? _codigoRetorno;
   List<Map<String, dynamic>> _equipamentos = [];
   List<Map<String, dynamic>> _agendamentos = [];
   List<Map<String, dynamic>> _tentativas = [];
@@ -70,6 +76,13 @@ class _OsTelaState extends State<OsTela> {
             .maybeSingle();
         codigoOrigem = o?['codigo'] as String?;
       }
+      // Guia 59: retorno de outra OS (citado no áudio).
+      String? codigoRetorno;
+      if (os['retorno_de_os_id'] != null) {
+        final o = await _db.from('ordens_servico').select('codigo').eq('id', os['retorno_de_os_id'] as String).maybeSingle();
+        codigoRetorno = o?['codigo'] as String?;
+      }
+      _codigoRetorno = codigoRetorno;
       final equipamentos = await _db
           .from('os_equipamentos')
           .select('equipamento_id, principal, equipamentos(codigo, descricao, marca, modelo)')
@@ -405,9 +418,22 @@ class _OsTelaState extends State<OsTela> {
   }
 
   Future<void> _reabrir() async {
-    final motivo = await _pedirTexto('Reabrir OS', 'Motivo da reabertura', botao: 'Reabrir');
+    // Guia 84: OS já cobrada. Reabrir só a OS não destrava os itens; oferece reabrir o financeiro junto.
+    final faturada = _os?['cobranca_status'] == 'faturada';
+    final motivo = await _pedirTexto('Reabrir OS', 'Motivo da reabertura',
+        botao: 'Reabrir',
+        explicacao: faturada
+            ? 'Esta OS já foi cobrada. Reabrir a OS não muda a cobrança e os itens continuam travados; '
+                'para mudar os itens, depois use "Reabrir o financeiro" em Peças e serviços.'
+            : null);
     if (motivo == null) return;
     await _acao({'acao': 'reabrir', 'os_id': widget.id, 'motivo': motivo}, 'OS reaberta.');
+    if (faturada && mounted) {
+      final r = await cobrancaDaOs(widget.id);
+      final cob = r?['cobranca'] is Map ? Map<String, dynamic>.from(r!['cobranca'] as Map) : null;
+      if (cob == null || !mounted) return;
+      if (await reabrirFinanceiro(context, cob, (r?['notas'] as List?) ?? const [])) await _carregar();
+    }
   }
 
   // ---------------- tela ----------------
@@ -491,6 +517,8 @@ class _OsTelaState extends State<OsTela> {
                           visualDensity: VisualDensity.compact,
                           onPressed: () => context.push('/contratos/${os['contrato_id']}'),
                         ),
+                      // Guia 70: prazo do SLA do contrato.
+                      if (os['sla_prazo'] != null) chipSla(os),
                     ]),
                   ),
                   if (_ocupado) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -506,6 +534,16 @@ class _OsTelaState extends State<OsTela> {
                         icon: const Icon(Icons.chat_outlined, size: 18),
                         label: const Text('Relatório pelo WhatsApp'),
                       ),
+                    // Guia 74: diagnóstico assistido pela IA.
+                    if (os['status'] != 'cancelada' && os['status'] != 'concluida')
+                      OutlinedButton.icon(
+                        onPressed: () => abrirDiagnostico(context,
+                            osId: widget.id, sintoma: os['problema_relatado'] as String?),
+                        icon: const Icon(Icons.psychology_alt_outlined, size: 18),
+                        label: const Text('Diagnóstico (IA)'),
+                      ),
+                    // Guia 81: nota fiscal da OS (só aparece com o módulo contratado).
+                    if (os['status'] == 'concluida') BotaoNotaOs(osId: widget.id),
                   ]),
                 ),
                 Padding(
@@ -519,6 +557,18 @@ class _OsTelaState extends State<OsTela> {
                 ),
                 const SizedBox(height: 16),
 
+                // ---------- retorno (guia 59) ----------
+                if (os['retorno_de_os_id'] != null)
+                  _Faixa(
+                    cor: Cores.info,
+                    icone: Icons.replay,
+                    texto: 'Retorno da ${_codigoRetorno ?? 'OS anterior'} (o técnico citou o serviço anterior).',
+                    acoes: [
+                      TextButton(
+                          onPressed: () => context.push('/os/${os['retorno_de_os_id']}'),
+                          child: const Text('Abrir a OS anterior')),
+                    ],
+                  ),
                 // ---------- garantia ----------
                 if (os['garantia_status'] == 'sugerida')
                   _Faixa(
@@ -675,11 +725,9 @@ class _OsTelaState extends State<OsTela> {
                 _Secao(
                   titulo: 'Peças e serviços',
                   children: [
+                    // Guia 84: a cobrança na própria OS, com "Reabrir o financeiro".
                     if (os['cobranca_status'] == 'faturada')
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text('OS faturada: os itens não mudam mais.', style: TextStyle(color: Cores.neutro)),
-                      ),
+                      FinanceiroDaOs(key: ValueKey('fin$_versao'), osId: widget.id, aoMudar: _carregar),
                     ItensDaOs(osId: widget.id, editavel: ajustar, versao: _versao, aoMudar: _carregar),
                   ],
                 ),
@@ -745,12 +793,18 @@ class _OsTelaState extends State<OsTela> {
     final status = a['status'] as String?;
     final equipe = a['equipes'] as Map?;
     final tentativas = _tentativas.where((t) => t['agendamento_id'] == a['id']).toList();
+    final simples = ParametrosEmpresa.instancia.modoSimples;
+    final itemNaAgenda = tentativas
+        .where((t) => t['papel_equipe'] == 'responsavel' && ['programado', 'em_deslocamento'].contains(t['status']))
+        .firstOrNull;
     final detalhes = [
       tiposAgendamento[a['tipo']] ?? '',
       if (a['data_prevista'] != null) 'desejado para ${dataBr(a['data_prevista'])}',
       if (janela(a['janela_inicio'], a['janela_fim']).isNotEmpty) janela(a['janela_inicio'], a['janela_fim']),
       if (a['duracao_estimada_min'] != null) '${a['duracao_estimada_min']} min',
-      if (equipe != null) 'equipe ${equipe['nome']}',
+      // "Equipe Ana" já diz que é equipe: não repete ("equipe Equipe Ana").
+      if (equipe != null)
+        '${equipe['nome']}'.toLowerCase().startsWith('equipe') ? '${equipe['nome']}' : 'equipe ${equipe['nome']}',
     ].join(' · ');
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -767,11 +821,27 @@ class _OsTelaState extends State<OsTela> {
               onPressed: () => _avisarVisita(a),
               icon: const Icon(Icons.chat_outlined, color: Cores.sucesso),
             ),
+          // Guia 62: no modo simples, agenda direto daqui (sem o quadro).
+          if (editar && simples && status == 'pendente')
+            TextButton.icon(
+              onPressed: () async {
+                if (await agendarSimples(context, agendamentoId: '${a['id']}')) _carregar();
+              },
+              icon: const Icon(Icons.event_available, size: 18),
+              label: const Text('Agendar'),
+            ),
           if (editar && ['pendente', 'suspenso', 'programado'].contains(status))
             PopupMenuButton<String>(
               tooltip: 'Ações',
-              onSelected: (op) {
+              onSelected: (op) async {
                 switch (op) {
+                  case 'reagendar':
+                    if (itemNaAgenda != null &&
+                        await agendarSimples(context, agendamentoId: '${a['id']}', parteItemId: '${itemNaAgenda['id']}')) {
+                      _carregar();
+                    }
+                  case 'tirar':
+                    if (itemNaAgenda != null && await tirarDaAgenda(context, '${itemNaAgenda['id']}')) _carregar();
                   case 'editar':
                     _agendamento(a);
                   case 'suspender':
@@ -783,6 +853,10 @@ class _OsTelaState extends State<OsTela> {
                 }
               },
               itemBuilder: (_) => [
+                if (simples && itemNaAgenda != null) ...const [
+                  PopupMenuItem(value: 'reagendar', child: Text('Reagendar')),
+                  PopupMenuItem(value: 'tirar', child: Text('Tirar da agenda')),
+                ],
                 const PopupMenuItem(value: 'editar', child: Text('Editar')),
                 if (status == 'pendente') const PopupMenuItem(value: 'suspender', child: Text('Suspender')),
                 if (status == 'suspenso') const PopupMenuItem(value: 'liberar', child: Text('Liberar para a fila')),

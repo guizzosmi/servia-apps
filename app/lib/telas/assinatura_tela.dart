@@ -254,7 +254,7 @@ class ResumoNaTela extends StatelessWidget {
       for (final (t, txt) in c.blocos)
         if (txt.trim().isNotEmpty) ...[titulo(t), Text(txt, style: const TextStyle(fontSize: 13))],
       if (c.itens.isNotEmpty) ...[
-        titulo(c.comValores ? 'Itens' : 'Peças e serviços'),
+        titulo(c.comValores && !c.recibo ? 'Itens' : 'Peças e serviços'),
         for (final i in c.itens)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
@@ -292,7 +292,7 @@ class ResumoNaTela extends StatelessWidget {
           ]),
       ],
       if (c.termo != null) ...[
-        titulo(c.comValores ? 'Termo de aceite' : 'Declaração'),
+        titulo(c.comValores && !c.recibo ? 'Termo de aceite' : 'Declaração'),
         Text(c.termo!, style: const TextStyle(fontSize: 12, color: Cores.neutro)),
       ],
     ]);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +12,9 @@ const versaoAdmin = '0.1.0';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Endereço sem "#": painel.servpilot.com.br/assinatura abre a própria tela (o Firebase
+  // devolve o index.html para qualquer caminho). Sem isso, links diretos caíam no Início.
+  usePathUrlStrategy();
   GoRouter.optionURLReflectsImperativeAPIs = true;
   await Supabase.initialize(
     url: Config.supabaseUrl,

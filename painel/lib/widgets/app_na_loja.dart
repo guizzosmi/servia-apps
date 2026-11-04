@@ -120,7 +120,7 @@ class _AppNaLojaState extends State<AppNaLoja> {
                 child: TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'E-mail da conta Google do celular', isDense: true),
+                  decoration: const InputDecoration(labelText: 'Gmail do celular', isDense: true),
                   onSubmitted: (_) {
                     if (!_ocupado) _adicionar();
                   },

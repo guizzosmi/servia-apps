@@ -1,7 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_cadastro.dart';
+import '../core/acoes_levantamento.dart';
+import '../core/estado.dart';
+
+const _unidades = {'btu_h': 'BTU/h', 'tr': 'TR', 'kw': 'kW'};
+
+/// "12.000" -> 12000; "3,5" -> 3.5; "12000" -> 12000.
+num? lerNumero(String texto) {
+  var t = texto.trim().replaceAll(RegExp(r'[^0-9.,]'), '');
+  if (t.isEmpty) return null;
+  if (RegExp(r'^\d{1,3}([.,]\d{3})+$').hasMatch(t)) {
+    t = t.replaceAll(RegExp(r'[.,]'), '');
+  } else {
+    t = t.replaceAll(',', '.');
+  }
+  return num.tryParse(t);
+}
+
+String _numeroTexto(Object? v) {
+  final n = num.tryParse('${v ?? ''}');
+  if (n == null) return '';
+  return (n == n.roundToDouble() ? n.toInt().toString() : n.toString()).replaceAll('.', ',');
+}
 
 const _novo = '__novo__';
 
@@ -73,6 +97,13 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
   final _fluido = TextEditingController();
   final _ambienteNovo = TextEditingController();
   final _tipoNovo = TextEditingController();
+  // Guia 57: capacidade, leitura da plaqueta pela IA e a etiqueta QR em branco.
+  final _capacidade = TextEditingController();
+  String _unidade = 'btu_h';
+  String? _qr;
+  bool _lendo = false;
+  String? _recado;
+  bool _recadoErro = false;
   // (só se o ambiente estiver na lista: o menu não aceita valor de fora)
   late String? _ambiente =
       _ambientes.any((a) => '${a['id']}' == widget.ambienteId) ? widget.ambienteId : null;
@@ -80,11 +111,22 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
 
   @override
   void dispose() {
-    for (final c in [_descricao, _codigo, _marca, _modelo, _serie, _fluido, _ambienteNovo, _tipoNovo]) {
+    for (final c in [_descricao, _codigo, _marca, _modelo, _serie, _fluido, _ambienteNovo, _tipoNovo, _capacidade]) {
       c.dispose();
     }
     super.dispose();
   }
+
+  /// Guia 59: como o cliente identifica os aparelhos (etiqueta, patrimonio, descricao).
+  String get _modoCliente {
+    final banco = EstadoApp.instancia.banco;
+    final local = banco?.um('locais', widget.localId);
+    return '${banco?.um('clientes', local?['cliente_id'])?['identificacao_equipamentos'] ?? 'etiqueta'}';
+  }
+
+  /// O tipo escolhido pede o número de série?
+  bool get _serieObrigatoria =>
+      _tipo != null && _tipo != _novo && EstadoApp.instancia.banco?.um('tipos_equipamento', _tipo)?['serie_obrigatoria'] == true;
 
   /// Ambientes do local mais os novos de outros equipamentos desta OS.
   List<Map<String, dynamic>> get _ambientes => [
@@ -108,6 +150,79 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
     return null;
   }
 
+  void _avisar(String texto, {bool erro = false}) => setState(() {
+        _recado = texto;
+        _recadoErro = erro;
+      });
+
+  /// Foto da plaqueta: a IA preenche marca, modelo, série, capacidade e fluido.
+  Future<void> _lerPlaqueta() async {
+    final foto = await ImagePicker()
+        .pickImage(source: ImageSource.camera, maxWidth: 1600, maxHeight: 1600, imageQuality: 80);
+    if (foto == null || !mounted) return;
+    setState(() {
+      _lendo = true;
+      _recado = null;
+    });
+    try {
+      final r = await AcoesLevantamento.lerPlaqueta(await foto.readAsBytes());
+      if (!mounted) return;
+      if (r['legivel'] == false) {
+        _avisar('Não deu para ler a plaqueta: tire outra foto, mais perto e sem reflexo.', erro: true);
+        return;
+      }
+      void por(TextEditingController c, Object? v) {
+        if (v != null && '$v'.trim().isNotEmpty) c.text = '$v'.trim();
+      }
+
+      setState(() {
+        por(_marca, r['marca']);
+        por(_modelo, r['modelo']);
+        por(_serie, r['numero_serie']);
+        por(_fluido, r['fluido']);
+        if (r['capacidade_valor'] != null) {
+          _capacidade.text = _numeroTexto(r['capacidade_valor']);
+          if (_unidades.containsKey(r['capacidade_unidade'])) _unidade = '${r['capacidade_unidade']}';
+        }
+        if (_codigo.text.trim().isEmpty) por(_codigo, r['codigo']);
+        final sugerido = '${r['tipo_sugerido'] ?? ''}'.trim().toLowerCase();
+        if (_tipo == null && sugerido.isNotEmpty) {
+          for (final t in _tipos) {
+            if ('${t['nome']}'.trim().toLowerCase() == sugerido) _tipo = '${t['id']}';
+          }
+        }
+        if (_descricao.text.trim().isEmpty) {
+          _descricao.text = [r['tipo_sugerido'], r['marca']].where((x) => x != null && '$x' != 'outro').join(' ');
+        }
+      });
+      _avisar('Plaqueta lida. Confira os campos antes de cadastrar.');
+    } catch (_) {
+      if (mounted) _avisar('Sem internet ou a leitura falhou: preencha à mão.', erro: true);
+    } finally {
+      if (mounted) setState(() => _lendo = false);
+    }
+  }
+
+  /// Etiqueta QR em branco (impressa no painel): fica no aparelho ao cadastrar.
+  Future<void> _lerEtiqueta() async {
+    final lido = await context.push<String>('/ler-codigo');
+    if (lido == null || !mounted) return;
+    final t = lido.trim();
+    if (!AcoesLevantamento.etiquetaValida(t)) {
+      _avisar('Esta não é uma etiqueta em branco do ServPilot ($t).', erro: true);
+      return;
+    }
+    final usada = AcoesLevantamento.etiquetaUsada(t);
+    if (usada != null) {
+      _avisar('Esta etiqueta já está no $usada. Use outra.', erro: true);
+      return;
+    }
+    setState(() {
+      _qr = t;
+      _recado = null;
+    });
+  }
+
   void _salvar() {
     if (!(_form.currentState?.validate() ?? false)) return;
     final ambienteExistente = _ambiente == _novo ? _existente(_ambientes, _ambienteNovo.text) : _ambiente;
@@ -119,6 +234,9 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
       modelo: _modelo.text,
       numeroSerie: _serie.text,
       fluido: _fluido.text,
+      capacidadeValor: lerNumero(_capacidade.text),
+      capacidadeUnidade: _unidade,
+      qrToken: _qr,
       ambienteId: ambienteExistente,
       ambienteNovo: _ambiente == _novo && ambienteExistente == null ? _ambienteNovo.text : null,
       tipoId: tipoExistente,
@@ -164,7 +282,29 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
             const Text('Cadastrar equipamento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              OutlinedButton.icon(
+                key: const ValueKey('lerPlaqueta'),
+                onPressed: _lendo ? null : _lerPlaqueta,
+                icon: _lendo
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.document_scanner_outlined),
+                label: Text(_lendo ? 'Lendo a plaqueta…' : 'Foto da plaqueta (IA preenche)'),
+              ),
+              OutlinedButton.icon(
+                key: const ValueKey('etiquetaQr'),
+                onPressed: _lerEtiqueta,
+                icon: Icon(_qr == null ? Icons.qr_code_2 : Icons.check_circle, color: _qr == null ? null : Cores.sucesso),
+                label: Text(_qr == null ? 'Etiqueta QR' : 'Etiqueta $_qr'),
+              ),
+            ]),
+            if (_recado != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(_recado!, style: TextStyle(color: _recadoErro ? Cores.erro : Cores.sucesso)),
+              ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _descricao,
               autofocus: widget.sugestao.isEmpty,
@@ -177,11 +317,20 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
             TextFormField(
               controller: _codigo,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Plaqueta ou patrimônio (se tiver)',
-                helperText: 'Sem plaqueta? Deixe vazio: o app cria um código provisório (PROV-...).',
+              decoration: InputDecoration(
+                labelText: switch (_modoCliente) {
+                  'patrimonio' => 'Patrimônio do cliente *',
+                  'descricao' => 'Código (se tiver)',
+                  _ => 'Plaqueta ou patrimônio (se tiver)',
+                },
+                helperText: switch (_modoCliente) {
+                  'patrimonio' => 'Este cliente identifica os aparelhos pelo patrimônio dele.',
+                  'descricao' => 'Este cliente não usa plaqueta: vazio, o sistema gera o código (EQ-0001).',
+                  _ => 'Sem plaqueta? Deixe vazio: o app cria um código provisório (PROV-...).',
+                },
               ),
               validator: (v) {
+                if (_modoCliente == 'patrimonio' && (v ?? '').trim().isEmpty) return 'Informe o patrimônio do cliente';
                 final ja = widget.codigosUsados[(v ?? '').trim().toLowerCase()];
                 return ja == null ? null : 'Já cadastrado neste cliente: $ja. Escolha na lista.';
               },
@@ -221,7 +370,11 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
             const SizedBox(height: 8),
             Row(children: [
               Expanded(
-                child: TextFormField(controller: _serie, decoration: const InputDecoration(labelText: 'Nº de série')),
+                child: TextFormField(
+                  controller: _serie,
+                  decoration: InputDecoration(labelText: _serieObrigatoria ? 'Nº de série *' : 'Nº de série'),
+                  validator: (v) => _serieObrigatoria && (v ?? '').trim().isEmpty ? 'Obrigatório neste tipo' : null,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -229,6 +382,33 @@ class _FormEquipamentoState extends State<_FormEquipamento> {
                   controller: _fluido,
                   textCapitalization: TextCapitalization.characters,
                   decoration: const InputDecoration(labelText: 'Fluido', hintText: 'Ex.: R-410A'),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _capacidade,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Capacidade', hintText: 'Ex.: 12.000'),
+                  validator: (v) => (v ?? '').trim().isEmpty || lerNumero(v!) != null ? null : 'Só números',
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 110,
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Unidade'),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _unidade,
+                      isDense: true,
+                      isExpanded: true,
+                      items: [for (final u in _unidades.entries) DropdownMenuItem(value: u.key, child: Text(u.value))],
+                      onChanged: (v) => setState(() => _unidade = v ?? _unidade),
+                    ),
+                  ),
                 ),
               ),
             ]),

@@ -533,6 +533,12 @@ class _QuadroTelaState extends State<QuadroTela> implements AcoesQuadro {
         await _novaOsNaEquipe(coluna);
       case 'incluir_pessoa':
         await _incluirPessoa(coluna);
+      // Guia 77: a rota do dia (Google Maps) e a ordem sugerida.
+      case 'rota':
+        if (coluna.parteId == null) return;
+        if (await abrirRotaDoDia(context, parteId: coluna.parteId!, podeOrdenar: coluna.aceitaMudancas) && mounted) {
+          _carregar();
+        }
     }
   }
 

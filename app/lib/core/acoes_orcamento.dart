@@ -42,6 +42,19 @@ class ConfigApp {
 
   /// Relato por áudio (a IA organiza o que o técnico falou).
   bool get relatoAudio => _d['relato_audio'] != false;
+
+  /// Valores no recibo da OS: com | sem | perguntar (na hora, no app).
+  String get osValores => '${_d['os_valores'] ?? 'perguntar'}';
+
+  /// Papel da impressão no app: a4 | 80mm | 58mm (bobina da impressora térmica).
+  String get osPapel => '${_d['os_papel'] ?? 'a4'}';
+
+  /// Guia 58: o cliente "interno" (a própria empresa) aparece na busca só com manutenção própria.
+  /// Plataforma antiga (sem a chave): mostra, como antes.
+  bool get manutencaoPropria => _d['manutencao_propria'] != false;
+
+  /// Guia 62: modo simples (os dias se fecham sozinhos; sem "Encerrar o dia").
+  bool get modoSimples => _d['modo_simples'] == true;
 }
 
 /// Texto padrão do termo (o mesmo do PDF da plataforma), quando a empresa

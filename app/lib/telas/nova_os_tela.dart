@@ -71,6 +71,10 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   bool _jaNoLocal = false;
   bool _propostaAplicada = false;
   List<String> _dicas = const [];
+  // Guia 59: retorno de outra OS citado no áudio (sugerido ou candidatos) e o que o técnico confirmou.
+  List<Map> _retornoCandidatos = const [];
+  Map? _retornoSugerido;
+  String? _retornoOsId;
   List<Map> _clientesSugeridos = const [];
 
   @override
@@ -232,6 +236,53 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     });
   }
 
+  /// "Retorno da OS-000123 (02/10, limpeza do split)": confirmar, trocar ou nenhuma.
+  Widget _cartaoRetorno() {
+    String rotulo(Map c) {
+      final d = '${c['data'] ?? ''}';
+      final data = d.length >= 10 ? '${d.substring(8, 10)}/${d.substring(5, 7)}' : d;
+      return [c['codigo'], data, c['resumo']].where((x) => x != null && '$x'.isNotEmpty).join(' · ');
+    }
+
+    final todos = <Map>[if (_retornoSugerido != null) _retornoSugerido!, ..._retornoCandidatos];
+    final escolhido = todos.where((c) => c['os_id'] == _retornoOsId).firstOrNull;
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      color: Cores.indigo100,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+              escolhido != null
+                  ? 'Retorno da ${rotulo(escolhido)}'
+                  : _retornoSugerido != null
+                      ? 'Parece retorno da ${rotulo(_retornoSugerido!)}'
+                      : 'Retorno de qual serviço?',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            if (escolhido == null && _retornoSugerido != null)
+              FilledButton.tonal(
+                onPressed: () => setState(() => _retornoOsId = '${_retornoSugerido!['os_id']}'),
+                child: const Text('Confirmar'),
+              ),
+            if (escolhido == null)
+              for (final c in _retornoCandidatos.where((c) => c['os_id'] != _retornoSugerido?['os_id']))
+                ActionChip(label: Text(rotulo(c)), onPressed: () => setState(() => _retornoOsId = '${c['os_id']}')),
+            TextButton(
+              onPressed: () => setState(() {
+                _retornoOsId = null;
+                _retornoSugerido = null;
+                _retornoCandidatos = const [];
+              }),
+              child: Text(escolhido == null ? 'Não é retorno' : 'Desfazer'),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
   /// Preenche a tela com a proposta da IA (uma vez). O que ela não resolveu
   /// vira dica para o técnico escolher.
   void _aplicarProposta(Map<String, dynamic> ab) {
@@ -296,6 +347,12 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       } else if (eq['tipo'] != null && eq['texto'] != null) {
         dicas.add('Equipamento: ${eq['texto']}.');
       }
+      final ret = ab['retorno'] is Map ? ab['retorno'] as Map : const {};
+      _retornoSugerido = ret['tipo'] == 'sugerido' ? ret : null;
+      _retornoCandidatos = (ret['tipo'] == 'escolher' || ret['tipo'] == 'sugerido') && ret['candidatos'] is List
+          ? (ret['candidatos'] as List).whereType<Map>().toList()
+          : const [];
+      _retornoOsId = null;
       _comoRelato = ab['tem_relato'] == true;
       _jaNoLocal = ab['momento'] != 'futuro';
       _dicas = dicas;
@@ -387,6 +444,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text('• $d', style: const TextStyle(color: Cores.alerta)),
                 ),
+              if (_retornoSugerido != null || _retornoCandidatos.isNotEmpty || _retornoOsId != null) _cartaoRetorno(),
               if (_clientesSugeridos.isNotEmpty)
                 Wrap(spacing: 6, children: [
                   for (final c in _clientesSugeridos)
@@ -487,6 +545,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         equipamentosNovos: List.of(_novos),
         contatoId: _contatoNovo == null ? _contatoId : null,
         contatoNovo: _contatoNovo,
+        retornoDeOsId: _retornoOsId,
       );
       // A OS falada recusada (arquivo sumiu...) não liga: a OS vai sem ela.
       final audio = _audioId == null ? null : AcoesRelato.um(_audioId!);

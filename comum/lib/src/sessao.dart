@@ -83,9 +83,47 @@ class Sessao {
   static SessaoInfo? get atual =>
       SessaoInfo.daSessao(_db.auth.currentSession);
 
+  /// Entra com e-mail e senha. Guia 58: 5 senhas erradas em 15 minutos
+  /// bloqueiam o e-mail por 15 minutos (a conferência fica no banco).
   static Future<void> entrar(String email, String senha) async {
-    await _db.auth.signInWithPassword(email: email.trim(), password: senha);
+    final e = email.trim();
+    final situacao = await _consultar('login_situacao', e);
+    if (situacao?['bloqueado'] == true) throw LoginBloqueado(situacao?['minutos'] as int?);
+    try {
+      await _db.auth.signInWithPassword(email: e, password: senha);
+    } on AuthException catch (erro) {
+      if (erro.message.toLowerCase().contains('invalid login')) {
+        final r = await _consultar('login_falhou', e);
+        if (r?['bloqueado'] == true) throw LoginBloqueado(r?['minutos'] as int?);
+        final restantes = r?['restantes'] as int?;
+        if (restantes != null && restantes <= 2) {
+          throw LoginBloqueado.aviso('E-mail ou senha incorretos. Mais $restantes tentativa(s) e o acesso fica '
+              'bloqueado por 15 minutos.');
+        }
+      }
+      rethrow;
+    }
+    try {
+      await _db.rpc('login_ok');
+    } catch (_) {}
   }
+
+  /// Consulta do bloqueio; sem resposta (banco antigo, sem internet), não atrapalha o login.
+  static Future<Map<String, dynamic>?> _consultar(String funcao, String email) async {
+    try {
+      final r = await _db.rpc(funcao, params: {'p_email': email});
+      return r is Map ? Map<String, dynamic>.from(r) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Recuperar a senha (guia 58): manda o e-mail com o link para criar outra.
+  static Future<void> recuperarSenha(String email, {required String voltarPara}) =>
+      _db.auth.resetPasswordForEmail(email.trim(), redirectTo: voltarPara);
+
+  /// Grava a senha nova (depois de abrir o link do e-mail).
+  static Future<void> trocarSenha(String nova) => _db.auth.updateUser(UserAttributes(password: nova));
 
   /// Troca a empresa ativa e renova o token para o banco enxergar a nova.
   static Future<void> trocarEmpresa(String empresaId) async {
@@ -95,4 +133,17 @@ class Sessao {
   }
 
   static Future<void> sair() => _db.auth.signOut();
+}
+
+/// Login bloqueado por excesso de tentativas (ou o aviso de que está perto).
+class LoginBloqueado implements Exception {
+  LoginBloqueado(int? minutos)
+      : mensagem = 'Muitas tentativas com senha errada. Por segurança, o acesso deste e-mail fica bloqueado por '
+            '${minutos ?? 15} minuto(s). Se esqueceu a senha, use "Esqueci minha senha".';
+  LoginBloqueado.aviso(this.mensagem);
+
+  final String mensagem;
+
+  @override
+  String toString() => mensagem;
 }

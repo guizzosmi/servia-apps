@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/campos.dart';
 import '../cadastros/definicoes.dart';
+import '../servicos/documentos.dart';
 import '../servicos/parametros.dart';
 import '../servicos/planos.dart';
 import '../servicos/status.dart';
@@ -858,6 +859,13 @@ class _PlanoTelaState extends State<PlanoTela> {
         if (!_novo) ...[
           StatusChip(_tipo, tiposPlano),
           StatusChip(situacao, situacoesPlano),
+          // Guia 56: o documento do plano (PMOC completo) e o relatório de execução do mês.
+          BotaoPdf(
+            tipo: 'pmoc',
+            id: '$_planoId',
+            nomeArquivo: '${_plano?['nome'] ?? 'plano'}'.replaceAll(RegExp(r'[^A-Za-z0-9À-ÿ]+'), '-'),
+            rotulo: _tipo == 'pmoc' ? 'Documento do PMOC' : 'Documento do plano',
+          ),
         ],
         if (_ocupado || _carregando)
           const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),

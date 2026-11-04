@@ -8,6 +8,7 @@ import '../cadastros/definicoes.dart';
 import '../servicos/contratos.dart';
 import '../servicos/planos.dart' show periodicidades;
 import '../servicos/status.dart';
+import '../widgets/sla.dart';
 import '../widgets/campos_data_hora.dart';
 import '../widgets/itens_os.dart' show dinheiro, lerNumero, numeroBr;
 import '../widgets/margem.dart';
@@ -727,6 +728,17 @@ class _ContratoTelaState extends State<ContratoTela> {
       if (_erro != null) Text(_erro!, style: const TextStyle(color: Cores.erro)),
       const SizedBox(height: 8),
       _secao('Dados do contrato', [_dados(_novo ? !_ocupado : editar)]),
+      // Guia 70: SLA (prazo de atendimento das corretivas).
+      if (!_novo && c != null)
+        _secao('SLA (prazo de atendimento)', [
+          SlaDoContrato(
+            key: ValueKey('sla-${c['id']}'),
+            contratoId: '${c['id']}',
+            horas: c['sla_horas'],
+            horasUrgente: c['sla_urgente_horas'],
+            habilitado: editar,
+          ),
+        ]),
       if (!_novo && c != null) ...[
         if (_sit == 'ativo') _secao('Consumo da competência', [_consumo()]),
         if (_modalidadeSalva == 'por_execucao' || _precos.isNotEmpty)

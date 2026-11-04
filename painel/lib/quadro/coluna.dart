@@ -173,6 +173,13 @@ class _Cabecalho extends StatelessWidget {
             ]),
           ]),
         ),
+        if (coluna.parte != null && total > 0)
+          IconButton(
+            tooltip: 'Rota do dia',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.route_outlined, size: 20),
+            onPressed: () => acoes.acaoEquipe('rota', coluna),
+          ),
         if (coluna.rascunho && acoes.podeEditar)
           TextButton(onPressed: () => acoes.acaoEquipe('publicar', coluna), child: const Text('Publicar')),
         if (coluna.semFechar && acoes.diaPassado && acoes.podeEditar)
@@ -470,8 +477,9 @@ class CartaoItem extends StatelessWidget {
               const SizedBox(width: 6),
               Text('${os['codigo'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(width: 6),
-              Flexible(child: StatusChip(status, statusItem, compacto: true)),
-              const Spacer(),
+              Expanded(
+                child: Align(alignment: Alignment.centerLeft, child: StatusChip(status, statusItem, compacto: true)),
+              ),
               SizedBox(
                 width: 32,
                 height: 28,

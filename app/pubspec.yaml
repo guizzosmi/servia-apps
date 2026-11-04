@@ -1,7 +1,7 @@
 name: servia_app
 description: "ServPilot - app do técnico (parte do dia, atendimento, offline)."
 publish_to: 'none'
-version: 0.14.0+14
+version: 0.17.0+17
 
 environment:
   sdk: ^3.9.0
@@ -31,6 +31,8 @@ dependencies:
   firebase_messaging: ^16.0.0
   # Resumo que o cliente assina (PDF gerado no aparelho, sem internet).
   pdf: ^3.11.0
+  # Imprimir (serviço de impressão do celular) ou compartilhar o recibo no local (guia 54).
+  printing: ^5.13.0
   # Relato do atendimento por áudio (m4a/AAC, gravado no aparelho).
   record: ^6.0.0
 

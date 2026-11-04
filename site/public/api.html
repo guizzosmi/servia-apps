@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API OData · ServPilot</title>
+<meta name="description" content="API do ServPilot no padrão OData v4: autenticação OAuth 2.0, consultas com $filter e $expand, inclusão, alteração, exclusão e integração com o Protheus por TenantId.">
+<link rel="canonical" href="https://servpilot.com.br/api">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/doc.css">
+</head>
+<body>
+<!-- Guia 53: documentação da API OData v4. -->
+<header class="doc-topo"><div class="faixa">
+  <a href="/"><img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38"></a>
+  <a href="https://painel.servpilot.com.br/integracoes">Criar credencial</a>
+</div></header>
+
+<main class="doc">
+<h1>API do ServPilot (OData v4)</h1>
+<p class="atualizado">Última atualização: 04/11/2026</p>
+
+<p>Integre o ServPilot ao seu ERP (Protheus, por exemplo), ao BI ou a outro sistema. A API segue o padrão
+<b>OData v4</b> e expõe os cadastros e movimentos com consulta, inclusão, alteração e exclusão. O administrador da
+plataforma decide o que fica liberado em cada entidade; o modelo completo, com o que cada uma permite, está no
+<code>$metadata</code>.</p>
+
+<table>
+  <tr><th>Item</th><th>Endereço</th></tr>
+  <tr><td>Token (OAuth 2.0)</td><td><code>https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api/token</code></td></tr>
+  <tr><td>Serviço OData</td><td><code>https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api/odata</code></td></tr>
+  <tr><td>Modelo (CSDL)</td><td><code>…/api/odata/$metadata</code></td></tr>
+</table>
+
+<h2>1. Credencial</h2>
+<p>No painel, em <b>Administração › Integrações (API)</b>, o administrador da empresa cria uma credencial para cada
+sistema. Ela tem um <code>client_id</code> e um <code>client_secret</code>, que aparece uma única vez. A API age como o
+usuário que criou a credencial, só com os papéis escolhidos nela (gestor, financeiro ou técnico), e sempre dentro das
+empresas liberadas. Uma credencial pode ser só de consulta. Revogar vale na hora.</p>
+
+<h2>2. Autenticação: bearer token e refresh token</h2>
+<pre><code>POST /api/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&amp;client_id=SEU_CLIENT_ID&amp;client_secret=SEU_CLIENT_SECRET</code></pre>
+<p>Também aceita o <code>client_id</code> e o <code>client_secret</code> no cabeçalho <code>Authorization: Basic</code>. A resposta:</p>
+<pre><code>{ "access_token": "eyJ…", "token_type": "Bearer", "expires_in": 900,
+  "refresh_token": "spr_…", "refresh_token_expires_in": 2592000 }</code></pre>
+<ul>
+  <li><b>access_token</b>: vale 15 minutos. Envie em toda chamada: <code>Authorization: Bearer eyJ…</code>.</li>
+  <li><b>refresh_token</b>: vale 30 dias e <b>uma vez só</b>. Troque por um par novo com
+  <code>grant_type=refresh_token&amp;refresh_token=spr_…</code> e guarde o novo. Se um refresh token já usado aparecer de
+  novo, a sessão inteira é encerrada por segurança e é preciso pedir outro token com o <code>client_secret</code>.</li>
+  <li>Limite: 120 chamadas por minuto por credencial (resposta <code>429</code> com <code>Retry-After</code>).</li>
+</ul>
+
+<h2>3. Empresa e filial: TenantId</h2>
+<p>A conta é o grupo de empresas; cada empresa (CNPJ) pode ser matriz ou filial. Cadastre no painel os códigos da
+empresa no ERP (Protheus: grupo, empresa, unidade e filial). Em cada chamada, escolha a filial como no REST do Protheus:</p>
+<pre><code>TenantId: 01,0101</code></pre>
+<p>Também vale <code>ServPilot-Empresa: &lt;código curto ou id da empresa&gt;</code>. Sem cabeçalho, vale a empresa
+principal da credencial. A filial precisa estar liberada na credencial.</p>
+
+<h2>4. Consultas</h2>
+<pre><code>GET /api/odata/Clientes?$filter=contains(tolower(nome),'mercado') and ativo eq true
+    &amp;$select=nome,documento&amp;$orderby=nome&amp;$top=50&amp;$count=true
+GET /api/odata/Clientes(5d1c…)?$expand=Locais($select=nome,cidade)
+GET /api/odata/OrdensServico?$filter=status eq 'aberta' and prevista_para le 2026-11-30&amp;$expand=cliente($select=nome)
+GET /api/odata/Clientes/$count</code></pre>
+<table>
+  <tr><th>Opção</th><th>Como funciona</th></tr>
+  <tr><td><code>$filter</code></td><td><code>eq ne gt ge lt le</code>, <code>and or not</code>, <code>in (…)</code>, <code>null</code>,
+  <code>contains startswith endswith tolower toupper trim length year month day hour minute date now</code>.
+  Textos entre aspas simples; datas como <code>2026-11-01</code> ou <code>2026-11-01T10:00:00Z</code>; ids sem aspas.</td></tr>
+  <tr><td><code>$select</code>, <code>$orderby</code></td><td>Campos separados por vírgula; <code>desc</code> para ordem decrescente.</td></tr>
+  <tr><td><code>$expand</code></td><td>Um nível, com <code>$select</code>, <code>$filter</code>, <code>$orderby</code> e <code>$top</code> dentro dos parênteses, separados por <code>;</code>.</td></tr>
+  <tr><td><code>$top</code>, <code>$skip</code>, <code>$count</code></td><td>Sem <code>$top</code>, vêm 100 por página com <code>@odata.nextLink</code> para a próxima. Máximo 1.000 por chamada. <code>Prefer: odata.maxpagesize=N</code> também vale.</td></tr>
+  <tr><td><code>incluir_excluidos=true</code></td><td>Traz também os registros excluídos (para sincronizar exclusões).</td></tr>
+</table>
+
+<h2>5. Incluir, alterar e excluir</h2>
+<pre><code>POST   /api/odata/Clientes            { "tipo": "pj", "nome": "Mercado Bom Preço", "documento": "11111111000111" }
+PATCH  /api/odata/Clientes(5d1c…)     { "telefone": "45999990001" }      If-Match: W/"3"   (opcional)
+PUT    /api/odata/Clientes(5d1c…)     registro completo (o que não vier volta ao padrão)
+DELETE /api/odata/Clientes(5d1c…)</code></pre>
+<ul>
+  <li>Incluir responde <code>201</code> com o registro e o cabeçalho <code>Location</code>. Alterar e excluir respondem
+  <code>204</code>; use <code>Prefer: return=representation</code> para receber o registro alterado.</li>
+  <li>Cada registro traz <code>@odata.etag</code>. Mandando o mesmo valor em <code>If-Match</code>, a alteração só acontece
+  se ninguém mexeu no registro desde a leitura (senão, <code>412</code>).</li>
+  <li>Excluir é lógico quando a tabela tem exclusão lógica: o registro some das consultas, mas continua no histórico.</li>
+  <li>Campos do sistema (<code>conta_id</code>, <code>empresa_id</code>, <code>versao</code>, datas de criação e alteração) são ignorados na gravação.</li>
+</ul>
+
+<h2>6. Movimentos e ações</h2>
+<p>Ordens de serviço, orçamentos, planos de preventiva e contratos gravam pelas mesmas regras do painel. Incluir uma OS
+abre a OS com o agendamento; excluir cancela (informe o motivo):</p>
+<pre><code>POST   /api/odata/OrdensServico   { "cliente_id": "…", "local_id": "…", "problema_relatado": "Não gela",
+                                    "equipamentos": ["…"], "agendamento": { "data_prevista": "2026-11-10" } }
+DELETE /api/odata/OrdensServico(…)?motivo=Cliente%20desistiu
+POST   /api/odata/OrdensServico(…)/ServPilot.Acao   { "acao": "concluir" }
+POST   /api/odata/Orcamentos(…)/ServPilot.Acao      { "acao": "aprovar" }</code></pre>
+<p>Itens de OS, atendimentos, medições e similares são só consulta: mudam pela entidade principal.</p>
+
+<h2>7. De-para com o ERP: VinculosExternos</h2>
+<p>Guarde a chave do ERP de cada registro, sem precisar guardar os ids do ServPilot no ERP:</p>
+<pre><code>POST /api/odata/VinculosExternos
+{ "sistema": "protheus", "entidade": "Clientes", "registro_id": "5d1c…",
+  "chave_externa": "000123|01", "filial_externa": "" }
+
+GET /api/odata/VinculosExternos?$filter=entidade eq 'Clientes' and chave_externa eq '000123|01'</code></pre>
+<p><code>filial_externa</code> vazia = cadastro compartilhado no ERP (xFilial em branco).</p>
+
+<h2>8. Exemplo em TLPP (Protheus)</h2>
+<pre><code>#include "tlpp-core.th"
+
+User Function SPClientes() as Logical
+  Local oRest   := FWRest():New("https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api")
+  Local aHeader := {"Content-Type: application/x-www-form-urlencoded"}
+  Local jToken  := JsonObject():New()
+  Local cToken  as Character
+
+  oRest:SetPath("/token")
+  oRest:SetPostParams("grant_type=client_credentials&amp;client_id=" + SuperGetMV("MV_XSPCID", .F., "") + ;
+                      "&amp;client_secret=" + SuperGetMV("MV_XSPSEC", .F., ""))
+  If !oRest:Post(aHeader)
+    ConOut("ServPilot token: " + oRest:GetLastError())
+    Return .F.
+  EndIf
+  jToken:FromJson(oRest:GetResult())
+  cToken := jToken["access_token"]
+
+  oRest:SetPath("/odata/Clientes?$select=nome,documento&amp;$top=100")
+  If oRest:Get({"Authorization: Bearer " + cToken, "TenantId: " + cEmpAnt + "," + cFilAnt})
+    ConOut(oRest:GetResult())
+  EndIf
+Return .T.</code></pre>
+
+<h2>9. Erros</h2>
+<pre><code>{ "error": { "code": "metodo_desabilitado", "message": "Incluir OsItens pela API está desabilitado." } }</code></pre>
+<table>
+  <tr><th>Status</th><th>Quando</th></tr>
+  <tr><td>400</td><td>Consulta ou dado inválido, regra do sistema (o <code>code</code> diz qual), filial desconhecida no TenantId</td></tr>
+  <tr><td>401</td><td>Sem token, token vencido ou credencial revogada</td></tr>
+  <tr><td>403</td><td>Método desabilitado na entidade, credencial só de consulta ou papel sem permissão</td></tr>
+  <tr><td>404</td><td>Entidade ou registro não encontrado (ou de outra empresa)</td></tr>
+  <tr><td>409</td><td>Valor duplicado</td></tr>
+  <tr><td>412</td><td>O registro mudou desde a leitura (If-Match)</td></tr>
+  <tr><td>429</td><td>Passou do limite por minuto</td></tr>
+</table>
+
+<h2>10. Segurança</h2>
+<ul>
+  <li>Só HTTPS. Guarde o <code>client_secret</code> num cofre ou parâmetro protegido; nunca em código-fonte.</li>
+  <li>Uma credencial por sistema, com os menores papéis possíveis. Revogue as que não usa.</li>
+  <li>Cada chamada fica registrada (90 dias) e pode ser vista no painel, na credencial.</li>
+</ul>
+<p>Dúvidas: <b><a href="mailto:anadgtec@gmail.com">anadgtec@gmail.com</a></b>.</p>
+</main>
+</body>
+</html>

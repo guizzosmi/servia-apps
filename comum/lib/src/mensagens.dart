@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -44,6 +46,9 @@ const camposMensagem = <String, String>{
   'validade': 'validade do orçamento',
   'resumo': 'o que foi feito (solução)',
   'link': 'link para o cliente',
+  'aparelhos': 'aparelhos do lembrete de limpeza',
+  'meses': 'meses desde a última limpeza',
+  'ultimo': 'data do último serviço',
 };
 
 /// Os modelos. O texto padrão fica aqui; a empresa guarda só o que mudou
@@ -99,6 +104,53 @@ const modelosMensagem = <ModeloMensagem>[
     padrao: 'Olá, {contato}!\n'
         'Segue o relatório da {os} ({local}), da {empresa}, para consultar ou imprimir:\n'
         '{link}',
+  ),
+  // Guia 68: chamar de volta o cliente parado.
+  ModeloMensagem(
+    chave: 'reativar_cliente',
+    titulo: 'Chamar o cliente de volta',
+    onde: 'Painel: Clientes parados',
+    campos: ['contato', 'empresa', 'cliente', 'local', 'ultimo'],
+    padrao: 'Olá, {contato}!\n'
+        'Aqui é da {empresa}. O último serviço em {local} foi em {ultimo}.\n'
+        'Que tal uma revisão ou limpeza do ar-condicionado antes do calor apertar? É só responder esta mensagem que a '
+        'gente agenda.',
+  ),
+  // Guia 73: cobrança por Pix.
+  ModeloMensagem(
+    chave: 'cobranca_pix',
+    titulo: 'Cobrança por Pix',
+    onde: 'Painel: Caixa > A receber, botão Pix',
+    campos: ['contato', 'empresa', 'cliente', 'valor', 'referencia', 'chave', 'pix'],
+    padrao: 'Olá, {contato}!\n'
+        'Aqui é da {empresa}. Segue o Pix de {valor} ({referencia}).\n'
+        'Chave: {chave}\n'
+        'Ou use o Pix copia e cola:\n'
+        '{pix}\n'
+        'Obrigado!',
+  ),
+  // Guia 72: o link do portal do cliente.
+  ModeloMensagem(
+    chave: 'portal_cliente',
+    titulo: 'Portal do cliente',
+    onde: 'Painel: no cadastro do cliente, Portal do cliente',
+    campos: ['contato', 'empresa', 'cliente', 'link'],
+    padrao: 'Olá, {contato}!\n'
+        'Aqui é da {empresa}. Neste link você acompanha as próximas visitas, os serviços em andamento e o que já foi '
+        'feito, e pode pedir um atendimento quando precisar:\n'
+        '{link}\n'
+        'Guarde o link: ele vale por 1 ano.',
+  ),
+  // Guia 64: lembrete recorrente de limpeza.
+  ModeloMensagem(
+    chave: 'lembrete_limpeza',
+    titulo: 'Lembrete de limpeza',
+    onde: 'Painel: Lembretes de limpeza',
+    campos: ['contato', 'empresa', 'cliente', 'local', 'aparelhos', 'meses'],
+    padrao: 'Olá, {contato}!\n'
+        'Aqui é da {empresa}. Já faz {meses} meses da última limpeza do ar-condicionado em {local} ({aparelhos}).\n'
+        'A limpeza em dia evita mau cheiro, gasto a mais de energia e problemas de saúde. Quer agendar? '
+        'É só responder esta mensagem.',
   ),
 ];
 
@@ -340,12 +392,22 @@ class _FolhaWhatsAppState extends State<_FolhaWhatsApp> {
     Navigator.of(context).pop(e);
   }
 
-  Future<void> _copiar() async {
+  void _copiar() {
     final e = _envio('copiada');
     if (e == null) return;
-    await Clipboard.setData(ClipboardData(text: e.texto));
-    if (!mounted) return;
+    // Sem esperar: em alguns navegadores a cópia não "responde" e a janela ficava aberta.
+    unawaited(Clipboard.setData(ClipboardData(text: e.texto)).catchError((_) {}));
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('Mensagem copiada.')));
+    Navigator.of(context).pop(e);
+  }
+
+  /// Copia só o link e fecha como "copiada" (guia 51): antes a janela ficava aberta e o
+  /// "Cancelar" em seguida cancelava o link que a pessoa acabou de copiar.
+  void _copiarLink() {
+    final e = _envio('copiada');
+    if (e == null) return;
+    unawaited(Clipboard.setData(ClipboardData(text: widget.link!)).catchError((_) {}));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('Link copiado.')));
     Navigator.of(context).pop(e);
   }
 
@@ -441,11 +503,7 @@ class _FolhaWhatsAppState extends State<_FolhaWhatsApp> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
         if (widget.link != null)
           TextButton.icon(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: widget.link!));
-              if (!context.mounted) return;
-              ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('Link copiado.')));
-            },
+            onPressed: _copiarLink,
             icon: const Icon(Icons.link, size: 18),
             label: const Text('Copiar só o link'),
           ),

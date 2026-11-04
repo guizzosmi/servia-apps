@@ -90,6 +90,30 @@ class _OrcamentosDaOsState extends State<OrcamentosDaOs> {
     }
   }
 
+  Future<void> _pelaIa() async {
+    setState(() => _ocupado = true);
+    try {
+      final r = Map<String, dynamic>.from(await Supabase.instance.client.rpc('orcamento_pelo_relato', params: {
+        'p': {'os_id': widget.osId}
+      }) as Map);
+      if (!mounted) return;
+      final sem = ((r['sem_cadastro'] as List?) ?? const []).join(', ');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${r['codigo']}: ${r['itens']} item(ns) do relato'
+            '${sem.isEmpty ? '' : '. Sem cadastro (inclua à mão): $sem'}'),
+        duration: const Duration(seconds: 8),
+      ));
+      await _abrir(r['orcamento_id'] as String);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(mensagemDeErro(e)), backgroundColor: Cores.erro));
+      }
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
   String _quando(Map<String, dynamic> o) => switch (o['status']) {
         'aprovado' => 'aprovado em ${dataBr(o['aprovado_em'])}',
         'reprovado' => 'reprovado em ${dataBr(o['reprovado_em'])}',
@@ -116,15 +140,21 @@ class _OrcamentosDaOsState extends State<OrcamentosDaOs> {
           ]),
           onTap: () => _abrir(o['id'] as String),
         ),
-      if (widget.podeCriar && !_temAberto)
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _ocupado ? null : _criar,
-            icon: const Icon(Icons.add),
-            label: const Text('Novo orçamento'),
+      if (widget.podeCriar)
+        Wrap(spacing: 8, children: [
+          if (!_temAberto)
+            TextButton.icon(
+              onPressed: _ocupado ? null : _criar,
+              icon: const Icon(Icons.add),
+              label: const Text('Novo orçamento'),
+            ),
+          // Guia 71: as peças e a mão de obra que o técnico falou no relato.
+          TextButton.icon(
+            onPressed: _ocupado ? null : _pelaIa,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Montar pelo relato (IA)'),
           ),
-        ),
+        ]),
     ]);
   }
 }

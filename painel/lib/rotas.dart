@@ -7,6 +7,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cadastros/catalogo.dart';
 import 'quadro/quadro_tela.dart';
+import 'telas/agenda_tela.dart';
+import 'telas/estoque_tela.dart';
+import 'telas/lembretes_tela.dart';
+import 'telas/whatsapp_tela.dart';
+import 'telas/caixa_tela.dart';
+import 'telas/fiscal_tela.dart';
+import 'telas/notas_tela.dart';
+import 'telas/parados_tela.dart';
+import 'telas/assistente_tela.dart';
 import 'telas/aparelhos_tela.dart';
 import 'telas/assinatura_tela.dart';
 import 'telas/cadastro_form_tela.dart';
@@ -20,13 +29,17 @@ import 'telas/empresa_tela.dart';
 import 'telas/etiquetas_tela.dart';
 import 'telas/fila_tela.dart';
 import 'telas/importar_tela.dart';
+import 'telas/indicadores_tela.dart';
+import 'telas/integracoes_tela.dart';
 import 'telas/inicio_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/nova_senha_tela.dart';
 import 'telas/orcamento_tela.dart';
 import 'telas/orcamentos_tela.dart';
 import 'telas/os_lista_tela.dart';
 import 'telas/os_nova_tela.dart';
 import 'telas/os_tela.dart';
+import 'telas/plano_assistente_tela.dart';
 import 'telas/plano_tela.dart';
 import 'telas/planos_tela.dart';
 import 'telas/usuario_tela.dart';
@@ -38,9 +51,22 @@ const papeisDoPainel = [Papel.gestor, Papel.financeiro];
 /// Avisa o roteador sempre que a sessão muda (entrou, saiu, trocou empresa).
 class _SessaoMudou extends ChangeNotifier {
   _SessaoMudou() {
-    _assinatura = Supabase.instance.client.auth.onAuthStateChange
-        .listen((_) => notifyListeners());
+    _assinatura = Supabase.instance.client.auth.onAuthStateChange.listen((s) {
+      // Guia 58: entrou pelo link de "Esqueci minha senha" -> tela da senha nova.
+      if (s.event == AuthChangeEvent.passwordRecovery) recuperandoSenha = true;
+      if (s.event == AuthChangeEvent.signedOut) recuperandoSenha = false;
+      notifyListeners();
+    });
   }
+
+  /// Veio do link do e-mail e ainda não gravou a senha nova.
+  bool recuperandoSenha = false;
+
+  void senhaTrocada() {
+    recuperandoSenha = false;
+    notifyListeners();
+  }
+
   late final StreamSubscription<AuthState> _assinatura;
 
   @override
@@ -50,13 +76,17 @@ class _SessaoMudou extends ChangeNotifier {
   }
 }
 
+final sessaoMudou = _SessaoMudou();
+
 final rotas = GoRouter(
   initialLocation: '/',
-  refreshListenable: _SessaoMudou(),
+  refreshListenable: sessaoMudou,
   redirect: (context, state) {
     final sessao = Sessao.atual;
     final local = state.matchedLocation;
     if (sessao == null) return local == '/login' ? null : '/login';
+    if (sessaoMudou.recuperandoSenha) return local == '/nova-senha' ? null : '/nova-senha';
+    if (local == '/nova-senha') return null;
     if (local == '/login') return '/';
     if (local == '/empresa') return null;
     // Sem empresa ativa ou sem papel de painel nesta empresa: escolher outra.
@@ -72,6 +102,7 @@ final rotas = GoRouter(
   errorBuilder: (context, state) => const _NaoEncontrada(),
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginTela()),
+    GoRoute(path: '/nova-senha', builder: (_, __) => const NovaSenhaTela()),
     GoRoute(path: '/empresa', builder: (_, __) => const EmpresaTela()),
     ShellRoute(
       builder: (context, state, filho) =>
@@ -80,6 +111,16 @@ final rotas = GoRouter(
         GoRoute(path: '/', builder: (_, __) => const InicioTela()),
         GoRoute(path: '/etiquetas', builder: (_, __) => const EtiquetasTela()),
         GoRoute(path: '/fila', builder: (_, __) => const FilaTela()),
+        GoRoute(path: '/agenda', builder: (_, __) => const AgendaTela()),
+        GoRoute(path: '/estoque', builder: (_, __) => const EstoqueTela()),
+        GoRoute(path: '/lembretes', builder: (_, __) => const LembretesTela()),
+        GoRoute(path: '/whatsapp', builder: (_, __) => const WhatsappTela()),
+        GoRoute(path: '/caixa', builder: (_, __) => const CaixaTela()),
+        // Guia 81: notas fiscais (Focus NFe).
+        GoRoute(path: '/notas', builder: (_, __) => const NotasTela()),
+        GoRoute(path: '/notas/configuracao', builder: (_, __) => const FiscalTela()),
+        GoRoute(path: '/parados', builder: (_, __) => const ParadosTela()),
+        GoRoute(path: '/assistente', builder: (_, __) => const AssistenteTela()),
         GoRoute(
           path: '/quadro',
           builder: (_, state) {
@@ -120,6 +161,7 @@ final rotas = GoRouter(
           builder: (_, __) => const PlanosTela(),
           routes: [
             GoRoute(path: 'novo', builder: (_, __) => const PlanoTela(key: ValueKey('plano-novo'))),
+            GoRoute(path: 'assistente', builder: (_, __) => const PlanoAssistenteTela()),
             GoRoute(
               path: ':id',
               builder: (_, state) {
@@ -147,6 +189,8 @@ final rotas = GoRouter(
         GoRoute(path: '/aparelhos', builder: (_, __) => const AparelhosTela()),
         GoRoute(path: '/configuracoes', builder: (_, __) => const ConfiguracoesTela()),
         GoRoute(path: '/importar', builder: (_, __) => const ImportarTela()),
+        GoRoute(path: '/indicadores', builder: (_, __) => const IndicadoresTela()),
+        GoRoute(path: '/integracoes', builder: (_, __) => const IntegracoesTela()),
         GoRoute(
           path: '/assinatura',
           builder: (_, state) => AssinaturaTela(pagamento: state.uri.queryParameters['pagamento']),

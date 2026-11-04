@@ -1,4 +1,4 @@
-// ServPilot · página inicial
+// ServPilot · site (início, aplicações e páginas de assunto)
 
 // Número do WhatsApp comercial: só números, com 55 e DDD (ex.: '5545999998888').
 // Vazio: os botões levam para a seção de contato.
@@ -9,10 +9,12 @@ const MENSAGEM = 'Olá! Vi o site do ServPilot e quero conhecer o sistema para a
   document.documentElement.classList.remove('sem-js');
 
   // Botões do WhatsApp
+  //   <a data-whatsapp>                       usa a MENSAGEM padrão acima
+  //   <a data-whatsapp="Olá! Quero ...">      usa o texto do próprio botão
   if (WHATSAPP) {
-    const link = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(MENSAGEM)}`;
     document.querySelectorAll('[data-whatsapp]').forEach((a) => {
-      a.href = link;
+      const texto = (a.getAttribute('data-whatsapp') || '').trim() || MENSAGEM;
+      a.href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(texto)}`;
       a.target = '_blank';
       a.rel = 'noopener';
     });
@@ -20,9 +22,11 @@ const MENSAGEM = 'Olá! Vi o site do ServPilot e quero conhecer o sistema para a
 
   // Topo: fica branco depois que a página rola
   const topo = document.getElementById('topo');
-  const aoRolar = () => topo.classList.toggle('rolou', window.scrollY > 40);
-  aoRolar();
-  window.addEventListener('scroll', aoRolar, { passive: true });
+  if (topo) {
+    const aoRolar = () => topo.classList.toggle('rolou', window.scrollY > 40);
+    aoRolar();
+    window.addEventListener('scroll', aoRolar, { passive: true });
+  }
 
   // Aparecer ao rolar
   const itens = document.querySelectorAll('.revelar');

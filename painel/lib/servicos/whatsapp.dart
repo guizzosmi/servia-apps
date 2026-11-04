@@ -86,6 +86,40 @@ Future<bool> mandarWhatsApp(
   return true;
 }
 
+/// Guia 64: mensagem fora de uma OS (ex.: lembrete de limpeza). Abre a folha do
+/// WhatsApp com o modelo e devolve o que foi enviado (null se cancelou), para
+/// quem chamou registrar.
+Future<EnvioWhatsApp?> mandarWhatsAppSemOs(
+  BuildContext context, {
+  required String modelo,
+  required String titulo,
+  required String clienteId,
+  required Map<String, String?> valores,
+  String? aviso,
+}) async {
+  var contatos = <Map<String, dynamic>>[];
+  var empresa = '';
+  var modelos = <String, dynamic>{};
+  try {
+    contatos = await contatosDoCliente(clienteId);
+    final r = await _empresaEModelos();
+    empresa = r.$1;
+    modelos = r.$2;
+  } catch (e) {
+    if (context.mounted) _avisar(context, mensagemDeErro(e), erro: true);
+    return null;
+  }
+  if (!context.mounted) return null;
+  final texto = textoDoModelo(modelo, modelos);
+  return compartilharWhatsApp(
+    context,
+    titulo: titulo,
+    contatos: contatos,
+    montarTexto: (nome) => montarMensagem(texto, {'empresa': empresa, ...valores, 'contato': nome}),
+    aviso: aviso,
+  );
+}
+
 void _avisar(BuildContext context, String texto, {bool erro = false}) {
   ScaffoldMessenger.maybeOf(context)
       ?.showSnackBar(SnackBar(content: Text(texto), backgroundColor: erro ? Cores.erro : null));

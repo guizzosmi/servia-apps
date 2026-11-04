@@ -114,13 +114,26 @@ class Conteudos {
   }
 
   /// Recibo da conclusão do atendimento: o que foi feito, sem valores.
-  static ConteudoResumo conclusao(Map<String, dynamic> atd) {
+  /// Recibo da conclusão. [comValores]: com o preço de cada item e o total
+  /// (Configurações > Impressão da OS: com, sem ou perguntar na hora).
+  static ConteudoResumo conclusao(Map<String, dynamic> atd, {bool comValores = false}) {
     final banco = EstadoApp.instancia.banco!;
     final nomes = <String>{
       for (final p in banco.participantes(atd['id'])) banco.nomeColaborador(p['colaborador_id']),
     };
     final itens = banco.doAtendimento('os_itens', atd['id'])
       ..sort((a, b) => '${a['descricao']}'.compareTo('${b['descricao']}'));
+    num n(Object? v) => num.tryParse('${v ?? 0}') ?? 0;
+    final linhas = [
+      for (final i in itens)
+        LinhaResumo(
+          descricao: '${i['descricao']}',
+          quantidade: '${numeroBr(i['quantidade'])} ${i['unidade'] ?? ''}'.trim(),
+          unitario: comValores ? n(i['preco_unitario']) : null,
+          desconto: comValores ? n(i['desconto']) : null,
+          total: comValores ? n(i['total']) : null,
+        ),
+    ];
     return ConteudoResumo(
       titulo: 'RECIBO DE SERVIÇO',
       subtitulo: '${codigoOs(_um('ordens_servico', atd['os_id']))} · ${dataBr(EstadoApp.instancia.sync!.hoje)}',
@@ -135,11 +148,16 @@ class Conteudos {
         ('Solução', '${atd['solucao'] ?? ''}'),
         ('Observações', '${atd['observacoes'] ?? ''}'),
       ],
-      itens: [
-        for (final i in itens)
-          LinhaResumo(descricao: '${i['descricao']}', quantidade: '${numeroBr(i['quantidade'])} ${i['unidade'] ?? ''}'.trim()),
-      ],
+      itens: linhas,
+      comValores: comValores && linhas.isNotEmpty,
+      totais: comValores && linhas.isNotEmpty ? _totais(linhas) : const [],
       termo: declaracaoConclusao,
+      recibo: true,
     );
   }
+
+  /// O atendimento tem algum item com preço? (só aí faz sentido perguntar dos valores)
+  static bool temValores(Map<String, dynamic> atd) => EstadoApp.instancia.banco!
+      .doAtendimento('os_itens', atd['id'])
+      .any((i) => (num.tryParse('${i['total'] ?? 0}') ?? 0) != 0);
 }

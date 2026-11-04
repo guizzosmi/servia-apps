@@ -14,6 +14,10 @@
       {
         "source": "/r/**",
         "destination": "/index.html"
+      },
+      {
+        "source": "/p/**",
+        "destination": "/portal.html"
       }
     ],
     "headers": [

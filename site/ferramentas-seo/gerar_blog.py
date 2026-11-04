@@ -28,8 +28,8 @@ def artigo(slug, titulo, descricao, tema, resumo, corpo, perguntas):
 {faq}
 <div class="artigo-chamada">
   <h3>Organize isso no ServPilot</h3>
-  <p>OS no celular do técnico (mesmo sem internet), relato por áudio com IA, orçamento com assinatura e PMOC por aparelho. 7 dias grátis.</p>
-  <a class="botao coral grande" href="/assinar">Testar 7 dias grátis</a>
+  <p>OS no celular do técnico (mesmo sem internet), relato por áudio com IA, orçamento com assinatura e PMOC por aparelho. 14 dias grátis.</p>
+  <a class="botao coral grande" href="/assinar">Testar 14 dias grátis</a>
 </div>
 </article>
 ''' + RODAPE

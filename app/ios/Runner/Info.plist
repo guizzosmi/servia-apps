@@ -70,5 +70,18 @@
 	<string>O microfone é usado para gravar o relato do atendimento.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>A câmera é usada para ler a etiqueta dos equipamentos e tirar as fotos do atendimento.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>As fotos da galeria podem ser anexadas ao atendimento.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>whatsapp</string>
+		<string>itms-beta</string>
+	</array>
 </dict>
 </plist>

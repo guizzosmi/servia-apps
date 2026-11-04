@@ -20,8 +20,12 @@ class StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: r.cor.withValues(alpha: 0.5)),
       ),
+      // Uma linha só: em coluna estreita corta com "..." em vez de quebrar a palavra (guia 51).
       child: Text(
         r.texto,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: r.cor,
           fontSize: compacto ? 11 : 12,

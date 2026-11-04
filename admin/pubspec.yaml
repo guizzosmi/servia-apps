@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # Endereços sem "#" (painel.../assinatura): links de volta do Mercado Pago e F5 (guia 51).
+  flutter_web_plugins:
+    sdk: flutter
   servia_comum:
     path: ../comum
   supabase_flutter: ^2.15.0

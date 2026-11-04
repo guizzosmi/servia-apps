@@ -9,6 +9,20 @@ import 'definicoes.dart';
 
 const _tiposCliente = [Opcao('pj', 'Pessoa jurídica'), Opcao('pf', 'Pessoa física')];
 
+// Guia 59: como os aparelhos do cliente são identificados.
+const _identificacaoEquip = [
+  Opcao('etiqueta', 'Plaqueta ou etiqueta QR da empresa'),
+  Opcao('patrimonio', 'Patrimônio do próprio cliente'),
+  Opcao('descricao', 'Sem plaqueta (só a descrição)'),
+];
+
+// Guia 59: peça com número de série.
+const _controlaSerie = [
+  Opcao('nao', 'Não'),
+  Opcao('opcional', 'Sim, opcional'),
+  Opcao('obrigatorio', 'Sim, obrigatório'),
+];
+
 // Mesmos códigos de mensagem_modelos.evento (ver "Notificações e mensagens").
 const _avisos = [
   Opcao('visita_agendada', 'Visita agendada'),
@@ -84,6 +98,7 @@ const _periodicidades = [
 ];
 
 const _tiposProduto = [Opcao('produto', 'Produto'), Opcao('servico', 'Serviço')];
+const _tiposEstoque = [Opcao('almoxarifado', 'Almoxarifado'), Opcao('veiculo', 'Carro da equipe')];
 
 const _funcoesColab = [
   Opcao('tecnico', 'Técnico'),
@@ -154,9 +169,20 @@ final List<CadastroDef> catalogo = [
       const CampoDef('nome', 'Nome / razão social', obrigatorio: true),
       const CampoDef('nome_fantasia', 'Nome fantasia'),
       const CampoDef('email', 'E-mail', tipo: TipoCampo.email, metade: true),
+      // Guia 81: notas fiscais.
+      const CampoDef('email_nota', 'E-mail para nota fiscal', tipo: TipoCampo.email, metade: true,
+          ajuda: 'Recebe as notas. Em branco: usa o e-mail acima.'),
+      const CampoDef('inscricao_estadual', 'Inscrição estadual', metade: true,
+          ajuda: 'Só para empresas contribuintes (NF-e das peças).'),
       const CampoDef('telefone', 'Telefone', tipo: TipoCampo.telefone, metade: true),
       const CampoDef('telefone2', 'Telefone 2', tipo: TipoCampo.telefone, metade: true),
       const CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
+      const CampoDef('identificacao_equipamentos', 'Como os aparelhos dele são identificados',
+          tipo: TipoCampo.opcoes, opcoes: _identificacaoEquip, padrao: 'etiqueta',
+          ajuda: 'Patrimônio: o app pede o número do cliente. Sem plaqueta: o código é gerado (EQ-0001) e não '
+              'fica provisório.'),
+      const CampoDef('recebe_lembretes', 'Recebe lembrete de limpeza', tipo: TipoCampo.simNao, padrao: true,
+          metade: true, ajuda: 'Guia 64: lembrete pelo WhatsApp quando chega a hora da limpeza'),
       const CampoDef('avisos_desligados', 'Avisos que o cliente NÃO quer receber',
           tipo: TipoCampo.multiOpcoes, opcoes: _avisos),
       const CampoDef('observacoes', 'Observações', tipo: TipoCampo.textoLongo),
@@ -164,10 +190,11 @@ final List<CadastroDef> catalogo = [
     filhos: const [
       FilhoDef('locais', 'cliente_id'),
       FilhoDef('contatos', 'cliente_id'),
+      FilhoDef('precos-cliente', 'cliente_id'),
     ],
     podeExcluir: (r) => r['interno'] != true,
-    aviso: 'O cliente "interno" (a própria empresa) é criado automaticamente '
-        'e serve para a manutenção própria.',
+    aviso: 'O cliente "interno" (a própria empresa) é criado automaticamente e serve para a manutenção '
+        'própria: ele aparece aqui quando "Faz manutenção própria" está ligado em Configurações > Preventivas.',
   ),
 
   CadastroDef(
@@ -199,6 +226,9 @@ final List<CadastroDef> catalogo = [
       const CampoDef('complemento', 'Complemento', metade: true),
       const CampoDef('bairro', 'Bairro', metade: true),
       const CampoDef('cidade', 'Cidade', metade: true),
+      // Guia 81: município da nota (preenchido sozinho pelo CEP na primeira nota).
+      const CampoDef('codigo_ibge', 'Código IBGE do município', metade: true,
+          ajuda: '7 dígitos. Preenchido sozinho na primeira nota fiscal.'),
       CampoDef('uf', 'UF', tipo: TipoCampo.opcoes, opcoes: _opcoesUf, metade: true),
       const CampoDef('regiao', 'Região', metade: true,
           ajuda: 'Agrupa locais próximos no planejamento'),
@@ -383,11 +413,56 @@ final List<CadastroDef> catalogo = [
           tipo: TipoCampo.numero, obrigatorio: true, padrao: 0, metade: true),
       CampoDef('preco_custo', 'Preço de custo (R\$)', tipo: TipoCampo.numero, metade: true),
       CampoDef('garantia_dias', 'Garantia (dias)', tipo: TipoCampo.inteiro, metade: true),
+      CampoDef('controla_serie', 'Número de série',
+          tipo: TipoCampo.opcoes, opcoes: _controlaSerie, padrao: 'nao', metade: true,
+          ajuda: 'Compressor, motor, placa...: o técnico informa o nº da peça nova e o da retirada'),
       CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
+      CampoDef('controla_estoque', 'Controla estoque', tipo: TipoCampo.simNao, padrao: true, metade: true,
+          ajuda: 'Com o estoque ligado (Configurações), a peça usada na OS sai sozinha do carro da equipe'),
       CampoDef('sinonimos', 'Como os técnicos chamam',
           tipo: TipoCampo.listaTexto,
           ajuda: 'Separe por vírgula. Ajuda a IA a reconhecer o item no áudio '
               '(ex.: "cap de partida, capacitor").'),
+      // Guia 81: dados fiscais da peça (NF-e).
+      CampoDef('ncm', 'NCM', metade: true,
+          ajuda: '8 dígitos. Obrigatório para emitir a NF-e da peça (confira com o contador).',
+          validar: _validarNcm),
+      CampoDef('cest', 'CEST', metade: true, ajuda: '7 dígitos, quando a peça tiver.',
+          validar: _validarCest),
+      CampoDef('origem_fiscal', 'Origem da mercadoria (NF-e)', tipo: TipoCampo.inteiro, padrao: 0, metade: true,
+          ajuda: '0 nacional; 1 importação direta; 2 estrangeira comprada no Brasil.'),
+      CampoDef('cfop', 'CFOP próprio', metade: true,
+          ajuda: 'Deixe em branco para usar o da Configuração fiscal.',
+          validar: _validarCfop),
+    ],
+  ),
+
+  // Guia 59: preço especial de peças e serviços para um cliente (filho do cliente).
+  const CadastroDef(
+    chave: 'precos-cliente',
+    tabela: 'cliente_precos',
+    titulo: 'Tabela de preços do cliente',
+    singular: 'Preço do cliente',
+    icone: Icons.sell_outlined,
+    noMenu: false,
+    select: '*, produtos(descricao, preco_venda)',
+    colunasBusca: ['observacoes'],
+    // A tabela não tem "nome": ordena pela criação e o título é o preço.
+    ordem: 'criado_em',
+    colunaTitulo: 'preco',
+    colunas: [
+      ColunaDef('produtos.descricao', 'Peça ou serviço', flex: 3),
+      ColunaDef('produtos.preco_venda', 'Catálogo', tipo: TipoCampo.numero),
+      ColunaDef('preco', 'Preço do cliente', tipo: TipoCampo.numero),
+    ],
+    campos: [
+      CampoDef('cliente_id', 'Cliente', tipo: TipoCampo.lookup, obrigatorio: true, lookup: Lookup(tabela: 'clientes')),
+      CampoDef('produto_id', 'Peça ou serviço',
+          tipo: TipoCampo.lookup, obrigatorio: true, lookup: Lookup(tabela: 'produtos', colunaRotulo: 'descricao')),
+      CampoDef('preco', 'Preço para este cliente (R\$)', tipo: TipoCampo.numero, obrigatorio: true, metade: true,
+          ajuda: 'Vale na OS e no orçamento (painel e app) no lugar do preço do catálogo'),
+      CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
+      CampoDef('observacoes', 'Observações', tipo: TipoCampo.textoLongo),
     ],
   ),
 
@@ -411,7 +486,9 @@ final List<CadastroDef> catalogo = [
       CampoDef('categoria', 'Categoria',
           tipo: TipoCampo.opcoes, opcoes: _categoriasTipo, obrigatorio: true,
           padrao: 'climatizacao', metade: true),
-      CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true),
+      CampoDef('serie_obrigatoria', 'Número de série obrigatório no cadastro do aparelho',
+          tipo: TipoCampo.simNao, padrao: false, metade: true),
+      CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
     ],
     filhos: [FilhoDef('modelos-medicao', 'tipo_equipamento_id')],
     aviso: 'Os tipos de equipamento e as medições valem para todas as empresas da conta.',
@@ -535,8 +612,9 @@ final List<CadastroDef> catalogo = [
     singular: 'Equipe',
     icone: Icons.groups_outlined,
     colunas: [
-      ColunaDef('cor', 'Cor', tipo: TipoCampo.cor, flex: 1),
+      // O nome primeiro: na tela estreita a 1ª coluna vira o título da linha (guia 51).
       ColunaDef('nome', 'Nome', flex: 4),
+      ColunaDef('cor', 'Cor', tipo: TipoCampo.cor, flex: 1),
       ColunaDef('ativa', 'Ativa', tipo: TipoCampo.simNao, flex: 1),
     ],
     campos: [
@@ -577,6 +655,35 @@ final List<CadastroDef> catalogo = [
           tipo: TipoCampo.opcoes, opcoes: _papelMembro, obrigatorio: true,
           padrao: 'membro', metade: true,
           ajuda: 'Cada equipe tem um líder só'),
+      CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
+    ],
+  ),
+
+  // Guia 63: locais de estoque (almoxarifado e o carro de cada equipe). Abre pela tela Estoque.
+  const CadastroDef(
+    chave: 'estoques',
+    tabela: 'estoques',
+    titulo: 'Locais de estoque',
+    singular: 'Local de estoque',
+    icone: Icons.warehouse_outlined,
+    noMenu: false,
+    select: '*, equipes(nome)',
+    colunas: [
+      ColunaDef('nome', 'Nome', flex: 3),
+      ColunaDef('tipo', 'Tipo', tipo: TipoCampo.opcoes, opcoes: _tiposEstoque, flex: 2),
+      ColunaDef('equipes.nome', 'Equipe', flex: 2),
+      ColunaDef('padrao', 'Padrão', tipo: TipoCampo.simNao, flex: 1),
+      ColunaDef('ativo', 'Ativo', tipo: TipoCampo.simNao, flex: 1),
+    ],
+    campos: [
+      CampoDef('nome', 'Nome', obrigatorio: true),
+      CampoDef('tipo', 'Tipo', tipo: TipoCampo.opcoes, opcoes: _tiposEstoque, obrigatorio: true,
+          padrao: 'almoxarifado', metade: true),
+      CampoDef('equipe_id', 'Equipe (carro)', tipo: TipoCampo.lookup, metade: true,
+          lookup: Lookup(tabela: 'equipes', colunaAtivo: 'ativa'),
+          ajuda: 'Obrigatória no carro: a peça usada pela equipe sai daqui'),
+      CampoDef('padrao', 'Almoxarifado padrão', tipo: TipoCampo.simNao, padrao: false, metade: true,
+          ajuda: 'De onde sai a peça lançada na OS sem atendimento'),
       CampoDef('ativo', 'Ativo', tipo: TipoCampo.simNao, padrao: true, metade: true),
     ],
   ),
@@ -639,3 +746,14 @@ Set<String> colunasPaiDe(String chave) => {
         for (final f in d.filhos)
           if (f.cadastro == chave) f.colunaPai,
     };
+
+// Guia 81: dados fiscais da peça (só dígitos; em branco vale).
+String? _digitos(Object? v, int n, String nome) {
+  final t = '${v ?? ''}'.trim();
+  if (t.isEmpty || RegExp('^\\d{$n}\$').hasMatch(t)) return null;
+  return '$nome tem $n dígitos.';
+}
+
+String? _validarNcm(Object? v) => _digitos(v, 8, 'NCM');
+String? _validarCest(Object? v) => _digitos(v, 7, 'CEST');
+String? _validarCfop(Object? v) => _digitos(v, 4, 'CFOP');

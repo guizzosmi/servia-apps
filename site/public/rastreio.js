@@ -62,7 +62,7 @@
   // ---------------------------------------------------------------- eventos (as conversões)
   //   ServPilotRastreio.evento('cadastro')   conta criada pelo site (a conversão principal)
   //   ServPilotRastreio.evento('whatsapp')   clicou para falar no WhatsApp
-  //   ServPilotRastreio.evento('teste')      clicou em "Testar 7 dias grátis"
+  //   ServPilotRastreio.evento('teste')      clicou em "Testar 14 dias grátis"
   function evento(nome, extra) {
     if (!ligado) return;
     const dados = Object.assign({}, extra || {});

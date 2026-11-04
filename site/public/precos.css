@@ -180,3 +180,7 @@
 @media (max-width: 520px) { .planos-escolha { grid-template-columns: 1fr; } }
 .inclui small b { display: inline; font-size: inherit; }
 .sucesso .aviso-app { margin-top: 18px; background: #FFF5E5; border: 1px solid #EBCB95; border-radius: 12px; padding: 12px 14px; text-align: left; font-size: 15px; }
+
+/* Antes em style="" (bloqueado pelo CSP) */
+.secao.sem-topo { padding-top: 0; }
+.botao.sim-assinar { margin-top: 18px; justify-content: center; }

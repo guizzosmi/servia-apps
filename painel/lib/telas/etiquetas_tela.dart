@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
@@ -116,6 +118,62 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
       } else {
         await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'etiquetas-qr');
       }
+    } catch (e) {
+      _avisar(mensagemDeErro(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _gerando = false);
+    }
+  }
+
+  /// Guia 57: etiquetas em branco (só o QR). O técnico cola no aparelho e lê
+  /// no app ao cadastrar no levantamento: a etiqueta fica ligada a ele.
+  Future<void> _emBranco() async {
+    final qtd = TextEditingController(text: '${_modelo.porFolha}');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Etiquetas em branco'),
+        content: SizedBox(
+          width: 420,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Cada etiqueta tem um QR único, ainda sem aparelho. No levantamento do local, o técnico cola a '
+                'etiqueta e toca em "Etiqueta QR" no cadastro do aparelho: ela fica ligada a ele.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: qtd,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Quantas', helperText: 'Uma folha = ${_modelo.porFolha}'),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Gerar PDF')),
+        ],
+      ),
+    );
+    final n = int.tryParse(qtd.text.trim()) ?? 0;
+    qtd.dispose();
+    if (ok != true) return;
+    if (n < 1 || n > 1000) {
+      _avisar('De 1 a 1.000 etiquetas.', erro: true);
+      return;
+    }
+    setState(() => _gerando = true);
+    try {
+      const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      final r = Random.secure();
+      final tokens = [for (var i = 0; i < n; i++) List.generate(10, (_) => letras[r.nextInt(letras.length)]).join()];
+      final bytes = await gerarPdfEtiquetas(
+        etiquetas: [
+          for (final t in tokens) Etiqueta(codigo: t, qrToken: t, descricao: 'Etiqueta do aparelho (ServPilot)'),
+        ],
+        modelo: _modelo,
+        rodape: await _rodape(),
+        pular: int.tryParse(_pular.text.trim()) ?? 0,
+        contorno: _contorno,
+      );
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'etiquetas-em-branco');
     } catch (e) {
       _avisar(mensagemDeErro(e), erro: true);
     } finally {
@@ -254,6 +312,13 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          TextButton.icon(
+                            key: const ValueKey('emBranco'),
+                            onPressed: _gerando ? null : _emBranco,
+                            icon: const Icon(Icons.qr_code_2),
+                            label: const Text('Etiquetas em branco'),
+                          ),
+                          const Spacer(),
                           OutlinedButton.icon(
                             onPressed: _gerando ? null : () => _gerar(baixar: true),
                             icon: const Icon(Icons.download),

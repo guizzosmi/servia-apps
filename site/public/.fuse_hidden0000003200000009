@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR" class="sem-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ordem de serviço para ar-condicionado e refrigeração | ServPilot</title>
+<meta name="description" content="Ordem de serviço digital para ar-condicionado: cliente, local, equipamentos, medições, fotos, peças, relato e assinatura, com PDF para o cliente e o que cobrar. Teste grátis.">
+<meta name="theme-color" content="#121A2B">
+<link rel="canonical" href="https://servpilot.com.br/ordem-de-servico-ar-condicionado">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="ServPilot">
+<meta property="og:title" content="Ordem de serviço para ar-condicionado e refrigeração | ServPilot">
+<meta property="og:description" content="Ordem de serviço digital para ar-condicionado: cliente, local, equipamentos, medições, fotos, peças, relato e assinatura, com PDF para o cliente e o que cobrar. Teste grátis.">
+<meta property="og:url" content="https://servpilot.com.br/ordem-de-servico-ar-condicionado">
+<meta property="og:image" content="https://servpilot.com.br/img/compartilhar.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/conteudo.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "ServPilot", "applicationCategory": "BusinessApplication", "applicationSubCategory": "Gestão de serviços de campo", "operatingSystem": "Android, Web", "url": "https://servpilot.com.br", "inLanguage": "pt-BR", "description": "Sistema para empresas de refrigeração e climatização: ordens de serviço, quadro do dia das equipes, app do técnico que funciona sem internet, relato por áudio com inteligência artificial, orçamento com assinatura do cliente, preventivas e PMOC.", "offers": [{"@type": "Offer", "name": "Plano Autônomo", "price": "99.99", "priceCurrency": "BRL", "url": "https://servpilot.com.br/precos", "description": "1 usuário, 300 minutos de IA e 250 mensagens; tudo incluso, inclusive PMOC; 7 dias grátis."}, {"@type": "Offer", "name": "Plano Equipe", "price": "199.00", "priceCurrency": "BRL", "url": "https://servpilot.com.br/precos", "description": "Plano mensal com 2 usuários, 600 minutos de IA e 500 mensagens; usuário extra R$ 69/mês; 7 dias grátis."}], "publisher": {"@type": "Organization", "name": "ServPilot", "url": "https://servpilot.com.br"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Como fazer uma ordem de serviço de ar-condicionado?", "acceptedAnswer": {"@type": "Answer", "text": "Registre o cliente, o local, os equipamentos e o problema; no atendimento, inclua as medições, as peças, as fotos, o relato e a assinatura do cliente. No ServPilot, o técnico preenche pelo celular e o relato pode ser falado."}}, {"@type": "Question", "name": "Tem modelo de OS de ar-condicionado?", "acceptedAnswer": {"@type": "Answer", "text": "O ServPilot já traz a OS com os campos de refrigeração (equipamento, capacidade, fluido, medições e checklist) e gera o PDF para o cliente."}}, {"@type": "Question", "name": "A OS digital tem validade?", "acceptedAnswer": {"@type": "Answer", "text": "A OS registra data, hora, quem fez e a assinatura do cliente, e serve como comprovante do serviço prestado. Para valores altos, use também o aceite do orçamento."}}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "ServPilot", "item": "https://servpilot.com.br/"}, {"@type": "ListItem", "position": 2, "name": "Ordem de serviço para ar-condicionado", "item": "https://servpilot.com.br/ordem-de-servico-ar-condicionado"}]}</script>
+</head>
+<body>
+
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="topo" id="topo">
+  <div class="faixa topo-dentro">
+    <a href="/" class="marca" aria-label="ServPilot, início">
+      <img class="marca-escura" src="/img/logo-escuro.svg" alt="ServPilot" width="150" height="40">
+      <img class="marca-clara" src="/img/logo.svg" alt="" width="150" height="40">
+    </a>
+    <nav class="menu" aria-label="Seções">
+      <a href="/sistema-para-refrigeracao">Para refrigeração</a>
+      <a href="/software-pmoc">PMOC</a>
+      <a href="/precos">Preços</a>
+      <a href="/blog">Blog</a>
+    </nav>
+    <div class="topo-acoes">
+      <a class="botao fantasma" href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
+      <a class="botao primario so-largo" href="/assinar">Testar 7 dias grátis</a>
+    </div>
+  </div>
+</header>
+
+<main id="conteudo">
+<section class="abertura lp-abertura">
+  <div class="abertura-fundo" aria-hidden="true"></div>
+  <div class="faixa">
+    <div class="abertura-texto">
+      <p class="lp-trilha"><a href="/">ServPilot</a> › Ordem de serviço para ar-condicionado</p>
+      <h1>Ordem de serviço para ar-condicionado <span class="destaque">completa, sem papel.</span></h1>
+      <p class="lead">Cada OS do ServPilot já nasce com o cliente, o local e os equipamentos, e volta do campo com o relato, as medições, as peças, as fotos e a assinatura. O relatório vai para o cliente pelo WhatsApp e o valor entra no &quot;a cobrar&quot;.</p>
+      <div class="abertura-acoes">
+        <a class="botao coral grande" href="/assinar">Testar 7 dias grátis</a>
+        <a class="botao contorno-claro grande" href="/precos">Ver preços</a>
+      </div>
+      <ul class="abertura-garantias"><li>7 dias grátis, sem cartão</li><li>A partir de R$ 99,99/mês</li><li>Sem fidelidade</li><li>Funciona sem internet</li></ul>
+    </div>
+  </div>
+</section>
+<section class="secao">
+  <div class="faixa">
+    <div class="titulo-secao revelar"><p class="sobretitulo">O que vai na OS</p><h2>Uma OS de refrigeração que não deixa nada de fora</h2>
+      </div>
+    <div class="lp-grade">
+      <div class="lp-bloco revelar"><h3>Cliente, local e contato</h3><p>Endereço, instruções de acesso e quem acompanha o serviço.</p></div>
+      <div class="lp-bloco revelar"><h3>Equipamentos</h3><p>Marca, modelo, capacidade, fluido e o histórico de cada aparelho.</p></div>
+      <div class="lp-bloco revelar"><h3>Medições</h3><p>Pressões, correntes, tensões e temperaturas do tipo do equipamento.</p></div>
+      <div class="lp-bloco revelar"><h3>Peças e mão de obra</h3><p>Do catálogo, com preço e desconto, ou fora dele quando a empresa permitir.</p></div>
+      <div class="lp-bloco revelar"><h3>Fotos e relato</h3><p>Antes e depois, e o relato falado pelo técnico e organizado pela IA.</p></div>
+      <div class="lp-bloco revelar"><h3>Assinatura e PDF</h3><p>Assinatura do cliente na tela e o relatório em PDF pelo WhatsApp.</p></div>
+    </div>
+  </div>
+</section>
+<section class="secao">
+  <div class="faixa estreita">
+    <div class="titulo-secao revelar"><p class="sobretitulo">Modelo</p><h2>Os campos de uma boa OS de ar-condicionado</h2></div>
+    <table class="lp-tabela revelar">
+      <thead><tr><th>Campo</th><th>Por que importa</th></tr></thead>
+      <tbody>
+        <tr><td>Tipo (corretiva, preventiva, instalação)</td><td>Define o checklist e a garantia</td></tr>
+        <tr><td>Problema relatado</td><td>O que o cliente disse, para conferir no fim</td></tr>
+        <tr><td>Equipamentos atendidos</td><td>Histórico por aparelho e PMOC</td></tr>
+        <tr><td>Medições</td><td>Prova técnica do serviço e base para o próximo atendimento</td></tr>
+        <tr><td>Peças, serviços e valores</td><td>O que cobrar, sem esquecer nada</td></tr>
+        <tr><td>Assinatura do cliente</td><td>Comprova a execução e o aceite</td></tr>
+      </tbody>
+    </table>
+    <div class="lp-cta"><a class="botao coral grande" href="/assinar">Testar 7 dias grátis</a>
+      <a class="botao primario grande" href="/precos">Ver preços e simulador</a></div>
+  </div>
+</section>
+<section class="secao clara" id="perguntas">
+  <div class="faixa estreita">
+    <div class="titulo-secao revelar"><p class="sobretitulo">Perguntas frequentes</p><h2>Dúvidas comuns</h2></div>
+    <div class="perguntas">
+      <details class="revelar"><summary>Como fazer uma ordem de serviço de ar-condicionado?</summary>
+        <p>Registre o cliente, o local, os equipamentos e o problema; no atendimento, inclua as medições, as peças, as fotos, o relato e a assinatura do cliente. No ServPilot, o técnico preenche pelo celular e o relato pode ser falado.</p></details>
+      <details class="revelar"><summary>Tem modelo de OS de ar-condicionado?</summary>
+        <p>O ServPilot já traz a OS com os campos de refrigeração (equipamento, capacidade, fluido, medições e checklist) e gera o PDF para o cliente.</p></details>
+      <details class="revelar"><summary>A OS digital tem validade?</summary>
+        <p>A OS registra data, hora, quem fez e a assinatura do cliente, e serve como comprovante do serviço prestado. Para valores altos, use também o aceite do orçamento.</p></details>
+    </div>
+  </div>
+</section>
+<div class="faixa"><div class="lp-veja"><a href="/sistema-para-refrigeracao">Sistema para refrigeração</a><a href="/blog/ordem-de-servico-refrigeracao">O que não pode faltar na OS (blog)</a><a href="/app-tecnico-refrigeracao">App do técnico</a><a href="/precos">Preços</a></div></div>
+<section class="chamada">
+  <div class="faixa chamada-dentro revelar">
+    <img src="/img/simbolo-escuro.svg" alt="" width="72" height="72" class="chamada-simbolo">
+    <h2>Teste com a sua equipe, num serviço de verdade.</h2>
+    <p>7 dias grátis, sem cartão. Depois, R$ 99,99 por mês para quem trabalha sozinho ou R$ 199 com 2 usuários, com preço aberto para o resto.</p>
+    <div class="abertura-acoes centro">
+      <a class="botao coral grande" href="/assinar">Começar o teste grátis</a>
+      <a class="botao contorno-claro grande" href="/precos">Ver preços</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <div class="faixa rodape-dentro">
+    <div>
+      <img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38">
+      <p>Gestão inteligente de serviços de campo para refrigeração e climatização.</p>
+    </div>
+    <nav aria-label="Rodapé">
+      <a href="/sistema-para-refrigeracao">Sistema para refrigeração</a>
+      <a href="/software-pmoc">Software de PMOC</a>
+      <a href="/app-tecnico-refrigeracao">App do técnico</a>
+      <a href="/ordem-de-servico-ar-condicionado">Ordem de serviço</a>
+      <a href="/precos">Preços</a>
+      <a href="/blog">Blog</a>
+      <a href="/termos">Termos de uso</a>
+      <a href="/privacidade">Privacidade</a>
+      <a href="#" data-cookies>Cookies</a>
+    </nav>
+    <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+<script src="/rastreio.js" defer></script>
+</body>
+</html>

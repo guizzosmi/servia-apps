@@ -170,12 +170,19 @@ class _FormRegrasState extends State<_FormRegras> {
   late final _pagar = TextEditingController(text: '${widget.regras['dias_para_pagar'] ?? 5}');
   late final _bloquear = TextEditingController(text: '${widget.regras['bloquear_apos_dias'] ?? ''}');
   late bool _atendeu = widget.regras['conta_quem_atendeu'] != false;
+  // Guia 81: módulo de notas fiscais.
+  late final _notasModulo = TextEditingController(text: '${widget.regras['notas_valor_modulo'] ?? 49}');
+  late final _notasIncluidas = TextEditingController(text: '${widget.regras['notas_incluidas'] ?? 50}');
+  late final _notasExtra = TextEditingController(text: '${widget.regras['notas_valor_extra'] ?? 0.49}');
 
   @override
   void dispose() {
     _dias.dispose();
     _pagar.dispose();
     _bloquear.dispose();
+    _notasModulo.dispose();
+    _notasIncluidas.dispose();
+    _notasExtra.dispose();
     super.dispose();
   }
 
@@ -195,6 +202,11 @@ class _FormRegrasState extends State<_FormRegras> {
           campoTexto(_bloquear, 'Bloquear sozinho depois de quantos dias de atraso',
               ajuda: 'Vazio = nunca bloqueia sozinho (você decide na tela do cliente). Cortesia nunca é bloqueada.',
               teclado: TextInputType.number),
+          const SizedBox(height: 8),
+          const Text('Notas fiscais (módulo por empresa)', style: TextStyle(fontWeight: FontWeight.w600)),
+          campoTexto(_notasModulo, 'Mensalidade do módulo (R\$)', teclado: TextInputType.number),
+          campoTexto(_notasIncluidas, 'Notas incluídas por mês', teclado: TextInputType.number),
+          campoTexto(_notasExtra, 'Nota extra (R\$)', teclado: TextInputType.number),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton(
@@ -203,6 +215,9 @@ class _FormRegrasState extends State<_FormRegras> {
                 'conta_quem_atendeu': _atendeu,
                 'dias_para_pagar': numero(_pagar.text).toInt(),
                 'bloquear_apos_dias': _bloquear.text.trim().isEmpty ? null : numero(_bloquear.text).toInt(),
+                'notas_valor_modulo': numero(_notasModulo.text),
+                'notas_incluidas': numero(_notasIncluidas.text).toInt(),
+                'notas_valor_extra': numero(_notasExtra.text),
               }),
               child: const Text('Salvar regras'),
             ),

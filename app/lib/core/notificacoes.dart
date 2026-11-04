@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'firebase_opcoes.dart';
+import 'firebase_opcoes_ios.dart';
 
 /// Notificações no celular (Firebase Cloud Messaging).
 ///
@@ -29,8 +30,13 @@ class Notificacoes {
   /// Na abertura do app. Sem configuração (ou no iPhone, por enquanto),
   /// o app segue sem notificações.
   static Future<void> iniciar({required VoidCallback aoChegar}) async {
-    final opcoes = opcoesFirebase;
-    if (opcoes == null || defaultTargetPlatform != TargetPlatform.android) return;
+    // Guia 66: no iPhone, só depois de o app do iPhone existir no Firebase.
+    final opcoes = switch (defaultTargetPlatform) {
+      TargetPlatform.android => opcoesFirebase,
+      TargetPlatform.iOS => opcoesFirebaseIos,
+      _ => null,
+    };
+    if (opcoes == null) return;
     try {
       await Firebase.initializeApp(options: opcoes);
       _ligado = true;

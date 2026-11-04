@@ -5,10 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
 import '../servicos/parametros.dart';
+import '../widgets/sla.dart';
 import '../widgets/avisos_contratos.dart';
 import '../widgets/dias_sem_fechar.dart';
 import '../widgets/margem.dart';
 import '../widgets/prazos_preventivas.dart';
+import '../widgets/resumo_semana.dart';
 
 /// Tela inicial: números da operação, prazos das preventivas (quando a
 /// empresa usa) e contadores dos cadastros.
@@ -135,9 +137,14 @@ class _InicioTelaState extends State<InicioTela> {
               style: const TextStyle(color: Cores.neutro)),
           // Dias anteriores sem fechar (só o gestor vê; nunca hoje nem futuro).
           const DiasSemFechar(),
+          // Guia 68: os 7 dias em números e alertas.
+          const ResumoSemana(),
+          // Guia 70: SLA vencido ou vencendo.
+          const AlertasSla(),
           const SizedBox(height: 24),
           Wrap(spacing: 16, runSpacing: 16, children: [
-            _cartaoOperacao(Icons.inbox_outlined, 'na fila', _naFila, '/fila'),
+            _cartaoOperacao(Icons.inbox_outlined, ParametrosEmpresa.instancia.modoSimples ? 'para agendar' : 'na fila',
+                _naFila, ParametrosEmpresa.instancia.modoSimples ? '/agenda' : '/fila'),
             _cartaoOperacao(Icons.assignment_outlined, 'OS em aberto', _osAbertas, '/os'),
             _cartaoOperacao(Icons.request_quote_outlined, 'Orçamentos em Aberto', _orcamentosEmAberto, '/orcamentos'),
             if (_veCobranca) _cartaoOperacao(Icons.receipt_long_outlined, 'OS a cobrar', _aCobrar, '/cobrar'),

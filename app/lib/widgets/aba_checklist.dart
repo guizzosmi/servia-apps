@@ -113,11 +113,8 @@ class _AbaChecklistState extends State<AbaChecklist> {
     await _abrir(achado['id'] as String);
   }
 
-  Future<void> _abrir(String aparelhoId) => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (ctx) => _ChecklistDoAparelho(atd: widget.atd, aparelhoId: aparelhoId, habilitado: widget.habilitado),
-      );
+  Future<void> _abrir(String aparelhoId) =>
+      abrirChecklistDoAparelho(context, widget.atd, aparelhoId, habilitado: widget.habilitado);
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +332,19 @@ Future<String?> pedirObservacao(BuildContext context, String titulo, {String ini
 /// O checklist de um aparelho, numa folha de baixo: os itens, "Marcar o que
 /// falta" (abrindo a câmera em sequência para os itens que pedem foto) e a
 /// foto do aparelho.
+/// Abre o checklist de um aparelho (guia 55: também ao ler a etiqueta na aba
+/// Equipamentos). Devolve sem abrir quando a OS não tem itens para ele.
+Future<void> abrirChecklistDoAparelho(BuildContext context, Map<String, dynamic> atd, String aparelhoId,
+    {required bool habilitado}) async {
+  final itens = AcoesChecklist.porAparelho(atd['os_id'])[aparelhoId] ?? const [];
+  if (itens.isEmpty) return;
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => _ChecklistDoAparelho(atd: atd, aparelhoId: aparelhoId, habilitado: habilitado),
+  );
+}
+
 class _ChecklistDoAparelho extends StatefulWidget {
   const _ChecklistDoAparelho({required this.atd, required this.aparelhoId, required this.habilitado});
 
@@ -437,7 +447,11 @@ class _ChecklistDoAparelhoState extends State<_ChecklistDoAparelho> {
                       child: FilledButton.icon(
                         onPressed: faltando.isEmpty ? null : () => _marcarOQueFalta(faltando),
                         icon: const Icon(Icons.done_all),
-                        label: Text(faltando.isEmpty ? 'Tudo marcado' : 'Marcar o que falta como feito (${faltando.length})'),
+                        label: Text(faltando.isEmpty
+                            ? 'Tudo marcado'
+                            : faltando.length == itens.length
+                                ? 'Tudo OK neste aparelho (${faltando.length})'
+                                : 'Tudo OK: marcar o que falta (${faltando.length})'),
                       ),
                     ),
                   ),

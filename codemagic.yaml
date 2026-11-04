@@ -1,4 +1,4 @@
-# ServPilot - build do app do técnico para iPhone (guia 41, Parte B).
+# ServPilot - build do app do técnico para iPhone (guia 66: passo a passo completo).
 # O Codemagic compila no Mac dele, assina com a conta da Apple (pela chave
 # da App Store Connect, cadastrada no Codemagic com o nome abaixo) e manda
 # para o TestFlight. Nenhuma senha fica neste arquivo.
@@ -24,8 +24,9 @@ workflows:
         script: flutter pub get
       - name: Assinatura
         script: xcode-project use-profiles
-      - name: CocoaPods
-        script: cd ios && pod install
+      - name: CocoaPods (só se o Flutter gerou o Podfile)
+        script: |
+          if [ -f ios/Podfile ]; then cd ios && pod install; else echo "sem Podfile: dependências pelo Swift Package Manager"; fi
       - name: Build (número do build = número da execução no Codemagic)
         script: |
           flutter build ipa --release \

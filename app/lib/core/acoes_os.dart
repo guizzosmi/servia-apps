@@ -1,5 +1,6 @@
 import 'acoes_atendimento.dart';
 import 'acoes_cadastro.dart';
+import 'acoes_orcamento.dart';
 import 'acoes_relato.dart';
 import 'banco_local.dart';
 import 'consultas.dart';
@@ -61,6 +62,7 @@ class PedidoOs {
     this.equipamentosNovos = const [],
     this.contatoId,
     this.contatoNovo,
+    this.retornoDeOsId,
   });
 
   final String? clienteId;
@@ -78,6 +80,9 @@ class PedidoOs {
   /// Quem pediu: um contato do cliente ou um cadastrado na hora.
   final String? contatoId;
   final ContatoNovo? contatoNovo;
+
+  /// Guia 59: retorno de um serviço anterior (a OS que o técnico citou no áudio).
+  final String? retornoDeOsId;
 }
 
 /// Abrir OS pelo app. Como as outras ações: entra na fila, aparece no
@@ -128,7 +133,8 @@ class AcoesOs {
         cidades[l['cliente_id']] = '${cidades[l['cliente_id']] ?? ''} ${simples(l['nome'])} ${simples(l['cidade'])}';
       }
     }
-    final lista = _banco.todos('clientes').where(_vivo).where((c) {
+    final interno = AcoesOrcamento.config.manutencaoPropria;
+    final lista = _banco.todos('clientes').where(_vivo).where((c) => interno || c['interno'] != true).where((c) {
       if (b.isEmpty) return true;
       final texto = '${simples(c['nome'])} ${simples(c['nome_fantasia'])} ${cidades[c['id']] ?? ''}';
       return b.split(' ').where((p) => p.isNotEmpty).every(texto.contains);
@@ -195,6 +201,7 @@ class AcoesOs {
       'tipo': pedido.tipo,
       'prioridade': pedido.prioridade,
       'problema_relatado': pedido.problema.trim(),
+      if (pedido.retornoDeOsId != null) 'retorno_de_os_id': pedido.retornoDeOsId,
       'equipamentos': pedido.equipamentos,
       if (pedido.equipamentosNovos.isNotEmpty)
         'equipamentos_novos': [for (final e in pedido.equipamentosNovos) e.paraEnvio()],
