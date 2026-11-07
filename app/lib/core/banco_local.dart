@@ -188,6 +188,9 @@ class BancoLocal extends ChangeNotifier {
         }
       case 'cadastro_app':
         yield* doMapa(d['dados']);
+      // Guia 80: a OS que já existia, trazida para a parte (o serviço novo).
+      case 'os_puxar':
+        if (d['parte_item_id'] != null) yield '${d['parte_item_id']}';
     }
   }
 

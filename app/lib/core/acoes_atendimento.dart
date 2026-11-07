@@ -57,11 +57,13 @@ class AcoesAtendimento {
 
   /// "Estou neste serviço": cria o atendimento (se for o primeiro) e faz o
   /// check-in de quem pediu. O líder pode levar junto os membros livres.
-  /// Com [colaboradorId], o líder faz o check-in de outra pessoa.
+  /// Com [colaboradorId], o líder faz o check-in de outra pessoa. [em]: a
+  /// hora em que começou, se não foi agora (o serviço que ele já fez, guia 80).
   static Future<String> checkin(
     Map<String, dynamic> item, {
     List<String> acompanhantes = const [],
     String? colaboradorId,
+    DateTime? em,
   }) async {
     final atdId = idAtendimento(item['id']);
     final quem = colaboradorId ?? eu;
@@ -69,7 +71,7 @@ class AcoesAtendimento {
     final acomp = [
       for (final c in acompanhantes) {'colaborador_id': c, 'participante_id': novoId()},
     ];
-    final agora = _agora();
+    final agora = em?.toUtc().toIso8601String() ?? _agora();
     await _sync.registrar(
       'checkin',
       {
@@ -125,6 +127,7 @@ class AcoesAtendimento {
           await _banco.alterar('partes_diarias', parte['id'], {'status': 'em_andamento'});
         }
       },
+      em: em,
     );
     return atdId;
   }
@@ -134,6 +137,9 @@ class AcoesAtendimento {
   static Future<void> _sairDeOutro(String colaboradorId, String atdId, String agora) async {
     final aberto = _banco.checkinAberto(colaboradorId);
     if (aberto == null || aberto['atendimento_id'] == atdId) return;
+    // Aquele começou depois deste (o serviço que ele já fez, guia 80): continua aberto.
+    final entrada = DateTime.tryParse('${aberto['entrada_em']}');
+    if (entrada != null && entrada.isAfter(DateTime.parse(agora))) return;
     await _banco.alterar('atendimento_participantes', aberto['id'], {'saida_em': agora});
     await _pausarSeVazio(aberto['atendimento_id']);
   }
@@ -149,15 +155,38 @@ class AcoesAtendimento {
     }
   }
 
-  /// "Sair do serviço" (a própria pessoa, ou o líder tirando alguém).
-  static Future<void> checkout(Map<String, dynamic> participante) async {
+  /// "Sair do serviço" (a própria pessoa, ou o líder tirando alguém). [em]:
+  /// a hora em que saiu, se não foi agora.
+  static Future<void> checkout(Map<String, dynamic> participante, {DateTime? em}) async {
     await _sync.registrar(
       'checkout',
       {'participante_id': participante['id']},
       aplicarLocal: () async {
-        await _banco.alterar('atendimento_participantes', participante['id'], {'saida_em': _agora()});
+        await _banco.alterar('atendimento_participantes', participante['id'],
+            {'saida_em': em?.toUtc().toIso8601String() ?? _agora()});
         if (participante['colaborador_id'] == eu) await _banco.gravarMeta('meu_checkin', null);
         await _pausarSeVazio(participante['atendimento_id']);
+      },
+      em: em,
+    );
+  }
+
+  /// Andamento do serviço: a caminho, de volta a programado ou não realizado.
+  static Future<void> mudarStatus(Map<String, dynamic> item, String status, {String? motivo}) async {
+    await _sync.registrar(
+      'item_status',
+      {'parte_item_id': item['id'], 'status': status, if (motivo != null) 'motivo': motivo},
+      aplicarLocal: () async {
+        final agora = _agora();
+        await _banco.alterar('partes_itens', item['id'], {
+          'status': status,
+          if (status == 'em_deslocamento' && item['iniciado_em'] == null) 'iniciado_em': agora,
+          if (status == 'nao_realizado') ...{'resultado_motivo': motivo, 'concluido_em': agora},
+        });
+        final parte = _banco.um('partes_diarias', item['parte_id']);
+        if (status == 'em_deslocamento' && parte != null && parte['status'] == 'publicada') {
+          await _banco.alterar('partes_diarias', parte['id'], {'status': 'em_andamento'});
+        }
       },
     );
   }

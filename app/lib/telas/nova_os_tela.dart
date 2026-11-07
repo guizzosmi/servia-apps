@@ -66,9 +66,21 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   String? _audioId;
   bool _comoRelato = false;
 
-  /// Pelo que ele falou ("estou na...", "fui na..."), já está no local:
-  /// "Atender agora" também faz o check-in. ("amanhã vou na..." = não.)
-  bool _jaNoLocal = false;
+  /// Pelo que ele falou (guias 17d e 80): futuro ("amanhã vou na..."), indo
+  /// ("estou indo na..."), agora ("estou na...") ou feito ("fui na..., troquei").
+  /// Decide o que acontece depois que a OS entra na parte.
+  String _momento = 'futuro';
+
+  /// "feito": o horário falado (ou escolhido aqui). Sem ele, o app pergunta.
+  TimeOfDay? _inicio;
+  TimeOfDay? _fim;
+
+  /// Guia 80: as OS em aberto do cliente e a escolhida para usar (null = OS
+  /// nova). [_decidiuNova]: ele tocou "Abrir uma OS nova".
+  List<OsAberta> _abertas = const [];
+  OsAberta? _usar;
+  bool _decidiuNova = false;
+
   bool _propostaAplicada = false;
   List<String> _dicas = const [];
   // Guia 59: retorno de outra OS citado no áudio (sugerido ou candidatos) e o que o técnico confirmou.
@@ -183,6 +195,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     if (escolha == null || !mounted) return;
     setState(() {
       _limparEquipamentos();
+      _esquecerAbertas();
       _contatoId = null;
       _contatoNovo = null;
       if (escolha.cliente != null) {
@@ -233,6 +246,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       _audioId = null;
       _dicas = const [];
       _clientesSugeridos = const [];
+      _esquecerAbertas();
     });
   }
 
@@ -354,15 +368,138 @@ class _NovaOsTelaState extends State<NovaOsTela> {
           : const [];
       _retornoOsId = null;
       _comoRelato = ab['tem_relato'] == true;
-      _jaNoLocal = ab['momento'] != 'futuro';
+      final momento = '${ab['momento'] ?? ''}';
+      _momento = _momentos.containsKey(momento) ? momento : 'agora';
+      final horario = ab['horario'] is Map ? ab['horario'] as Map : const {};
+      _inicio = _hora(horario['inicio']);
+      _fim = _hora(horario['fim']);
+      // Guia 80: as OS em aberto deste cliente (a que combina com o falado vem primeiro).
+      final abertas = ab['os_aberta'] is Map ? ab['os_aberta'] as Map : const {};
+      final clienteId = _cliente?['id'];
+      _abertas = clienteId != null && clienteId == cli['cliente_id'] && abertas['candidatos'] is List
+          ? [for (final c in (abertas['candidatos'] as List).whereType<Map>()) OsAberta(c, clienteId: '$clienteId')]
+          : const [];
+      // Aberta de dentro de um serviço ("outra OS neste cliente"): a OS nova continua sendo o padrão.
+      final outraOs = widget.clienteId != null;
+      _usar = abertas['tipo'] == 'identificada' && _abertas.isNotEmpty && !outraOs ? _abertas.first : null;
+      _decidiuNova = _abertas.isNotEmpty && outraOs;
       _dicas = dicas;
       _clientesSugeridos = sugeridos;
     });
   }
 
+  /// 'HH:MM' -> horário (null se não veio).
+  static TimeOfDay? _hora(Object? v) {
+    final m = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch('${v ?? ''}'.trim());
+    if (m == null) return null;
+    final h = int.parse(m[1]!), min = int.parse(m[2]!);
+    return h < 24 && min < 60 ? TimeOfDay(hour: h, minute: min) : null;
+  }
+
+  static String _hhmm(TimeOfDay? t) =>
+      t == null ? '--:--' : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<TimeOfDay?> _perguntarHora({required bool inicio}) => showTimePicker(
+        context: context,
+        initialTime: (inicio ? _inicio : _fim) ?? TimeOfDay.now(),
+        helpText: inicio ? 'Que horas você começou?' : 'Que horas você terminou?',
+      );
+
+  Future<void> _escolherHora({required bool inicio}) async {
+    final t = await _perguntarHora(inicio: inicio);
+    if (t == null || !mounted) return;
+    setState(() {
+      if (inicio) {
+        _inicio = t;
+      } else {
+        _fim = t;
+      }
+    });
+  }
+
+  /// "Já fiz": das que horas às que horas (o falado ou o escolhido no quadro).
+  /// O que faltar, pergunta. null = desistiu ou o horário não fecha.
+  Future<(DateTime, DateTime)?> _periodoFeito() async {
+    final inicio = _inicio ?? await _perguntarHora(inicio: true);
+    if (inicio == null || !mounted) return null;
+    final fim = _fim ?? await _perguntarHora(inicio: false);
+    if (fim == null || !mounted) return null;
+    setState(() {
+      _inicio = inicio;
+      _fim = fim;
+    });
+    final dia = DateTime.parse(EstadoApp.instancia.sync!.hoje);
+    final de = DateTime(dia.year, dia.month, dia.day, inicio.hour, inicio.minute);
+    final ate = DateTime(dia.year, dia.month, dia.day, fim.hour, fim.minute);
+    final erro = !ate.isAfter(de)
+        ? 'O fim precisa ser depois do início.'
+        : ate.isAfter(DateTime.now())
+            ? 'O fim não pode ser depois de agora.'
+            : null;
+    if (erro == null) return (de, ate);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$erro Confira o horário em "Já fiz".')));
+    return null;
+  }
+
+  /// Outro cliente (ou sem o áudio): as OS em aberto da proposta não valem mais.
+  void _esquecerAbertas() {
+    _abertas = const [];
+    _usar = null;
+    _decidiuNova = false;
+  }
+
+  void _abrirNova() => setState(() {
+        _usar = null;
+        _decidiuNova = true;
+      });
+
+  /// Guia 80: o cliente já tem OS em aberto. A que combina com o que ele falou
+  /// vem marcada; dá para escolher outra ou abrir uma nova.
+  Widget _cartaoOsAberta() {
+    Widget opcao(bool marcada, String titulo, String sub, VoidCallback aoTocar, {String? alerta}) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(marcada ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: marcada ? Cores.indigo500 : Cores.neutro),
+          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(sub),
+            if (alerta != null) Text(alerta, style: const TextStyle(color: Cores.erro)),
+          ]),
+          onTap: aoTocar,
+        );
+
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      color: Cores.indigo100,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_abertas.length == 1 ? 'Este cliente já tem uma OS aberta' : 'Este cliente tem ${_abertas.length} OS abertas',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          if (_usar == null && !_decidiuNova)
+            const Text('Escolha a OS deste serviço ou abra uma nova.', style: TextStyle(color: Cores.alerta)),
+          for (final o in _abertas)
+            opcao(
+              _usar?.osId == o.osId,
+              [o.codigo, o.problema].where((x) => x.isNotEmpty).join(' · '),
+              o.ondeEsta,
+              () => setState(() {
+                _usar = o;
+                _decidiuNova = false;
+              }),
+              // (no futuro não traz para a parte: só liga o áudio)
+              alerta: _momento == 'futuro' ? null : o.impedimento,
+            ),
+          opcao(_usar == null && _decidiuNova, 'Abrir uma OS nova', 'É outro serviço neste cliente.', _abrirNova),
+        ]),
+      ),
+    );
+  }
+
   /// Troca o cliente: o local, os equipamentos e o contato eram do outro.
   void _trocarCliente(Map<String, dynamic> c) {
     _limparEquipamentos();
+    _esquecerAbertas();
     _contatoId = null;
     _contatoNovo = null;
     _cliente = c;
@@ -439,12 +576,16 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                         style: TextStyle(color: Cores.sucesso, fontWeight: FontWeight.w600))
                     : const Text('A IA não trouxe uma proposta. Preencha à mão.', style: TextStyle(color: Cores.neutro)),
               },
-              for (final d in _dicas)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text('• $d', style: const TextStyle(color: Cores.alerta)),
-                ),
-              if (_retornoSugerido != null || _retornoCandidatos.isNotEmpty || _retornoOsId != null) _cartaoRetorno(),
+              // (usando a OS que já existe, as dicas e o retorno eram para a OS nova)
+              if (_usar == null)
+                for (final d in _dicas)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('• $d', style: const TextStyle(color: Cores.alerta)),
+                  ),
+              if (_abertas.isNotEmpty) _cartaoOsAberta(),
+              if (_usar == null && (_retornoSugerido != null || _retornoCandidatos.isNotEmpty || _retornoOsId != null))
+                _cartaoRetorno(),
               if (_clientesSugeridos.isNotEmpty)
                 Wrap(spacing: 6, children: [
                   for (final c in _clientesSugeridos)
@@ -471,13 +612,33 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                   title: const Text('O que foi falado'),
                   children: [Text(r!.transcricao!, style: const TextStyle(fontStyle: FontStyle.italic))],
                 ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _jaNoLocal,
-                onChanged: (v) => setState(() => _jaNoLocal = v),
-                title: const Text('Já estou no local'),
-                subtitle: const Text('"Atender agora" já faz o check-in no serviço.'),
+              const SizedBox(height: 8),
+              const Text('Quando é o serviço?', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                for (final m in _momentos.entries)
+                  ChoiceChip(
+                    label: Text(m.value.$1),
+                    selected: _momento == m.key,
+                    onSelected: (_) => setState(() => _momento = m.key),
+                  ),
+              ]),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(_momentos[_momento]!.$2, style: const TextStyle(fontSize: 12, color: Cores.neutro)),
               ),
+              if (_momento == 'feito')
+                Row(children: [
+                  const Text('Das'),
+                  TextButton(onPressed: () => _escolherHora(inicio: true), child: Text(_hhmm(_inicio))),
+                  const Text('às'),
+                  TextButton(onPressed: () => _escolherHora(inicio: false), child: Text(_hhmm(_fim))),
+                  if (_inicio == null || _fim == null)
+                    const Expanded(
+                      child: Text('Sem horário no áudio: toque para escolher.',
+                          style: TextStyle(fontSize: 12, color: Cores.neutro)),
+                    ),
+                ]),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
@@ -498,6 +659,11 @@ class _NovaOsTelaState extends State<NovaOsTela> {
 
   Future<void> _salvar({required bool agora}) async {
     if (_salvando) return;
+    if (_abertas.isNotEmpty && _usar == null && !_decidiuNova) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Este cliente já tem OS aberta: escolha uma delas ou toque em "Abrir uma OS nova".')));
+      return;
+    }
     final valido = _form.currentState?.validate() ?? false;
     String? falta;
     if (!_clienteNovo && _cliente == null) {
@@ -512,11 +678,17 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     if (!valido) return;
 
     Map<String, dynamic>? parte;
+    (DateTime, DateTime)? periodo;
     if (agora) {
       final partes = AcoesOs.partesParaAtender();
       if (partes.isEmpty) return;
       parte = partes.length == 1 ? partes.first : await _escolherParte(partes);
       if (parte == null || !mounted) return;
+      // Já fez: o horário antes de abrir (se desistir, nada é registrado).
+      if (_audioId != null && _momento == 'feito') {
+        periodo = await _periodoFeito();
+        if (periodo == null || !mounted) return;
+      }
     }
 
     setState(() => _salvando = true);
@@ -547,27 +719,17 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         contatoNovo: _contatoNovo,
         retornoDeOsId: _retornoOsId,
       );
-      // A OS falada recusada (arquivo sumiu...) não liga: a OS vai sem ela.
-      final audio = _audioId == null ? null : AcoesRelato.um(_audioId!);
-      final itemId = await AcoesOs.abrir(pedido,
-          parte: parte,
-          audioId: audio == null || const ['recusado', 'revisado', 'descartado'].contains(audio.status) ? null : audio.id,
-          audioComoRelato: _comoRelato);
+      final itemId = await AcoesOs.abrir(pedido, parte: parte, audioId: _audioUsavel(), audioComoRelato: _comoRelato);
       if (!mounted) return;
       final aviso = ScaffoldMessenger.of(context);
-      if (itemId != null && _audioId != null && _jaNoLocal) {
-        // Já está no local: entra no serviço agora (quem está junto, se for o líder).
-        final item = EstadoApp.instancia.banco!.um('partes_itens', itemId);
-        if (item != null) await entrarNoServico(context, Map<String, dynamic>.from(item), abrir: false);
-        if (!mounted) return;
-        final atdId = AcoesAtendimento.idAtendimento(itemId);
-        if (AcoesAtendimento.meuCheckin()?['atendimento_id'] == atdId) {
-          aviso.showSnackBar(const SnackBar(content: Text('OS aberta e você já está no serviço.')));
-          context.pushReplacement('/atendimento/$atdId');
-        } else {
-          aviso.showSnackBar(const SnackBar(content: Text('OS aberta e incluída na sua parte. Faça o check-in quando começar.')));
-          context.pushReplacement('/servico/$itemId');
+      if (itemId != null && _audioId != null) {
+        // OS falada: segue pelo que ele falou (a caminho, no serviço ou o que já fez).
+        if (_momento == 'indo') {
+          final item = EstadoApp.instancia.banco!.um('partes_itens', itemId);
+          if (item != null) await AcoesAtendimento.mudarStatus(item, 'em_deslocamento');
+          if (!mounted) return;
         }
+        await _seguir(itemId, 'OS aberta e incluída na sua parte', periodo);
       } else if (itemId != null) {
         aviso.showSnackBar(const SnackBar(content: Text('OS aberta e incluída na sua parte. Faça o check-in quando começar.')));
         context.pushReplacement('/servico/$itemId');
@@ -582,6 +744,168 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Não deu para registrar: $e'), backgroundColor: Cores.erro));
     }
+  }
+
+  /// A OS falada, se o áudio ainda pode ir para uma OS (recusado porque o
+  /// arquivo sumiu, já usado ou descartado: a OS vai sem ele).
+  String? _audioUsavel() {
+    final audio = _audioId == null ? null : AcoesRelato.um(_audioId!);
+    return audio == null || const ['recusado', 'revisado', 'descartado'].contains(audio.status) ? null : audio.id;
+  }
+
+  /// Depois que a OS (nova ou a que já existia) entrou na parte: segue pelo
+  /// que ele falou. [quem]: o começo do aviso ("OS aberta e incluída na sua parte").
+  Future<void> _seguir(String itemId, String quem, (DateTime, DateTime)? periodo) async {
+    final banco = EstadoApp.instancia.banco!;
+    final aviso = ScaffoldMessenger.of(context);
+    final item = banco.um('partes_itens', itemId);
+    if (item == null || _momento == 'futuro') {
+      aviso.showSnackBar(SnackBar(content: Text('$quem. Faça o check-in quando começar.')));
+      context.pushReplacement('/servico/$itemId');
+      return;
+    }
+    if (_momento == 'indo') {
+      // A caminho: oferece o aviso ao cliente, como no "Estou a caminho".
+      final avisou = await avisarACaminho(context, Map<String, dynamic>.from(item));
+      if (!mounted) return;
+      if (!avisou) aviso.showSnackBar(SnackBar(content: Text('$quem: você está a caminho.')));
+      context.pushReplacement('/servico/$itemId');
+      return;
+    }
+    // Está no local ou já fez: entra no serviço (quem está junto, se for o líder).
+    await entrarNoServico(context, Map<String, dynamic>.from(item),
+        abrir: false, inicio: periodo?.$1, fim: periodo?.$2);
+    if (!mounted) return;
+    final atdId = AcoesAtendimento.idAtendimento(itemId);
+    if (periodo != null && banco.um('atendimentos', atdId) != null) {
+      final de = _hhmm(TimeOfDay.fromDateTime(periodo.$1)), ate = _hhmm(TimeOfDay.fromDateTime(periodo.$2));
+      aviso.showSnackBar(
+          SnackBar(content: Text('$quem: serviço das $de às $ate registrado. Revise o relato e conclua.')));
+      context.pushReplacement('/atendimento/$atdId');
+    } else if (AcoesAtendimento.meuCheckin()?['atendimento_id'] == atdId) {
+      aviso.showSnackBar(SnackBar(content: Text('$quem: você já está no serviço.')));
+      context.pushReplacement('/atendimento/$atdId');
+    } else {
+      aviso.showSnackBar(SnackBar(content: Text('$quem. Faça o check-in quando começar.')));
+      context.pushReplacement('/servico/$itemId');
+    }
+  }
+
+  /// Guia 80: usar a OS que já existe. "Ainda vou": só liga o áudio a ela.
+  /// Nos outros momentos, traz o serviço para a parte de hoje (os_puxar) e
+  /// segue como na OS nova.
+  Future<void> _usarExistente() async {
+    final os = _usar;
+    if (os == null || _salvando) return;
+    final audio = _audioUsavel();
+    if (_momento == 'futuro') {
+      setState(() => _salvando = true);
+      if (audio != null) await AcoesRelato.vincular(audio, os.osId, comoRelato: _comoRelato);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Nenhuma OS nova: o áudio ficou na ${os.codigo}.')));
+      context.pop();
+      return;
+    }
+    // Já fez: o horário antes de tudo (se desistir, nada é registrado).
+    final periodo = _momento == 'feito' ? await _periodoFeito() : null;
+    if (!mounted || (_momento == 'feito' && periodo == null)) return;
+    final item = AcoesOs.servicoNaMinhaParte(os);
+    Map<String, dynamic>? parte;
+    var confirmado = false;
+    if (item == null) {
+      final partes = AcoesOs.partesParaAtender();
+      if (partes.isEmpty) return;
+      parte = partes.length == 1 ? partes.first : await _escolherParte(partes);
+      if (parte == null || !mounted) return;
+      if (os.comOutraEquipe) {
+        confirmado = await _confirmarTrazer(os);
+        if (!confirmado || !mounted) return;
+      }
+    }
+
+    setState(() => _salvando = true);
+    try {
+      final String itemId;
+      if (item != null) {
+        // Já está na minha parte: é o mesmo serviço.
+        itemId = '${item['id']}';
+        if (_momento == 'indo' && item['status'] == 'programado') {
+          await AcoesAtendimento.mudarStatus(item, 'em_deslocamento');
+        }
+      } else {
+        itemId = await AcoesOs.puxar(os, parte: parte!, confirmado: confirmado, aCaminho: _momento == 'indo');
+      }
+      if (audio != null) await AcoesRelato.vincular(audio, os.osId, comoRelato: _comoRelato);
+      if (!mounted) return;
+      await _seguir(itemId, '${os.codigo} na sua parte', periodo);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Não deu para registrar: $e'), backgroundColor: Cores.erro));
+    }
+  }
+
+  /// Guia 80: a OS está com outra equipe (ou em outro dia): trazer só confirmando.
+  Future<bool> _confirmarTrazer(OsAberta os) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Trazer a ${os.codigo} para você?'),
+        content: Text('${os.ondeEsta}. Ela sai de lá e entra no fim da sua parte de hoje. O escritório é avisado.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Trazer para mim')),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  /// O que acontece ao usar a OS que já existe (embaixo do botão).
+  String _dicaUsar(OsAberta os, List<Map<String, dynamic>> partes) {
+    if (_momento == 'futuro') return 'Nenhuma OS nova: o áudio fica nesta OS.';
+    if (os.impedimento case final motivo?) return motivo;
+    if (partes.isEmpty) return 'Para usar a OS agora, você precisa estar numa parte publicada de hoje.';
+    if (os.naMinhaParte) return 'Ela já está na sua parte de hoje.';
+    if (os.comOutraEquipe) return 'Ela sai de onde está e entra no fim da sua parte (o escritório é avisado).';
+    return partes.length == 1
+        ? 'Entra no fim da parte da ${EstadoApp.instancia.banco!.nomeEquipe(partes.first['equipe_id'])}.'
+        : 'Entra no fim da parte da sua equipe.';
+  }
+
+  Widget _botoesUsar(OsAberta os, List<Map<String, dynamic>> partes) {
+    final bloqueado = _momento != 'futuro' && (os.impedimento != null || partes.isEmpty);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SizedBox(
+        height: 52,
+        child: FilledButton.icon(
+          onPressed: _salvando || bloqueado ? null : _usarExistente,
+          icon: const Icon(Icons.task_alt),
+          label: Text(switch (_momento) {
+            'agora' => 'Usar a ${os.codigo} e entrar no serviço',
+            'feito' => 'Usar a ${os.codigo} e registrar o serviço',
+            'indo' => 'Usar a ${os.codigo}: estou a caminho',
+            _ => 'Usar a ${os.codigo} (já aberta)',
+          }),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(_dicaUsar(os, partes),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: bloqueado ? Cores.erro : Cores.neutro)),
+      ),
+      SizedBox(
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: _salvando ? null : _abrirNova,
+          icon: const Icon(Icons.add),
+          label: const Text('Abrir uma OS nova'),
+        ),
+      ),
+    ]);
   }
 
   Future<Map<String, dynamic>?> _escolherParte(List<Map<String, dynamic>> partes) {
@@ -625,6 +949,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     final banco = EstadoApp.instancia.banco!;
     final partes = AcoesOs.partesParaAtender();
     final equipamentos = (_localNovo || _local == null) ? const <Map<String, dynamic>>[] : AcoesOs.equipamentosDo(_local!['id']);
+    final usar = _usar;
 
     return PopScope(
       canPop: !_preencheuAlgo || _salvando,
@@ -641,318 +966,330 @@ class _NovaOsTelaState extends State<NovaOsTela> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
             children: [
               _osFalada(),
-              // ---------- cliente ----------
-              _Secao(titulo: 'Cliente', filhos: [
-                if (_clienteNovo) ...[
-                  Row(children: [
-                    const Expanded(child: Text('Cliente novo', style: TextStyle(fontWeight: FontWeight.w700))),
-                    TextButton(onPressed: _escolherCliente, child: const Text('Escolher da lista')),
-                  ]),
-                  TextFormField(
-                    controller: _cNome,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(labelText: 'Nome do cliente *'),
-                    validator: (v) => (v ?? '').trim().isEmpty ? 'Informe o nome' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _cTelefone,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Telefone (com DDD)'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _cDocumento,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9./-]'))],
-                    decoration: const InputDecoration(labelText: 'CPF ou CNPJ (se souber)'),
-                    validator: (v) {
-                      final n = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                      return n.isEmpty || n.length == 11 || n.length == 14 ? null : 'CPF tem 11 números; CNPJ, 14';
-                    },
-                  ),
-                  const SizedBox(height: 6),
-                  const Text('O escritório completa o resto do cadastro depois.',
-                      style: TextStyle(fontSize: 12, color: Cores.neutro)),
-                ] else if (_cliente != null)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('${_cliente!['nome']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-                    subtitle: _cliente!['nome_fantasia'] == null ? null : Text('${_cliente!['nome_fantasia']}'),
-                    trailing: TextButton(onPressed: _escolherCliente, child: const Text('Trocar')),
-                  )
-                else
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: _escolherCliente,
-                      icon: const Icon(Icons.search),
-                      label: const Text('Escolher cliente'),
-                    ),
-                  ),
-              ]),
-
-              // ---------- local ----------
-              if (_cliente != null || _clienteNovo)
-                _Secao(titulo: 'Local do serviço', filhos: [
-                  if (_localNovo) ...[
-                    if (!_clienteNovo && AcoesOs.locaisDo(_cliente?['id']).isNotEmpty)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => setState(() {
-                            _localNovo = false;
-                            _limparEquipamentos();
-                            _escolherLocalPadrao();
-                          }),
-                          child: const Text('Escolher da lista'),
-                        ),
-                      ),
-                    TextFormField(
-                      controller: _lNome,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                          labelText: 'Nome do local', hintText: 'Ex.: Matriz, Unidade Cacic (vazio: Principal)'),
-                    ),
-                    const SizedBox(height: 8),
+              // Guia 80: usando a OS que já existe, o formulário da OS nova não aparece.
+              if (usar == null) ...[
+                // ---------- cliente ----------
+                _Secao(titulo: 'Cliente', filhos: [
+                  if (_clienteNovo) ...[
                     Row(children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: _lRua,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(labelText: 'Rua / rodovia'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(controller: _lNumero, decoration: const InputDecoration(labelText: 'Nº')),
-                      ),
+                      const Expanded(child: Text('Cliente novo', style: TextStyle(fontWeight: FontWeight.w700))),
+                      TextButton(onPressed: _escolherCliente, child: const Text('Escolher da lista')),
                     ]),
-                    const SizedBox(height: 8),
                     TextFormField(
-                      controller: _lBairro,
+                      controller: _cNome,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Bairro / linha'),
+                      decoration: const InputDecoration(labelText: 'Nome do cliente *'),
+                      validator: (v) => (v ?? '').trim().isEmpty ? 'Informe o nome' : null,
                     ),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: _lCidade,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(labelText: 'Cidade'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _lUf,
-                          maxLength: 2,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(labelText: 'UF', counterText: ''),
-                        ),
-                      ),
-                    ]),
                     const SizedBox(height: 8),
                     TextFormField(
-                      controller: _lAcesso,
-                      decoration: const InputDecoration(labelText: 'Como chegar / acesso (opcional)'),
+                      controller: _cTelefone,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Telefone (com DDD)'),
                     ),
-                  ] else ...[
-                    for (final l in AcoesOs.locaisDo(_cliente?['id']))
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _cDocumento,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9./-]'))],
+                      decoration: const InputDecoration(labelText: 'CPF ou CNPJ (se souber)'),
+                      validator: (v) {
+                        final n = (v ?? '').replaceAll(RegExp(r'\D'), '');
+                        return n.isEmpty || n.length == 11 || n.length == 14 ? null : 'CPF tem 11 números; CNPJ, 14';
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    const Text('O escritório completa o resto do cadastro depois.',
+                        style: TextStyle(fontSize: 12, color: Cores.neutro)),
+                  ] else if (_cliente != null)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${_cliente!['nome']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+                      subtitle: _cliente!['nome_fantasia'] == null ? null : Text('${_cliente!['nome_fantasia']}'),
+                      trailing: TextButton(onPressed: _escolherCliente, child: const Text('Trocar')),
+                    )
+                  else
+                    SizedBox(
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: _escolherCliente,
+                        icon: const Icon(Icons.search),
+                        label: const Text('Escolher cliente'),
+                      ),
+                    ),
+                ]),
+
+                // ---------- local ----------
+                if (_cliente != null || _clienteNovo)
+                  _Secao(titulo: 'Local do serviço', filhos: [
+                    if (_localNovo) ...[
+                      if (!_clienteNovo && AcoesOs.locaisDo(_cliente?['id']).isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => setState(() {
+                              _localNovo = false;
+                              _limparEquipamentos();
+                              _escolherLocalPadrao();
+                            }),
+                            child: const Text('Escolher da lista'),
+                          ),
+                        ),
+                      TextFormField(
+                        controller: _lNome,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                            labelText: 'Nome do local', hintText: 'Ex.: Matriz, Unidade Cacic (vazio: Principal)'),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: _lRua,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(labelText: 'Rua / rodovia'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(controller: _lNumero, decoration: const InputDecoration(labelText: 'Nº')),
+                        ),
+                      ]),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _lBairro,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(labelText: 'Bairro / linha'),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: _lCidade,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(labelText: 'Cidade'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lUf,
+                            maxLength: 2,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: const InputDecoration(labelText: 'UF', counterText: ''),
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _lAcesso,
+                        decoration: const InputDecoration(labelText: 'Como chegar / acesso (opcional)'),
+                      ),
+                    ] else ...[
+                      for (final l in AcoesOs.locaisDo(_cliente?['id']))
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            _local?['id'] == l['id'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                            color: _local?['id'] == l['id'] ? Cores.indigo500 : Cores.neutro,
+                          ),
+                          onTap: () => setState(() {
+                            _local = l;
+                            _limparEquipamentos();
+                          }),
+                          title: Text('${l['nome']}'),
+                          subtitle: _comEnvio(_endereco(l), l['id']),
+                        ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => setState(() {
+                            _localNovo = true;
+                            _local = null;
+                            _limparEquipamentos();
+                          }),
+                          icon: const Icon(Icons.add_location_alt_outlined),
+                          label: const Text('Outro local (cadastrar)'),
+                        ),
+                      ),
+                    ],
+                  ]),
+
+                // ---------- o que fazer ----------
+                _Secao(titulo: 'O que fazer', filhos: [
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    for (final t in tiposOs.entries)
+                      ChoiceChip(
+                        label: Text(t.value),
+                        selected: _tipo == t.key,
+                        onSelected: (_) => setState(() => _tipo = t.key),
+                      ),
+                  ]),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _problema,
+                    minLines: 3,
+                    maxLines: 6,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'O que precisa ser feito *',
+                      hintText: 'Ex.: trocar a torneira do bebedouro do refeitório',
+                      alignLabelWithHint: true,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Conte o que precisa ser feito' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text('Prioridade', style: TextStyle(color: Cores.neutro)),
+                  const SizedBox(height: 4),
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    for (final p in const ['baixa', 'media', 'alta', 'urgente'])
+                      ChoiceChip(
+                        label: Text(prioridades[p]!.texto),
+                        selected: _prioridade == p,
+                        onSelected: (_) => setState(() => _prioridade = p),
+                      ),
+                  ]),
+                ]),
+
+                // ---------- quem pediu ----------
+                if (_cliente != null || _clienteNovo)
+                  _Secao(titulo: 'Quem pediu (opcional)', filhos: [
+                    for (final c in _clienteNovo ? const <Map<String, dynamic>>[] : AcoesCadastro.contatosDo(_cliente?['id'], localId: _local?['id']))
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(
-                          _local?['id'] == l['id'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: _local?['id'] == l['id'] ? Cores.indigo500 : Cores.neutro,
+                          _contatoNovo == null && _contatoId == c['id'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: _contatoNovo == null && _contatoId == c['id'] ? Cores.indigo500 : Cores.neutro,
                         ),
                         onTap: () => setState(() {
-                          _local = l;
-                          _limparEquipamentos();
+                          _contatoNovo = null;
+                          _contatoId = _contatoId == c['id'] ? null : '${c['id']}';
                         }),
-                        title: Text('${l['nome']}'),
-                        subtitle: _comEnvio(_endereco(l), l['id']),
+                        title: Text('${c['nome']}'),
+                        subtitle: _comEnvio(
+                            [c['cargo'], c['telefone']].where((x) => x != null && '$x'.isNotEmpty).join(' · '), c['id']),
+                      ),
+                    if (_contatoNovo != null)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.radio_button_checked, color: Cores.indigo500),
+                        title: Text(_contatoNovo!.nome.trim()),
+                        subtitle: Text(['Novo', _contatoNovo!.cargo.trim(), _contatoNovo!.telefone.trim()]
+                            .where((x) => x.isNotEmpty)
+                            .join(' · ')),
+                        trailing: IconButton(
+                          tooltip: 'Tirar',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _contatoNovo = null),
+                        ),
                       ),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () => setState(() {
-                          _localNovo = true;
-                          _local = null;
-                          _limparEquipamentos();
+                        onPressed: _novoContato,
+                        icon: const Icon(Icons.person_add_alt_1_outlined),
+                        label: const Text('Cadastrar contato'),
+                      ),
+                    ),
+                  ]),
+
+                // ---------- equipamentos ----------
+                if (_local != null || _localNovo)
+                  _Secao(titulo: 'Equipamentos (opcional)', filhos: [
+                    for (final e in equipamentos)
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _equipamentos.contains(e['id']),
+                        onChanged: (v) => setState(() {
+                          if (v == true) {
+                            _equipamentos.add('${e['id']}');
+                          } else {
+                            _equipamentos.remove('${e['id']}');
+                          }
                         }),
-                        icon: const Icon(Icons.add_location_alt_outlined),
-                        label: const Text('Outro local (cadastrar)'),
+                        title: Text([e['codigo'], e['descricao']].where((x) => x != null).join(' · ')),
+                        subtitle: _comEnvio(
+                            [
+                              banco.um('ambientes', e['ambiente_id'])?['nome'],
+                              [e['marca'], e['modelo']].where((x) => x != null).join(' '),
+                            ].where((x) => x != null && '$x'.isNotEmpty).join(' · '),
+                            e['id']),
+                      ),
+                    for (final e in _novos)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.check_box, color: Cores.indigo500),
+                        title: Text(e.rotulo),
+                        subtitle: Text(['Novo', e.ambienteNovo ?? '', '${e.marca} ${e.modelo}'.trim()]
+                            .where((x) => x.trim().isNotEmpty)
+                            .join(' · ')),
+                        trailing: IconButton(
+                          tooltip: 'Tirar',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => _tirarNovo(e),
+                        ),
+                      ),
+                    if (equipamentos.isEmpty && _novos.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Text('Nenhum equipamento cadastrado neste local.', style: TextStyle(color: Cores.neutro)),
+                      ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _novoEquipamento,
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Cadastrar equipamento'),
                       ),
                     ),
-                  ],
-                ]),
-
-              // ---------- o que fazer ----------
-              _Secao(titulo: 'O que fazer', filhos: [
-                Wrap(spacing: 6, runSpacing: 4, children: [
-                  for (final t in tiposOs.entries)
-                    ChoiceChip(
-                      label: Text(t.value),
-                      selected: _tipo == t.key,
-                      onSelected: (_) => setState(() => _tipo = t.key),
-                    ),
-                ]),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _problema,
-                  minLines: 3,
-                  maxLines: 6,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'O que precisa ser feito *',
-                    hintText: 'Ex.: trocar a torneira do bebedouro do refeitório',
-                    alignLabelWithHint: true,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                  validator: (v) => (v ?? '').trim().isEmpty ? 'Conte o que precisa ser feito' : null,
-                ),
-                const SizedBox(height: 10),
-                const Text('Prioridade', style: TextStyle(color: Cores.neutro)),
-                const SizedBox(height: 4),
-                Wrap(spacing: 6, runSpacing: 4, children: [
-                  for (final p in const ['baixa', 'media', 'alta', 'urgente'])
-                    ChoiceChip(
-                      label: Text(prioridades[p]!.texto),
-                      selected: _prioridade == p,
-                      onSelected: (_) => setState(() => _prioridade = p),
-                    ),
-                ]),
-              ]),
-
-              // ---------- quem pediu ----------
-              if (_cliente != null || _clienteNovo)
-                _Secao(titulo: 'Quem pediu (opcional)', filhos: [
-                  for (final c in _clienteNovo ? const <Map<String, dynamic>>[] : AcoesCadastro.contatosDo(_cliente?['id'], localId: _local?['id']))
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        _contatoNovo == null && _contatoId == c['id'] ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: _contatoNovo == null && _contatoId == c['id'] ? Cores.indigo500 : Cores.neutro,
-                      ),
-                      onTap: () => setState(() {
-                        _contatoNovo = null;
-                        _contatoId = _contatoId == c['id'] ? null : '${c['id']}';
-                      }),
-                      title: Text('${c['nome']}'),
-                      subtitle: _comEnvio(
-                          [c['cargo'], c['telefone']].where((x) => x != null && '$x'.isNotEmpty).join(' · '), c['id']),
-                    ),
-                  if (_contatoNovo != null)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.radio_button_checked, color: Cores.indigo500),
-                      title: Text(_contatoNovo!.nome.trim()),
-                      subtitle: Text(['Novo', _contatoNovo!.cargo.trim(), _contatoNovo!.telefone.trim()]
-                          .where((x) => x.isNotEmpty)
-                          .join(' · ')),
-                      trailing: IconButton(
-                        tooltip: 'Tirar',
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => _contatoNovo = null),
-                      ),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: _novoContato,
-                      icon: const Icon(Icons.person_add_alt_1_outlined),
-                      label: const Text('Cadastrar contato'),
-                    ),
-                  ),
-                ]),
-
-              // ---------- equipamentos ----------
-              if (_local != null || _localNovo)
-                _Secao(titulo: 'Equipamentos (opcional)', filhos: [
-                  for (final e in equipamentos)
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _equipamentos.contains(e['id']),
-                      onChanged: (v) => setState(() {
-                        if (v == true) {
-                          _equipamentos.add('${e['id']}');
-                        } else {
-                          _equipamentos.remove('${e['id']}');
-                        }
-                      }),
-                      title: Text([e['codigo'], e['descricao']].where((x) => x != null).join(' · ')),
-                      subtitle: _comEnvio(
-                          [
-                            banco.um('ambientes', e['ambiente_id'])?['nome'],
-                            [e['marca'], e['modelo']].where((x) => x != null).join(' '),
-                          ].where((x) => x != null && '$x'.isNotEmpty).join(' · '),
-                          e['id']),
-                    ),
-                  for (final e in _novos)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.check_box, color: Cores.indigo500),
-                      title: Text(e.rotulo),
-                      subtitle: Text(['Novo', e.ambienteNovo ?? '', '${e.marca} ${e.modelo}'.trim()]
-                          .where((x) => x.trim().isNotEmpty)
-                          .join(' · ')),
-                      trailing: IconButton(
-                        tooltip: 'Tirar',
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _tirarNovo(e),
-                      ),
-                    ),
-                  if (equipamentos.isEmpty && _novos.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Text('Nenhum equipamento cadastrado neste local.', style: TextStyle(color: Cores.neutro)),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: _novoEquipamento,
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Cadastrar equipamento'),
-                    ),
-                  ),
-                ]),
+                  ]),
+              ],
               // Botões no fim do formulário: rolam junto e nunca ficam atrás do teclado.
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _salvando || partes.isEmpty ? null : () => _salvar(agora: true),
-                      icon: const Icon(Icons.play_arrow),
-                      label: Text(_audioId != null && _jaNoLocal ? 'Atender agora e entrar no serviço' : 'Atender agora'),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      partes.isEmpty
-                          ? 'Para atender agora, você precisa estar numa parte publicada de hoje.'
-                          : partes.length == 1
-                              ? 'Entra no fim da parte da ${banco.nomeEquipe(partes.first['equipe_id'])}.'
-                              : 'Entra no fim da parte da sua equipe.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: Cores.neutro),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _salvando ? null : () => _salvar(agora: false),
-                      icon: const Icon(Icons.send_outlined),
-                      label: const Text('Mandar para o escritório'),
-                    ),
-                  ),
-                ]),
+                child: usar != null
+                    ? _botoesUsar(usar, partes)
+                    : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: _salvando || partes.isEmpty ? null : () => _salvar(agora: true),
+                          icon: const Icon(Icons.play_arrow),
+                          label: Text(_audioId == null
+                              ? 'Atender agora'
+                              : switch (_momento) {
+                                  'agora' => 'Atender agora e entrar no serviço',
+                                  'feito' => 'Atender agora e registrar o serviço',
+                                  'indo' => 'Atender agora: estou a caminho',
+                                  _ => 'Atender agora',
+                                }),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          partes.isEmpty
+                              ? 'Para atender agora, você precisa estar numa parte publicada de hoje.'
+                              : partes.length == 1
+                                  ? 'Entra no fim da parte da ${banco.nomeEquipe(partes.first['equipe_id'])}.'
+                                  : 'Entra no fim da parte da sua equipe.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 12, color: Cores.neutro),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: _salvando ? null : () => _salvar(agora: false),
+                          icon: const Icon(Icons.send_outlined),
+                          label: const Text('Mandar para o escritório'),
+                        ),
+                      ),
+                    ]),
               ),
             ],
           ),
@@ -974,6 +1311,14 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         [l['cidade'], l['uf']].where((x) => x != null && '$x'.isNotEmpty).join('/'),
       ].where((x) => x != null && '$x'.isNotEmpty).join(' · ');
 }
+
+/// Quando é o serviço (o "momento" da OS falada): o rótulo e o que acontece.
+const _momentos = {
+  'futuro': ('Ainda vou', 'Só deixa a OS pronta: o check-in fica para depois.'),
+  'indo': ('Estou indo', 'O serviço já fica "a caminho" (e dá para avisar o cliente).'),
+  'agora': ('Estou no local', 'Já faz o check-in no serviço.'),
+  'feito': ('Já fiz', 'Registra o serviço no horário em que você fez.'),
+};
 
 /// Resultado da busca: um cliente da lista ou "cadastrar novo" (com o nome digitado).
 class _EscolhaCliente {

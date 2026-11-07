@@ -4,7 +4,6 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
 import '../core/acoes_checklist.dart';
-import '../core/acoes_mensagens.dart';
 import '../core/acoes_os.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
@@ -80,6 +79,15 @@ class ServicoTela extends StatelessWidget {
                   texto: envio.startsWith('Recusado')
                       ? 'A plataforma recusou esta OS. Veja o motivo em Sincronização.'
                       : 'Aguardando envio: esta OS foi aberta no celular e sobe quando houver internet.',
+                  cor: envio.startsWith('Recusado') ? Cores.erro : Cores.alerta,
+                )
+              // Guia 80: a OS que já existia, trazida para a parte neste celular.
+              else if (textoEnvio(item['id']) case final envio?)
+                _Faixa(
+                  icone: envio.startsWith('Recusado') ? Icons.error_outline : Icons.cloud_upload_outlined,
+                  texto: envio.startsWith('Recusado')
+                      ? 'A plataforma não trouxe esta OS para a sua parte. Veja o motivo em Sincronização.'
+                      : 'Aguardando envio: esta OS veio para a sua parte no celular e sobe quando houver internet.',
                   cor: envio.startsWith('Recusado') ? Cores.erro : Cores.alerta,
                 ),
               if (os['garantia_status'] == 'confirmada')
@@ -160,46 +168,13 @@ class _Acoes extends StatelessWidget {
   final Map<String, dynamic> item;
   final Map<String, dynamic> parte;
 
-  Future<void> _mudar(String status, {String? motivo}) async {
-    final estado = EstadoApp.instancia;
-    final banco = estado.banco!;
-    await estado.sync!.registrar(
-      'item_status',
-      {'parte_item_id': item['id'], 'status': status, if (motivo != null) 'motivo': motivo},
-      aplicarLocal: () async {
-        final agora = DateTime.now().toUtc().toIso8601String();
-        await banco.alterar('partes_itens', item['id'], {
-          'status': status,
-          if (status == 'em_deslocamento' && item['iniciado_em'] == null) 'iniciado_em': agora,
-          if (status == 'nao_realizado') ...{'resultado_motivo': motivo, 'concluido_em': agora},
-        });
-        if (status == 'em_deslocamento' && parte['status'] == 'publicada') {
-          await banco.alterar('partes_diarias', parte['id'], {'status': 'em_andamento'});
-        }
-      },
-    );
-  }
+  Future<void> _mudar(String status, {String? motivo}) => AcoesAtendimento.mudarStatus(item, status, motivo: motivo);
 
   /// A caminho: muda o status e já oferece o aviso ao cliente.
   Future<void> _aCaminho(BuildContext context) async {
     await _mudar('em_deslocamento');
     if (!context.mounted) return;
-    await _avisarCliente(context);
-  }
-
-  Future<void> _avisarCliente(BuildContext context) async {
-    final os = EstadoApp.instancia.banco!.osDo(item);
-    if (os == null) return;
-    final mandou = await AcoesMensagens.mandar(
-      context,
-      modelo: 'a_caminho',
-      titulo: 'Avisar que está a caminho',
-      os: os,
-      entidade: 'parte_item',
-      entidadeId: '${item['id']}',
-    );
-    if (!mandou || !context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aviso registrado na OS.')));
+    await avisarACaminho(context, item);
   }
 
   Future<void> _naoRealizado(BuildContext context) async {
@@ -264,7 +239,7 @@ class _Acoes extends StatelessWidget {
         )),
       if (aberta && status == 'em_deslocamento')
         botao(OutlinedButton.icon(
-          onPressed: () => _avisarCliente(context),
+          onPressed: () => avisarACaminho(context, item),
           icon: const Icon(Icons.chat_outlined),
           label: const Text('Avisar o cliente (WhatsApp)'),
         )),

@@ -1,10 +1,12 @@
 import 'acoes_atendimento.dart';
 import 'acoes_cadastro.dart';
 import 'acoes_orcamento.dart';
+import 'acoes_parte.dart';
 import 'acoes_relato.dart';
 import 'banco_local.dart';
 import 'consultas.dart';
 import 'estado.dart';
+import 'formatos.dart';
 import 'sincronizacao.dart';
 
 /// Tipos de OS (mesmos códigos do banco).
@@ -83,6 +85,58 @@ class PedidoOs {
 
   /// Guia 59: retorno de um serviço anterior (a OS que o técnico citou no áudio).
   final String? retornoDeOsId;
+}
+
+/// Guia 80: uma OS em aberto do cliente, como a proposta da OS falada traz
+/// (onde ela está e o que foi pedido). [clienteId]: o cliente da proposta.
+class OsAberta {
+  const OsAberta(this.dados, {required this.clienteId});
+
+  final Map dados;
+  final String clienteId;
+
+  String get osId => '${dados['os_id']}';
+  String get codigo => '${dados['codigo'] ?? 'OS'}';
+  String get problema => '${dados['problema'] ?? ''}'.trim();
+  String? get agendamentoId => dados['agendamento_id'] as String?;
+  String? get itemId => dados['parte_item_id'] as String?;
+  String get _equipe => '${dados['equipe'] ?? 'outra equipe'}';
+
+  /// fila | agenda_hoje | outro_dia | dia_anterior | suspensa | sem_agendamento
+  String get onde => '${dados['onde'] ?? 'sem_agendamento'}';
+
+  /// Já está numa parte minha de hoje.
+  bool get naMinhaParte =>
+      dados['parte_id'] != null && AcoesOs.partesParaAtender().any((p) => p['id'] == dados['parte_id']);
+
+  /// Está na parte de outra equipe (ou de outro dia): trazer precisa da confirmação do técnico.
+  bool get comOutraEquipe => itemId != null && !naMinhaParte;
+
+  /// "Na fila do escritório", "Hoje, na parte da Equipe 2", "Dia 12/11, na parte da Equipe 2"...
+  String get ondeEsta {
+    final d = '${dados['data'] ?? ''}';
+    final dia = d.length >= 10 ? '${d.substring(8, 10)}/${d.substring(5, 7)}' : d;
+    final texto = switch (onde) {
+      'fila' => 'Na fila do escritório',
+      'agenda_hoje' => naMinhaParte ? 'Hoje, na sua parte' : 'Hoje, na parte da $_equipe',
+      'outro_dia' => 'Dia $dia, na parte da $_equipe',
+      'dia_anterior' => 'Ficou do dia $dia, na parte da $_equipe',
+      'suspensa' => 'Suspensa (peça ou orçamento)',
+      _ => 'Sem visita marcada',
+    };
+    final status = dados['item_status'];
+    return itemId != null && status != 'programado' ? '$texto · ${statusItem[status]?.texto ?? status}' : texto;
+  }
+
+  /// Por que não dá para trazer para a minha parte (null = dá).
+  String? get impedimento {
+    if (onde == 'suspensa') return 'Esta OS está suspensa (peça ou orçamento): fale com o escritório.';
+    if (agendamentoId == null) return 'Esta OS está sem visita em aberto: fale com o escritório.';
+    if (comOutraEquipe && dados['item_status'] != 'programado') {
+      return 'Já está em andamento na parte da $_equipe: fale com o escritório.';
+    }
+    return null;
+  }
 }
 
 /// Abrir OS pelo app. Como as outras ações: entra na fila, aparece no
@@ -285,15 +339,13 @@ class AcoesOs {
           }
       ], avisar: false);
       if (parte != null) {
-        final itens = _banco.itensDaParte(parte['id'] as String);
-        final ultima = itens.fold<num>(0, (m, i) => (i['ordem'] ?? 0) as num > m ? (i['ordem'] as num) : m);
         await _banco.gravar('partes_itens', [
           {
             'id': itemId,
             'parte_id': parte['id'],
             'agendamento_id': agId,
             'data': parte['data'],
-            'ordem': ultima + 1,
+            'ordem': _proximaOrdem(parte),
             'papel_equipe': 'responsavel',
             'status': 'programado',
             'designados': const <String>[],
@@ -305,6 +357,96 @@ class AcoesOs {
       _banco.avisar();
     });
     if (audioId != null) await AcoesRelato.vincular(audioId, osId, comoRelato: audioComoRelato);
+    return itemId;
+  }
+
+  /// O fim da parte (o serviço encaixado entra por último).
+  static num _proximaOrdem(Map<String, dynamic> parte) =>
+      _banco.itensDaParte(parte['id'] as String).fold<num>(0, (m, i) => (i['ordem'] ?? 0) as num > m ? (i['ordem'] as num) : m) + 1;
+
+  /// Guia 80: o serviço desta OS que já está numa parte minha de hoje (ou null).
+  static Map<String, dynamic>? servicoNaMinhaParte(OsAberta os) {
+    if (!os.naMinhaParte) return null;
+    final item = _banco.um('partes_itens', os.itemId);
+    return item != null && AcoesParte.statusAbertos.contains(item['status']) ? item : null;
+  }
+
+  /// Guia 80: usar a OS que já existe (os_puxar). O serviço entra no fim da
+  /// [parte] de hoje; da outra equipe (ou de outro dia) só com [confirmado]
+  /// (o técnico confirmou; o escritório é avisado). [aCaminho]: já sai "a
+  /// caminho". Devolve o id do serviço (nasce aqui, como no abrir).
+  static Future<String> puxar(OsAberta os,
+      {required Map<String, dynamic> parte, bool confirmado = false, bool aCaminho = false}) async {
+    final itemId = AcoesAtendimento.novoId();
+    final agora = _agora();
+    await _sync.registrar(
+      'os_puxar',
+      {
+        'agendamento_id': os.agendamentoId,
+        'parte_id': parte['id'],
+        'parte_item_id': itemId,
+        if (confirmado) 'confirmado': true,
+        if (aCaminho) 'status': 'em_deslocamento',
+        // Só para o app (a plataforma ignora): o aviso da sincronização.
+        'os_id': os.osId,
+      },
+      aplicarLocal: () async {
+        // Da fila do escritório (ou de outra equipe), a OS pode não estar no celular.
+        if (_banco.um('ordens_servico', os.osId) == null) {
+          await _banco.gravar('ordens_servico', [
+            {
+              'id': os.osId,
+              'codigo': os.dados['codigo'],
+              'tipo': os.dados['tipo'],
+              'status': 'agendada',
+              'cliente_id': os.clienteId,
+              'local_id': os.dados['local_id'],
+              'problema_relatado': os.dados['problema'],
+            }
+          ], avisar: false);
+        }
+        final ag = _banco.um('agendamentos', os.agendamentoId);
+        await _banco.gravar('agendamentos', [
+          {
+            ...?ag,
+            'id': os.agendamentoId,
+            'os_id': os.osId,
+            if (ag == null) 'tipo': os.dados['tipo'] == 'preventiva' ? 'preventiva' : 'visita_tecnica',
+            'status': 'programado',
+            'data_prevista': parte['data'],
+          }
+        ], avisar: false);
+        // Sai da parte onde estava (outra equipe ou outro dia).
+        final antes = _banco.um('partes_itens', os.itemId);
+        if (antes != null) {
+          await _banco.gravar('partes_itens', [
+            {...antes, 'status': 'removido'}
+          ], avisar: false);
+        }
+        await _banco.gravar('partes_itens', [
+          {
+            'id': itemId,
+            'parte_id': parte['id'],
+            'agendamento_id': os.agendamentoId,
+            'data': parte['data'],
+            'ordem': _proximaOrdem(parte),
+            'papel_equipe': 'responsavel',
+            'status': aCaminho ? 'em_deslocamento' : 'programado',
+            if (aCaminho) 'iniciado_em': agora,
+            'designados': const <String>[],
+            'incluido_apos_publicacao': true,
+            'alterado_apos_publicacao': false,
+          }
+        ], avisar: false);
+        final dia = _banco.um('partes_diarias', parte['id']);
+        if (aCaminho && dia != null && dia['status'] == 'publicada') {
+          await _banco.gravar('partes_diarias', [
+            {...dia, 'status': 'em_andamento'}
+          ], avisar: false);
+        }
+        _banco.avisar();
+      },
+    );
     return itemId;
   }
 }

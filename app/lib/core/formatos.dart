@@ -82,6 +82,7 @@ const nomesOperacoes = {
   'parte_designar': 'Quem faz o serviço',
   'parte_composicao': 'Equipe do dia',
   'replanejamento_pedir': 'Pedido de replanejamento',
+  'os_puxar': 'Trazer a OS para a parte',
 };
 
 const statusOrcamento = {

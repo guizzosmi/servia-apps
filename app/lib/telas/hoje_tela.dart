@@ -483,7 +483,11 @@ class _CartaoServico extends StatelessWidget {
                 Wrap(spacing: 6, runSpacing: 4, children: [
                   if (ag['prioridade'] == 'urgente' || ag['prioridade'] == 'alta')
                     StatusChip(ag['prioridade'] as String?, prioridades),
-                  if (textoEnvio(os['id']) != null) SeloEnvio(os['id']),
+                  if (textoEnvio(os['id']) != null)
+                    SeloEnvio(os['id'])
+                  // Guia 80: a OS que já existia, trazida para a parte (ainda no celular).
+                  else if (textoEnvio(item['id']) != null)
+                    SeloEnvio(item['id']),
                   if (item['incluido_apos_publicacao'] == true) const Selo('Novo', Cores.coral500),
                   if (item['alterado_apos_publicacao'] == true) const Selo('Alterado', Cores.alerta),
                   if (item['papel_equipe'] == 'apoio') const Selo('Apoio', Cores.andamento),

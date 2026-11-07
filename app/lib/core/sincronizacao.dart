@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.18.0'; // igual à versão do pubspec.yaml (a versão mínima compara com esta)
+const versaoApp = '0.19.0'; // igual à versão do pubspec.yaml (a versão mínima compara com esta)
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -124,12 +124,14 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Registra uma ação: entra na fila, muda o banco local na hora
-  /// (a tela já mostra o novo estado) e pede a sincronização.
-  Future<void> registrar(String tipo, Map<String, dynamic> dados, {Future<void> Function()? aplicarLocal}) async {
+  /// (a tela já mostra o novo estado) e pede a sincronização. [em]: quando
+  /// ela aconteceu, se não foi agora (ex.: o serviço que ele já fez, guia 80).
+  Future<void> registrar(String tipo, Map<String, dynamic> dados,
+      {Future<void> Function()? aplicarLocal, DateTime? em}) async {
     await banco.enfileirar(Operacao(
       opId: _uuid.v4(),
       tipo: tipo,
-      em: DateTime.now().toUtc().toIso8601String(),
+      em: (em ?? DateTime.now()).toUtc().toIso8601String(),
       dados: dados,
     ));
     if (aplicarLocal != null) await aplicarLocal();
@@ -257,7 +259,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
           await banco.marcarTentativa(opId, '${m['mensagem'] ?? 'Tentar de novo'}');
           parar = true; // tenta de novo na próxima sincronização
         } else {
-          await banco.marcarRecusada(opId, '${m['mensagem'] ?? m['codigo'] ?? 'Recusada'}');
+          await banco.marcarRecusada(opId, _motivoDaRecusa(lote.where((o) => o.opId == opId).firstOrNull, m));
         }
       }
       await banco.removerDaFila(aceitas);
@@ -267,9 +269,30 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// O motivo que a tela de sincronização mostra.
+  static String _motivoDaRecusa(Operacao? op, Map m) {
+    // Guia 80: antes de subir, a OS foi para outra equipe ou outro dia (o técnico não confirmou isso).
+    if (op?.tipo == 'os_puxar' && m['precisa_confirmar'] == true) {
+      final de = m['de'] is Map ? m['de'] as Map : const {};
+      return 'Antes de subir, esta OS foi programada para a ${de['equipe'] ?? 'outra equipe'} '
+          '(${dataBr(de['data'])}) e não veio para a sua parte. Fale com o escritório.';
+    }
+    return '${m['mensagem'] ?? m['codigo'] ?? 'Recusada'}';
+  }
+
   /// O que a plataforma respondeu e o técnico precisa saber.
   Future<void> _depoisDeAceita(Operacao op, Map m) async {
     if (op.opId != m['op_id']) return;
+    if (op.tipo == 'os_puxar') {
+      // O escritório já tinha posto a OS na sua parte: o serviço que vale é o de lá.
+      final item = m['parte_item_id'];
+      if (item != null && item != op.dados['parte_item_id']) {
+        final os = banco.um('ordens_servico', op.dados['os_id']);
+        await banco.gravarMeta('aviso:${op.opId}',
+            '${os?['codigo'] ?? 'A OS'} já estava na sua parte: use o serviço dela na tela Hoje.', avisar: true);
+      }
+      return;
+    }
     if (op.tipo == 'relato_vincular') {
       // O áudio já é da OS (a OS falada sai da lista; o relato aparece no atendimento).
       final d = op.dados;

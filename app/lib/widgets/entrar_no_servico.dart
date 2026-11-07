@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/acoes_atendimento.dart';
+import '../core/acoes_mensagens.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 
 /// "Estou neste serviço": confere se a pessoa está em outro serviço (e
 /// pergunta se sai de lá), deixa o líder escolher quem entra junto e abre
-/// o atendimento (com [abrir]).
-Future<void> entrarNoServico(BuildContext context, Map<String, dynamic> item, {bool abrir = true}) async {
+/// o atendimento (com [abrir]). O serviço que ele já fez (guia 80): entra em
+/// [inicio] e sai em [fim], com quem estava junto. true = entrou.
+Future<bool> entrarNoServico(BuildContext context, Map<String, dynamic> item,
+    {bool abrir = true, DateTime? inicio, DateTime? fim}) async {
   final banco = EstadoApp.instancia.banco!;
   final atdId = AcoesAtendimento.idAtendimento(item['id']);
   final parte = banco.um('partes_diarias', item['parte_id']) ?? const {};
 
-  // Já está em outro serviço? Sai de lá no mesmo instante.
+  // Já está em outro serviço? Sai de lá no mesmo instante. (O serviço que
+  // ele já fez, antes daquele: aquele continua.)
   final atual = AcoesAtendimento.meuCheckin();
-  if (atual != null && atual['atendimento_id'] != atdId) {
+  final entrada = DateTime.tryParse('${atual?['entrada_em'] ?? ''}');
+  final antes = inicio != null && entrada != null && entrada.isAfter(inicio);
+  if (atual != null && atual['atendimento_id'] != atdId && !antes) {
     final outro = banco.um('atendimentos', atual['atendimento_id']);
     final osOutro = outro == null ? null : banco.um('ordens_servico', outro['os_id']);
     final ok = await showDialog<bool>(
@@ -29,7 +35,7 @@ Future<void> entrarNoServico(BuildContext context, Map<String, dynamic> item, {b
         ],
       ),
     );
-    if (ok != true || !context.mounted) return;
+    if (ok != true || !context.mounted) return false;
   }
 
   // O líder leva junto quem está livre (pode desmarcar alguém).
@@ -41,13 +47,38 @@ Future<void> entrarNoServico(BuildContext context, Map<String, dynamic> item, {b
         context: context,
         builder: (ctx) => _QuemEntra(livres: livres, nome: banco.nomeColaborador),
       );
-      if (escolha == null || !context.mounted) return;
+      if (escolha == null || !context.mounted) return false;
       acompanhantes = escolha;
     }
   }
 
-  final id = await AcoesAtendimento.checkin(item, acompanhantes: acompanhantes);
+  final id = await AcoesAtendimento.checkin(item, acompanhantes: acompanhantes, em: inicio);
+  if (fim != null) {
+    final quem = {AcoesAtendimento.eu, ...acompanhantes};
+    for (final p in banco.participantes(id, soAbertos: true)) {
+      if (quem.contains(p['colaborador_id'])) await AcoesAtendimento.checkout(p, em: fim);
+    }
+  }
   if (abrir && context.mounted) await context.push('/atendimento/$id');
+  return true;
+}
+
+/// "Estou a caminho": oferece o aviso ao cliente pelo WhatsApp (modelo da
+/// empresa). true = mandou.
+Future<bool> avisarACaminho(BuildContext context, Map<String, dynamic> item) async {
+  final os = EstadoApp.instancia.banco!.osDo(item);
+  if (os == null) return false;
+  final mandou = await AcoesMensagens.mandar(
+    context,
+    modelo: 'a_caminho',
+    titulo: 'Avisar que está a caminho',
+    os: os,
+    entidade: 'parte_item',
+    entidadeId: '${item['id']}',
+  );
+  if (!mandou || !context.mounted) return mandou;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aviso registrado na OS.')));
+  return true;
 }
 
 class _QuemEntra extends StatefulWidget {
