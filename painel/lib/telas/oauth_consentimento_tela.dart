@@ -84,11 +84,11 @@ class _OauthConsentimentoTelaState extends State<OauthConsentimentoTela> {
     final nome = '${cliente['client_name'] ?? cliente['name'] ?? 'Um aplicativo'}';
     final volta = Uri.tryParse('${p?['redirect_uri'] ?? ''}')?.host ?? '';
     final pode = <String>[
-      'Consultar clientes, OS, agenda, orçamentos, contratos e indicadores',
+      'Consultar clientes, OS, agenda, orçamentos, contratos, financeiro e indicadores',
       if (_comercial && _conector['comercial'] != false) 'Criar e atualizar oportunidades, tarefas e anotações do Comercial',
-      if (_conector['cadastros'] == true) 'Cadastrar e alterar clientes',
-      if (_conector['operacao'] == true) 'Abrir OS',
-      if (_conector['financeiro'] == true) 'Registrar recebimentos e lançar no caixa',
+      if (_conector['cadastros'] == true) 'Cadastrar e alterar clientes, endereços e equipamentos',
+      if (_conector['operacao'] == true) 'Cuidar das OS, dos orçamentos e dos pedidos recebidos',
+      if (_conector['financeiro'] == true) 'Registrar cobranças, Pix, recebimentos e lançamentos no caixa',
     ];
     return Scaffold(
       backgroundColor: Cores.fundo,

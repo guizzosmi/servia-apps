@@ -685,9 +685,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                   ]),
                 for (final (chave, titulo, ajuda) in const [
                   ('comercial', 'Comercial', 'Criar e atualizar oportunidades, tarefas e anotações (com o módulo Comercial ligado).'),
-                  ('cadastros', 'Cadastros', 'Cadastrar e alterar clientes.'),
-                  ('operacao', 'Operação', 'Abrir OS.'),
-                  ('financeiro', 'Financeiro', 'Registrar recebimentos (ex.: lendo o comprovante) e lançar no caixa.'),
+                  ('cadastros', 'Cadastros', 'Cadastrar e alterar clientes, endereços e equipamentos.'),
+                  ('operacao', 'Operação', 'OS (abrir, agendar, pôr no dia da equipe, itens, concluir, cancelar), orçamentos e pedidos recebidos.'),
+                  ('financeiro', 'Financeiro', 'Cobranças, Pix, recebimentos (ex.: lendo o comprovante) e caixa.'),
                 ])
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,

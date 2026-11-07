@@ -64,6 +64,15 @@ na segurança e na melhoria do serviço.</p>
 organização de texto. Esses provedores agem como suboperadores, não usam os dados para treinar os seus modelos
 conforme os contratos de uso por API e podem processá-los fora do Brasil. O técnico sempre revisa o que a IA propôs
 antes de salvar.</p>
+<p><b>Conector do ServPilot para o Claude.</b> Só funciona se um usuário conectar a própria conta do Claude
+(Anthropic) e clicar em Permitir no painel do ServPilot. A partir daí, quando ele pede algo ao Claude, os dados que
+a pergunta precisa (por exemplo, clientes, OS, agenda e oportunidades da empresa ativa) são enviados à Anthropic
+para gerar a resposta. O Claude usa o login desse usuário: vê só a empresa ativa e só o que esse usuário pode ver no
+painel, e só altera dados nos grupos que o administrador da empresa liberou em Configurações › Conector do Claude.
+Tudo o que ele grava fica na auditoria da empresa. O ServPilot não guarda as conversas: elas ficam na conta do Claude
+do usuário, sob as regras de privacidade da Anthropic. Para cortar o acesso, o usuário desconecta o ServPilot nas
+configurações do Claude ou o administrador desliga o usuário no ServPilot. Detalhes em
+<a href="/conector">servpilot.com.br/conector</a>.</p>
 
 <h2>5. Com quem compartilhamos</h2>
 <table>
@@ -73,6 +82,7 @@ antes de salvar.</p>
   <tr><td>ElevenLabs e OpenAI</td><td>Transcrição e organização dos relatos por áudio</td></tr>
   <tr><td>Mercado Pago</td><td>Pagamento da assinatura do ServPilot (dados de quem paga: nome, e-mail, documento e o meio de pagamento, tratados pelo Mercado Pago)</td></tr>
   <tr><td>YouTube (Google)</td><td>Exibição dos vídeos da central de tutoriais (modo de privacidade avançada)</td></tr>
+  <tr><td>Anthropic (Claude)</td><td>Só quando o usuário conecta o próprio Claude ao ServPilot (conector): os dados de cada pedido que ele faz ao Claude</td></tr>
   <tr><td>WhatsApp (Meta)</td><td>Só quando o usuário escolhe enviar uma mensagem pelo próprio WhatsApp</td></tr>
   <tr><td>Google Analytics e Google Ads</td><td>Medir as visitas ao site e os anúncios, só se a pessoa aceitar os cookies</td></tr>
   <tr><td>Meta (Facebook e Instagram) e TikTok</td><td>Medir os anúncios nessas redes, só se a pessoa aceitar os cookies</td></tr>

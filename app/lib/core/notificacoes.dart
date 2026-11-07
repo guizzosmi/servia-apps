@@ -27,8 +27,7 @@ class Notificacoes {
   /// Firebase configurado e iniciado neste aparelho.
   static bool get ligado => _ligado;
 
-  /// Na abertura do app. Sem configuração (ou no iPhone, por enquanto),
-  /// o app segue sem notificações.
+  /// Na abertura do app. Sem configuração, o app segue sem notificações.
   static Future<void> iniciar({required VoidCallback aoChegar}) async {
     // Guia 66: no iPhone, só depois de o app do iPhone existir no Firebase.
     final opcoes = switch (defaultTargetPlatform) {
@@ -57,12 +56,22 @@ class Notificacoes {
     FirebaseMessaging.onMessageOpenedApp.listen((_) => aoChegar());
   }
 
-  /// Pede a permissão (Android 13 ou mais novo) e devolve o endereço deste
+  /// Pede a permissão (Android 13 ou mais novo e iPhone) e devolve o endereço deste
   /// aparelho no Firebase. Sem internet na primeira vez, devolve null.
   static Future<String?> token() async {
     if (!_ligado) return null;
     try {
       await FirebaseMessaging.instance.requestPermission();
+      // iPhone: o endereço do Firebase depende do da Apple (APNs), que chega uns segundos depois da
+      // permissão. Sem ele, getToken falha; espera até ~10 s e, se não vier, tenta na próxima abertura.
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        String? apns;
+        for (var i = 0; i < 10 && apns == null; i++) {
+          apns = await FirebaseMessaging.instance.getAPNSToken();
+          if (apns == null) await Future<void>.delayed(const Duration(seconds: 1));
+        }
+        if (apns == null) return null;
+      }
       return await FirebaseMessaging.instance.getToken();
     } catch (e) {
       debugPrint('Token das notificações: $e');

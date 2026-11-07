@@ -37,4 +37,7 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Teste interno (grupo Piloto) não passa pela revisão beta da Apple: o build fica disponível assim que a
+        # Apple termina de processar. Para testadores externos, preencher as Informações de teste no TestFlight e
+        # ligar de novo (true).
+        submit_to_testflight: false
