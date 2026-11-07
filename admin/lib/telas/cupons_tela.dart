@@ -81,6 +81,7 @@ class _DialogoCupomState extends State<_DialogoCupom> {
   late final _descricao = TextEditingController(text: '${c['descricao'] ?? ''}');
   late final _valor = TextEditingController(text: c['valor'] == null ? '' : '${c['valor']}'.replaceAll('.', ','));
   late final _meses = TextEditingController(text: '${c['meses'] ?? ''}');
+  late final _mesesGratis = TextEditingController(text: '${c['meses_gratis'] ?? 0}');
   late final _validade = TextEditingController(text: dataBr(c['valido_ate']));
   late final _usosMax = TextEditingController(text: '${c['usos_max'] ?? ''}');
   late String _tipo = '${c['tipo'] ?? 'percentual'}';
@@ -124,6 +125,7 @@ class _DialogoCupomState extends State<_DialogoCupom> {
           'aplica_em': _aplica,
           'plano_id': _plano,
           'meses': _meses.text.trim().isEmpty ? null : int.tryParse(_meses.text.trim()),
+          'meses_gratis': int.tryParse(_mesesGratis.text.trim()) ?? 0,
           'valido_ate': validade,
           'usos_max': _usosMax.text.trim().isEmpty ? null : int.tryParse(_usosMax.text.trim()),
           'so_novos': _soNovos,
@@ -159,7 +161,11 @@ class _DialogoCupomState extends State<_DialogoCupom> {
                 null: 'Qualquer plano',
                 for (final p in widget.planos) p['id'] as String: '${p['nome']}',
               }, (v) => setState(() => _plano = v)),
-              campoTexto(_meses, 'Em quantas mensalidades', ajuda: 'Vazio = todas, enquanto o cupom estiver na conta.',
+              campoTexto(_mesesGratis, 'Meses grátis antes do desconto',
+                  ajuda: 'Ex.: 3 = três meses de graça e depois o desconto acima (cliente fundador). 0 = nenhum.',
+                  teclado: TextInputType.number),
+              campoTexto(_meses, 'Em quantos meses com o desconto', ajuda: 'Vazio = todos, enquanto o cupom estiver na conta. '
+                  'O pagamento anual conta 12 meses.',
                   teclado: TextInputType.number),
               campoTexto(_validade, 'Usar até (dd/mm/aaaa)', ajuda: 'Até quando dá para digitar o cupom. Vazio = sem prazo.'),
               campoTexto(_usosMax, 'Limite de contas', ajuda: 'Vazio = sem limite.', teclado: TextInputType.number),

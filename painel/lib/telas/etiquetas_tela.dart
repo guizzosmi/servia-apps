@@ -82,7 +82,7 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
         .single();
     final nome = (e['nome_fantasia'] ?? e['razao_social'] ?? '') as String;
     final tel = formatarValor(e['telefone'], TipoCampo.telefone);
-    return tel.isEmpty ? 'Manutenção: $nome' : 'Manutenção: $nome · $tel';
+    return tel.isEmpty ? 'Manutenção: $nome' : 'Manutenção: $nome\n$tel';
   }
 
   /// [baixar] = true salva o arquivo; false abre a impressão do navegador.

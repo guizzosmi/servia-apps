@@ -631,7 +631,7 @@ class _EscolherClientesState extends State<_EscolherClientes> {
         .from('clientes')
         .select('id, nome, nome_fantasia, documento')
         .isFilter('excluido_em', null)
-        .order('nome')
+        .order('nome', ascending: true)
         .limit(2000)
         .then((r) {
       if (mounted) setState(() => _todos = r.map((x) => Map<String, dynamic>.from(x)).toList());

@@ -2,162 +2,241 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>API OData · ServPilot</title>
-<meta name="description" content="API do ServPilot no padrão OData v4: autenticação OAuth 2.0, consultas com $filter e $expand, inclusão, alteração, exclusão e integração com o Protheus por TenantId.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>API do ServPilot · Referência</title>
+<meta name="description" content="Referência completa da API do ServPilot (OData v4): todas as entidades, campos, navegações e ações, exemplos de retorno e um console para testar as chamadas com a sua credencial.">
 <link rel="canonical" href="https://servpilot.com.br/api">
 <link rel="icon" href="/favicon.ico" sizes="any">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/estilo.css">
-<link rel="stylesheet" href="/doc.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/api-doc.css">
+<script src="/api-doc.js" defer></script>
 </head>
 <body>
-<!-- Guia 53: documentação da API OData v4. -->
-<header class="doc-topo"><div class="faixa">
-  <a href="/"><img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38"></a>
-  <a href="https://painel.servpilot.com.br/integracoes">Criar credencial</a>
-</div></header>
+<!-- Guia 85: referência completa da API, gerada de GET /api/referencia, com console para testar. -->
+<header class="ad-topo">
+  <div class="ad-topo-in">
+    <a href="/"><img src="/img/logo-escuro.svg" alt="ServPilot" width="120" height="33"></a>
+    <span class="ad-titulo">API · Referência</span>
+    <nav aria-label="Atalhos">
+      <button class="ad-btn" type="button" id="baixarOpenapi" disabled>Baixar OpenAPI</button>
+      <a class="ad-btn coral" href="https://painel.servpilot.com.br/integracoes">Criar credencial</a>
+    </nav>
+  </div>
+</header>
 
-<main class="doc">
-<h1>API do ServPilot (OData v4)</h1>
-<p class="atualizado">Última atualização: 04/11/2026</p>
+<div class="ad-grade">
+  <aside class="ad-menu" aria-label="Conteúdo">
+    <h4>Guia</h4>
+    <a href="#comecar">Começar</a>
+    <a href="#credencial">1. Credencial</a>
+    <a href="#autenticacao">2. Token</a>
+    <a href="#empresa">3. Empresa e filial</a>
+    <a href="#consultas">4. Consultas</a>
+    <a href="#gravacao">5. Incluir, alterar, excluir</a>
+    <a href="#acoes">6. Ações</a>
+    <a href="#depara">7. De-para com o ERP</a>
+    <a href="#erros">8. Erros</a>
+    <a href="#limites">9. Limites e segurança</a>
+    <h4>Entidades</h4>
+    <label class="ad-campo"><span class="sr">Procurar entidade</span>
+      <input class="ad-busca" id="busca" type="search" placeholder="Procurar (ex.: Clientes)" autocomplete="off">
+    </label>
+    <div class="ad-lista" id="menuEntidades"><p class="ad-vazio">Carregando…</p></div>
+  </aside>
 
-<p>Integre o ServPilot ao seu ERP (Protheus, por exemplo), ao BI ou a outro sistema. A API segue o padrão
-<b>OData v4</b> e expõe os cadastros e movimentos com consulta, inclusão, alteração e exclusão. O administrador da
-plataforma decide o que fica liberado em cada entidade; o modelo completo, com o que cada uma permite, está no
-<code>$metadata</code>.</p>
+  <main class="ad-conteudo">
+    <section id="comecar">
+      <h1>API do ServPilot</h1>
+      <p class="ad-sub">Integre o ServPilot ao seu ERP, ao BI ou a outro sistema. A API segue o padrão <b>OData v4</b>:
+        consulta, inclusão, alteração, exclusão e as ações do sistema (concluir OS, aprovar orçamento...). Abaixo do guia
+        está a referência de <b>todas as entidades</b>, com campos, exemplos de retorno e um console para testar com a sua
+        credencial.</p>
+      <div class="ad-tabela"><table>
+        <tr><th>Item</th><th>Endereço</th></tr>
+        <tr><td>Token (OAuth 2.0)</td><td><code id="urlToken">…/api/token</code></td></tr>
+        <tr><td>Serviço OData</td><td><code id="urlOdata">…/api/odata</code></td></tr>
+        <tr><td>Modelo (CSDL)</td><td><code>…/api/odata/$metadata</code> (com token)</td></tr>
+        <tr><td>Esta referência (JSON)</td><td><code id="urlRef">…/api/referencia</code></td></tr>
+      </table></div>
+      <p class="ad-info">Para testar: crie uma credencial no painel (Administração › Integrações), cole o <code>client_id</code> e o
+        <code>client_secret</code> no console e clique em <b>Testar</b> em qualquer chamada. Para explorar com segurança, use
+        uma credencial <b>só de consulta</b>.</p>
+    </section>
 
-<table>
-  <tr><th>Item</th><th>Endereço</th></tr>
-  <tr><td>Token (OAuth 2.0)</td><td><code>https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api/token</code></td></tr>
-  <tr><td>Serviço OData</td><td><code>https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api/odata</code></td></tr>
-  <tr><td>Modelo (CSDL)</td><td><code>…/api/odata/$metadata</code></td></tr>
-</table>
+    <section id="credencial">
+      <h2>1. Credencial</h2>
+      <p>No painel, em <b>Administração › Integrações (API)</b>, o administrador da empresa cria uma credencial para cada
+        sistema. Ela tem um <code>client_id</code> e um <code>client_secret</code>, que aparece uma única vez. A API age como o
+        usuário que criou a credencial, só com os papéis escolhidos nela (gestor, financeiro ou técnico), e sempre dentro
+        das empresas liberadas. Uma credencial pode ser só de consulta. Revogar vale na hora.</p>
+    </section>
 
-<h2>1. Credencial</h2>
-<p>No painel, em <b>Administração › Integrações (API)</b>, o administrador da empresa cria uma credencial para cada
-sistema. Ela tem um <code>client_id</code> e um <code>client_secret</code>, que aparece uma única vez. A API age como o
-usuário que criou a credencial, só com os papéis escolhidos nela (gestor, financeiro ou técnico), e sempre dentro das
-empresas liberadas. Uma credencial pode ser só de consulta. Revogar vale na hora.</p>
-
-<h2>2. Autenticação: bearer token e refresh token</h2>
-<pre><code>POST /api/token
+    <section id="autenticacao">
+      <h2>2. Token: bearer e refresh</h2>
+<pre class="ad-codigo"><code>POST /api/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials&amp;client_id=SEU_CLIENT_ID&amp;client_secret=SEU_CLIENT_SECRET</code></pre>
-<p>Também aceita o <code>client_id</code> e o <code>client_secret</code> no cabeçalho <code>Authorization: Basic</code>. A resposta:</p>
-<pre><code>{ "access_token": "eyJ…", "token_type": "Bearer", "expires_in": 900,
+      <p>Também aceita o <code>client_id</code> e o <code>client_secret</code> no cabeçalho <code>Authorization: Basic</code>. A resposta:</p>
+<pre class="ad-codigo"><code>{ "access_token": "eyJ…", "token_type": "Bearer", "expires_in": 900,
   "refresh_token": "spr_…", "refresh_token_expires_in": 2592000 }</code></pre>
-<ul>
-  <li><b>access_token</b>: vale 15 minutos. Envie em toda chamada: <code>Authorization: Bearer eyJ…</code>.</li>
-  <li><b>refresh_token</b>: vale 30 dias e <b>uma vez só</b>. Troque por um par novo com
-  <code>grant_type=refresh_token&amp;refresh_token=spr_…</code> e guarde o novo. Se um refresh token já usado aparecer de
-  novo, a sessão inteira é encerrada por segurança e é preciso pedir outro token com o <code>client_secret</code>.</li>
-  <li>Limite: 120 chamadas por minuto por credencial (resposta <code>429</code> com <code>Retry-After</code>).</li>
-</ul>
+      <ul>
+        <li><b>access_token</b>: vale <span class="lim-access">15</span> minutos. Envie em toda chamada: <code>Authorization: Bearer eyJ…</code>.</li>
+        <li><b>refresh_token</b>: vale <span class="lim-refresh">30</span> dias e <b>uma vez só</b>. Troque por um par novo com
+          <code>grant_type=refresh_token&amp;refresh_token=spr_…</code> e guarde o novo. Se um refresh token já usado aparecer
+          de novo, a sessão inteira é encerrada por segurança e é preciso pedir outro token com o <code>client_secret</code>.</li>
+      </ul>
+    </section>
 
-<h2>3. Empresa e filial: TenantId</h2>
-<p>A conta é o grupo de empresas; cada empresa (CNPJ) pode ser matriz ou filial. Cadastre no painel os códigos da
-empresa no ERP (Protheus: grupo, empresa, unidade e filial). Em cada chamada, escolha a filial como no REST do Protheus:</p>
-<pre><code>TenantId: 01,0101</code></pre>
-<p>Também vale <code>ServPilot-Empresa: &lt;código curto ou id da empresa&gt;</code>. Sem cabeçalho, vale a empresa
-principal da credencial. A filial precisa estar liberada na credencial.</p>
+    <section id="empresa">
+      <h2>3. Empresa e filial: TenantId</h2>
+      <p>A conta é o grupo de empresas; cada empresa (CNPJ) pode ser matriz ou filial. Cadastre no painel os códigos da
+        empresa no ERP (grupo, empresa, unidade e filial, conforme o seu sistema). Em cada chamada, escolha a filial no
+        cabeçalho <code>TenantId</code> (grupo e filial separados por vírgula):</p>
+<pre class="ad-codigo"><code>TenantId: 01,0101</code></pre>
+      <p>Também vale <code>ServPilot-Empresa: &lt;código curto ou id da empresa&gt;</code>. Sem cabeçalho, vale a empresa
+        principal da credencial. A filial precisa estar liberada na credencial.</p>
+    </section>
 
-<h2>4. Consultas</h2>
-<pre><code>GET /api/odata/Clientes?$filter=contains(tolower(nome),'mercado') and ativo eq true
-    &amp;$select=nome,documento&amp;$orderby=nome&amp;$top=50&amp;$count=true
+    <section id="consultas">
+      <h2>4. Consultas</h2>
+<pre class="ad-codigo"><code>GET /api/odata/Clientes?$filter=contains(tolower(nome),'mercado') and ativo eq true&amp;$select=nome,documento&amp;$orderby=nome&amp;$top=50&amp;$count=true
 GET /api/odata/Clientes(5d1c…)?$expand=Locais($select=nome,cidade)
 GET /api/odata/OrdensServico?$filter=status eq 'aberta' and prevista_para le 2026-11-30&amp;$expand=cliente($select=nome)
 GET /api/odata/Clientes/$count</code></pre>
-<table>
-  <tr><th>Opção</th><th>Como funciona</th></tr>
-  <tr><td><code>$filter</code></td><td><code>eq ne gt ge lt le</code>, <code>and or not</code>, <code>in (…)</code>, <code>null</code>,
-  <code>contains startswith endswith tolower toupper trim length year month day hour minute date now</code>.
-  Textos entre aspas simples; datas como <code>2026-11-01</code> ou <code>2026-11-01T10:00:00Z</code>; ids sem aspas.</td></tr>
-  <tr><td><code>$select</code>, <code>$orderby</code></td><td>Campos separados por vírgula; <code>desc</code> para ordem decrescente.</td></tr>
-  <tr><td><code>$expand</code></td><td>Um nível, com <code>$select</code>, <code>$filter</code>, <code>$orderby</code> e <code>$top</code> dentro dos parênteses, separados por <code>;</code>.</td></tr>
-  <tr><td><code>$top</code>, <code>$skip</code>, <code>$count</code></td><td>Sem <code>$top</code>, vêm 100 por página com <code>@odata.nextLink</code> para a próxima. Máximo 1.000 por chamada. <code>Prefer: odata.maxpagesize=N</code> também vale.</td></tr>
-  <tr><td><code>incluir_excluidos=true</code></td><td>Traz também os registros excluídos (para sincronizar exclusões).</td></tr>
-</table>
+      <div class="ad-tabela"><table>
+        <tr><th>Opção</th><th>Como funciona</th></tr>
+        <tr><td><code>$filter</code></td><td><code>eq ne gt ge lt le</code>, <code>and or not</code>, <code>in (…)</code>, <code>null</code>,
+          funções <code>contains startswith endswith tolower toupper trim length year month day hour minute date now</code>.
+          Textos entre aspas simples; datas como <code>2026-11-01</code> ou <code>2026-11-01T10:00:00Z</code>; ids sem aspas.</td></tr>
+        <tr><td><code>$select</code>, <code>$orderby</code></td><td>Campos separados por vírgula; <code>desc</code> para ordem decrescente.</td></tr>
+        <tr><td><code>$expand</code></td><td>As navegações de cada entidade (listadas abaixo), um nível, com <code>$select</code>,
+          <code>$filter</code>, <code>$orderby</code> e <code>$top</code> dentro dos parênteses, separados por <code>;</code>.</td></tr>
+        <tr><td><code>$top</code>, <code>$skip</code>, <code>$count</code></td><td>Sem <code>$top</code>, vêm <span class="lim-pagina">100</span> por
+          página com <code>@odata.nextLink</code> para a próxima. Máximo <span class="lim-max">1.000</span> por chamada.
+          <code>Prefer: odata.maxpagesize=N</code> também vale.</td></tr>
+        <tr><td><code>incluir_excluidos=true</code></td><td>Traz também os registros excluídos (para sincronizar exclusões).</td></tr>
+      </table></div>
+    </section>
 
-<h2>5. Incluir, alterar e excluir</h2>
-<pre><code>POST   /api/odata/Clientes            { "tipo": "pj", "nome": "Mercado Bom Preço", "documento": "11111111000111" }
+    <section id="gravacao">
+      <h2>5. Incluir, alterar e excluir</h2>
+<pre class="ad-codigo"><code>POST   /api/odata/Clientes            { "tipo": "pj", "nome": "Mercado Bom Preço", "documento": "11111111000111" }
 PATCH  /api/odata/Clientes(5d1c…)     { "telefone": "45999990001" }      If-Match: W/"3"   (opcional)
 PUT    /api/odata/Clientes(5d1c…)     registro completo (o que não vier volta ao padrão)
 DELETE /api/odata/Clientes(5d1c…)</code></pre>
-<ul>
-  <li>Incluir responde <code>201</code> com o registro e o cabeçalho <code>Location</code>. Alterar e excluir respondem
-  <code>204</code>; use <code>Prefer: return=representation</code> para receber o registro alterado.</li>
-  <li>Cada registro traz <code>@odata.etag</code>. Mandando o mesmo valor em <code>If-Match</code>, a alteração só acontece
-  se ninguém mexeu no registro desde a leitura (senão, <code>412</code>).</li>
-  <li>Excluir é lógico quando a tabela tem exclusão lógica: o registro some das consultas, mas continua no histórico.</li>
-  <li>Campos do sistema (<code>conta_id</code>, <code>empresa_id</code>, <code>versao</code>, datas de criação e alteração) são ignorados na gravação.</li>
-</ul>
+      <ul>
+        <li>Incluir responde <code>201</code> com o registro e o cabeçalho <code>Location</code>. Alterar e excluir respondem
+          <code>204</code>; use <code>Prefer: return=representation</code> para receber o registro alterado.</li>
+        <li>Cada registro traz <code>@odata.etag</code>. Mandando o mesmo valor em <code>If-Match</code>, a alteração só acontece
+          se ninguém mexeu no registro desde a leitura (senão, <code>412</code>).</li>
+        <li>Excluir é lógico quando a entidade tem exclusão lógica: o registro some das consultas, mas continua no histórico.</li>
+        <li>Campos do sistema (<code>conta_id</code>, <code>empresa_id</code>, <code>versao</code>, datas de criação e alteração)
+          são ignorados na gravação. Na referência, aparecem como <i>só leitura</i>.</li>
+      </ul>
+    </section>
 
-<h2>6. Movimentos e ações</h2>
-<p>Ordens de serviço, orçamentos, planos de preventiva e contratos gravam pelas mesmas regras do painel. Incluir uma OS
-abre a OS com o agendamento; excluir cancela (informe o motivo):</p>
-<pre><code>POST   /api/odata/OrdensServico   { "cliente_id": "…", "local_id": "…", "problema_relatado": "Não gela",
-                                    "equipamentos": ["…"], "agendamento": { "data_prevista": "2026-11-10" } }
-DELETE /api/odata/OrdensServico(…)?motivo=Cliente%20desistiu
-POST   /api/odata/OrdensServico(…)/ServPilot.Acao   { "acao": "concluir" }
-POST   /api/odata/Orcamentos(…)/ServPilot.Acao      { "acao": "aprovar" }</code></pre>
-<p>Itens de OS, atendimentos, medições e similares são só consulta: mudam pela entidade principal.</p>
+    <section id="acoes">
+      <h2>6. Movimentos e ações</h2>
+      <p>Ordens de serviço, orçamentos, planos e contratos gravam pelas mesmas regras do painel. Nelas, o corpo do
+        <code>POST</code>, do <code>PATCH</code> e do <code>DELETE</code> segue a ação de incluir, alterar e excluir de cada uma, e
+        as outras ações usam:</p>
+<pre class="ad-codigo"><code>POST /api/odata/OrdensServico(…)/ServPilot.Acao   { "acao": "concluir", "laudo_final": "…" }</code></pre>
+      <p>Cada entidade lista as ações dela, com os campos e um exemplo. Itens de OS, atendimentos, medições e similares são
+        só consulta: mudam pela entidade principal.</p>
+    </section>
 
-<h2>7. De-para com o ERP: VinculosExternos</h2>
-<p>Guarde a chave do ERP de cada registro, sem precisar guardar os ids do ServPilot no ERP:</p>
-<pre><code>POST /api/odata/VinculosExternos
-{ "sistema": "protheus", "entidade": "Clientes", "registro_id": "5d1c…",
-  "chave_externa": "000123|01", "filial_externa": "" }
+    <section id="depara">
+      <h2>7. De-para com o ERP: VinculosExternos</h2>
+      <p>Guarde a chave do ERP de cada registro, sem precisar guardar os ids do ServPilot no ERP:</p>
+<pre class="ad-codigo"><code>POST /api/odata/VinculosExternos
+{ "sistema": "erp", "entidade": "Clientes", "registro_id": "5d1c…", "chave_externa": "000123|01", "filial_externa": "" }
 
 GET /api/odata/VinculosExternos?$filter=entidade eq 'Clientes' and chave_externa eq '000123|01'</code></pre>
-<p><code>filial_externa</code> vazia = cadastro compartilhado no ERP (xFilial em branco).</p>
+      <p><code>filial_externa</code> vazia = cadastro sem filial no ERP.</p>
+    </section>
 
-<h2>8. Exemplo em TLPP (Protheus)</h2>
-<pre><code>#include "tlpp-core.th"
+    <section id="erros">
+      <h2>8. Erros</h2>
+<pre class="ad-codigo"><code>{ "error": { "code": "metodo_desabilitado", "message": "Incluir OsItens pela API está desabilitado." } }</code></pre>
+      <div class="ad-tabela"><table>
+        <tr><th>Status</th><th>Quando</th></tr>
+        <tr><td>400</td><td>Consulta ou dado inválido, regra do sistema (o <code>code</code> diz qual), filial desconhecida no TenantId</td></tr>
+        <tr><td>401</td><td>Sem token, token vencido ou credencial revogada</td></tr>
+        <tr><td>403</td><td>Método desabilitado na entidade, credencial só de consulta ou papel sem permissão</td></tr>
+        <tr><td>404</td><td>Entidade ou registro não encontrado (ou de outra empresa)</td></tr>
+        <tr><td>409</td><td>Valor duplicado</td></tr>
+        <tr><td>412</td><td>O registro mudou desde a leitura (If-Match)</td></tr>
+        <tr><td>429</td><td>Passou do limite por minuto (veja <code>Retry-After</code>)</td></tr>
+        <tr><td>504</td><td>A consulta demorou demais: use <code>$filter</code> e <code>$top</code></td></tr>
+      </table></div>
+    </section>
 
-User Function SPClientes() as Logical
-  Local oRest   := FWRest():New("https://srtokvosnwtyewiempyw.supabase.co/functions/v1/api")
-  Local aHeader := {"Content-Type: application/x-www-form-urlencoded"}
-  Local jToken  := JsonObject():New()
-  Local cToken  as Character
+    <section id="limites">
+      <h2>9. Limites e segurança</h2>
+      <ul>
+        <li><span class="lim-minuto">120</span> chamadas por minuto por credencial.</li>
+        <li>Só HTTPS. Guarde o <code>client_secret</code> num cofre ou parâmetro protegido; nunca em código-fonte.</li>
+        <li>Uma credencial por sistema, com os menores papéis possíveis. Revogue as que não usa.</li>
+        <li>Cada chamada fica registrada (90 dias) e pode ser vista no painel, na credencial.</li>
+        <li>As entidades de uma aplicação só respondem para empresas que usam essa aplicação.</li>
+      </ul>
+      <p>Dúvidas: <b>contato@servpilot.com.br</b>.</p>
+    </section>
 
-  oRest:SetPath("/token")
-  oRest:SetPostParams("grant_type=client_credentials&amp;client_id=" + SuperGetMV("MV_XSPCID", .F., "") + ;
-                      "&amp;client_secret=" + SuperGetMV("MV_XSPSEC", .F., ""))
-  If !oRest:Post(aHeader)
-    ConOut("ServPilot token: " + oRest:GetLastError())
-    Return .F.
-  EndIf
-  jToken:FromJson(oRest:GetResult())
-  cToken := jToken["access_token"]
+    <section id="entidades">
+      <h2>Entidades</h2>
+      <p class="ad-sub">Tudo o que a API expõe hoje, gerado do próprio modelo. Em cada chamada, <b>Testar</b> leva a chamada
+        para o console.</p>
+      <div id="referencia"><p class="ad-vazio">Carregando a referência…</p></div>
+    </section>
+  </main>
 
-  oRest:SetPath("/odata/Clientes?$select=nome,documento&amp;$top=100")
-  If oRest:Get({"Authorization: Bearer " + cToken, "TenantId: " + cEmpAnt + "," + cFilAnt})
-    ConOut(oRest:GetResult())
-  EndIf
-Return .T.</code></pre>
+  <aside class="ad-console" id="console" aria-label="Testar a API">
+    <h3>Testar a API <button class="ad-btn ad-fechar" type="button" id="fecharConsole">Fechar</button></h3>
 
-<h2>9. Erros</h2>
-<pre><code>{ "error": { "code": "metodo_desabilitado", "message": "Incluir OsItens pela API está desabilitado." } }</code></pre>
-<table>
-  <tr><th>Status</th><th>Quando</th></tr>
-  <tr><td>400</td><td>Consulta ou dado inválido, regra do sistema (o <code>code</code> diz qual), filial desconhecida no TenantId</td></tr>
-  <tr><td>401</td><td>Sem token, token vencido ou credencial revogada</td></tr>
-  <tr><td>403</td><td>Método desabilitado na entidade, credencial só de consulta ou papel sem permissão</td></tr>
-  <tr><td>404</td><td>Entidade ou registro não encontrado (ou de outra empresa)</td></tr>
-  <tr><td>409</td><td>Valor duplicado</td></tr>
-  <tr><td>412</td><td>O registro mudou desde a leitura (If-Match)</td></tr>
-  <tr><td>429</td><td>Passou do limite por minuto</td></tr>
-</table>
+    <div class="ad-passo">
+      <b>1. Acesso</b>
+      <label class="ad-campo">client_id<input id="clientId" type="text" autocomplete="off" spellcheck="false"></label>
+      <label class="ad-campo">client_secret<input id="clientSecret" type="password" autocomplete="off"></label>
+      <label class="ad-campo">TenantId (opcional)<input id="tenant" type="text" placeholder="01,0101" autocomplete="off"></label>
+      <div class="ad-linha">
+        <button class="ad-btn primario" type="button" id="obterToken">Obter token</button>
+        <button class="ad-btn" type="button" id="esquecer">Esquecer</button>
+      </div>
+      <span class="ad-estado" id="estadoToken" aria-live="polite">Sem token. A credencial fica só nesta aba e nada é salvo.</span>
+    </div>
 
-<h2>10. Segurança</h2>
-<ul>
-  <li>Só HTTPS. Guarde o <code>client_secret</code> num cofre ou parâmetro protegido; nunca em código-fonte.</li>
-  <li>Uma credencial por sistema, com os menores papéis possíveis. Revogue as que não usa.</li>
-  <li>Cada chamada fica registrada (90 dias) e pode ser vista no painel, na credencial.</li>
-</ul>
-<p>Dúvidas: <b><a href="mailto:anadgtec@gmail.com">anadgtec@gmail.com</a></b>.</p>
-</main>
+    <div class="ad-passo">
+      <b>2. Chamada</b>
+      <div class="ad-linha">
+        <label class="ad-campo">Método
+          <select id="metodo"><option>GET</option><option>POST</option><option>PATCH</option><option>PUT</option><option>DELETE</option></select>
+        </label>
+      </div>
+      <label class="ad-campo">Caminho
+        <span class="ad-url"><span>/odata/</span><input id="caminho" type="text" value="Clientes?$top=5" spellcheck="false" autocomplete="off"></span>
+      </label>
+      <label class="ad-check"><input type="checkbox" id="preferRep"> <span>Prefer: return=representation (receber o registro gravado)</span></label>
+      <label class="ad-campo">If-Match (opcional)<input id="ifMatch" type="text" placeholder='W/"3"' autocomplete="off"></label>
+      <label class="ad-campo" id="campoCorpo">Corpo (JSON)<textarea id="corpo" spellcheck="false"></textarea></label>
+      <label class="ad-check" id="campoGrava"><input type="checkbox" id="confirmaGrava"> <span>Entendo que esta chamada grava dados reais da empresa.</span></label>
+      <div class="ad-linha">
+        <button class="ad-btn primario" type="button" id="enviar">Enviar</button>
+        <button class="ad-btn" type="button" id="copiarCurl">Copiar como curl</button>
+      </div>
+      <span class="ad-estado" id="estadoChamada" aria-live="polite"></span>
+    </div>
+
+    <div class="ad-passo ad-resp" id="resposta" hidden>
+      <b>3. Resposta</b>
+      <div class="ad-resp-topo"><span class="status" id="respStatus"></span><span id="respTempo"></span>
+        <button class="ad-btn" type="button" id="copiarResp">Copiar</button></div>
+      <div class="ad-cab" id="respCab"></div>
+      <pre class="ad-codigo"><code id="respCorpo"></code></pre>
+    </div>
+  </aside>
+</div>
+<button class="ad-btn coral ad-abrir-console" type="button" id="abrirConsole">Testar a API</button>
 </body>
 </html>

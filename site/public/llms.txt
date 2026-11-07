@@ -7,7 +7,7 @@
 - Gestão de Equipamentos (em breve): https://servpilot.com.br/equipamentos
 
 ## Módulos
-- Integração com ERP (disponível): API OData com credencial própria; integração com o Protheus e com outros ERPs.
+- Integração com ERP (disponível): API OData com credencial própria e documentação aberta em https://servpilot.com.br/api, para ERPs, BI e outros sistemas.
 - Notas fiscais (em breve): NFS-e dos serviços e NF-e das peças direto das OS, uma a uma ou o mês inteiro, com o certificado A1 enviado pela própria empresa. Módulo à parte.
 
 ## Gestão de Serviços de Refrigeração: o que faz
@@ -30,15 +30,18 @@
 - Localização e agenda de cada equipamento; checklist de saída e de retorno com fotos e aceite.
 - Manutenção preventiva por tempo e por uso, e corretiva.
 - Custos e margem por equipamento.
-- Integração com Protheus.
+- Integração com ERP.
 - Ainda sem data de lançamento.
 
 ## Preços da Gestão de Serviços de Refrigeração (novembro de 2026)
 - Plano Autônomo: R$ 99,99/mês com 1 usuário, 300 minutos de IA e 250 mensagens automáticas de WhatsApp.
 - Plano Equipe: R$ 199/mês com 2 usuários, 600 minutos de IA e 500 mensagens automáticas de WhatsApp.
 - Usuário adicional: R$ 69/mês (+300 minutos e +250 mensagens).
-- Pacotes: 500 minutos de IA por R$ 29; 1.000 mensagens por R$ 69.
+- Pacotes: 500 minutos de IA por R$ 59,90; 1.000 mensagens por R$ 69.
+- Módulo Notas fiscais (opcional), por empresa (CNPJ) que emite: até 50 notas por mês R$ 49; até 200 notas R$ 99; até 1.000 notas R$ 249. Nota além da faixa R$ 0,49.
 - 14 dias grátis sem cartão, sem fidelidade, pagamento por Pix, boleto ou cartão, nota fiscal em todo pagamento.
+- Pagamento anual opcional: paga 10 meses e usa 12 (Autônomo R$ 999,90/ano; Equipe R$ 1.990/ano), com devolução integral até 7 dias depois de pagar.
+- Indique e ganhe: 1 mês do plano grátis por empresa indicada que pagar a 1ª mensalidade.
 - Detalhes e simulador: https://servpilot.com.br/precos
 
 ## Páginas
@@ -47,12 +50,15 @@
 - [Gestão de Equipamentos (em breve)](https://servpilot.com.br/equipamentos)
 - [Sistema para empresas de refrigeração](https://servpilot.com.br/sistema-para-refrigeracao)
 - [Software de PMOC](https://servpilot.com.br/software-pmoc)
+- [Kit PMOC grátis: planilha e checklist mensal](https://servpilot.com.br/modelo-pmoc)
 - [App para técnico de refrigeração](https://servpilot.com.br/app-tecnico-refrigeracao)
 - [Ordem de serviço para ar-condicionado](https://servpilot.com.br/ordem-de-servico-ar-condicionado)
 - [Preços](https://servpilot.com.br/precos)
 - [Teste grátis](https://servpilot.com.br/assinar)
 - [Blog](https://servpilot.com.br/blog)
+- [Quanto cobrar por PMOC: como calcular o preço do contrato](https://servpilot.com.br/blog/quanto-cobrar-pmoc)
+- [Software de PMOC: quanto custa e como escolher](https://servpilot.com.br/blog/software-pmoc-quanto-custa-como-escolher)
 
 ## Empresa
 - ServPilot é oferecido por Ana DG Tecnologia da Informação Ltda (CNPJ 43.904.201/0001-26), São Miguel do Iguaçu, PR, Brasil.
-- Contato: anadgtec@gmail.com
+- Contato: contato@servpilot.com.br

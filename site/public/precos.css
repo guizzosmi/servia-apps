@@ -184,3 +184,7 @@
 /* Antes em style="" (bloqueado pelo CSP) */
 .secao.sem-topo { padding-top: 0; }
 .botao.sim-assinar { margin-top: 18px; justify-content: center; }
+
+/* Guia 89: preço do plano anual embaixo do mensal */
+.preco-anual { color: var(--neutro); font-size: 14px; margin-top: 2px; }
+.preco-anual b { color: var(--tinta, inherit); }

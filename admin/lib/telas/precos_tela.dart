@@ -70,6 +70,8 @@ class _FormPlanoState extends State<_FormPlano> {
     for (final (k, _, _) in _campos) k: TextEditingController(text: '${widget.plano[k] ?? ''}'.replaceAll('.', ',')),
   };
   late final _descricao = TextEditingController(text: '${widget.plano['descricao'] ?? ''}');
+  // Guia 90: o módulo Comercial vem incluído neste plano?
+  late bool _comercial = widget.plano['comercial_incluido'] != false;
 
   @override
   void dispose() {
@@ -88,12 +90,20 @@ class _FormPlanoState extends State<_FormPlano> {
               SizedBox(width: 230, child: campoTexto(_c[k]!, rotulo, teclado: ehNum ? TextInputType.number : null)),
           ]),
           campoTexto(_descricao, 'Descrição (site)'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _comercial,
+            onChanged: (v) => setState(() => _comercial = v),
+            title: const Text('Módulo Comercial incluído'),
+            subtitle: const Text('Desligado: quem ligar o Comercial paga o valor das regras abaixo, na mensalidade.'),
+          ),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: () => widget.aoSalvar({
                 'id': widget.plano['id'],
                 'descricao': _descricao.text.trim(),
+                'comercial_incluido': _comercial,
                 for (final (k, _, ehNum) in _campos) k: ehNum ? numero(_c[k]!.text) : _c[k]!.text.trim(),
               }),
               child: const Text('Salvar plano'),
@@ -170,19 +180,39 @@ class _FormRegrasState extends State<_FormRegras> {
   late final _pagar = TextEditingController(text: '${widget.regras['dias_para_pagar'] ?? 5}');
   late final _bloquear = TextEditingController(text: '${widget.regras['bloquear_apos_dias'] ?? ''}');
   late bool _atendeu = widget.regras['conta_quem_atendeu'] != false;
-  // Guia 81: módulo de notas fiscais.
-  late final _notasModulo = TextEditingController(text: '${widget.regras['notas_valor_modulo'] ?? 49}');
-  late final _notasIncluidas = TextEditingController(text: '${widget.regras['notas_incluidas'] ?? 50}');
+  // Guias 81 e 86: módulo de notas fiscais por faixa (notas por mês e valor) e a nota a mais.
+  late final _faixaNotas = [
+    TextEditingController(text: '${widget.regras['notas_faixa1_notas'] ?? widget.regras['notas_incluidas'] ?? 50}'),
+    TextEditingController(text: '${widget.regras['notas_faixa2_notas'] ?? 200}'),
+    TextEditingController(text: '${widget.regras['notas_faixa3_notas'] ?? 1000}'),
+  ];
+  late final _faixaValor = [
+    TextEditingController(text: '${widget.regras['notas_faixa1_valor'] ?? widget.regras['notas_valor_modulo'] ?? 49}'),
+    TextEditingController(text: '${widget.regras['notas_faixa2_valor'] ?? 99}'),
+    TextEditingController(text: '${widget.regras['notas_faixa3_valor'] ?? 249}'),
+  ];
   late final _notasExtra = TextEditingController(text: '${widget.regras['notas_valor_extra'] ?? 0.49}');
+  // Guia 89: plano anual, arrependimento e comissão padrão dos parceiros.
+  late final _anualPagos = TextEditingController(text: '${widget.regras['anual_meses_pagos'] ?? 10}');
+  late final _anualRenovar = TextEditingController(text: '${widget.regras['anual_renovar_dias'] ?? 7}');
+  late final _arrependimento = TextEditingController(text: '${widget.regras['arrependimento_dias'] ?? 7}');
+  late final _parceiroPct = TextEditingController(text: '${widget.regras['parceiro_comissao_pct'] ?? 10}');
+  late final _parceiroMeses = TextEditingController(text: '${widget.regras['parceiro_comissao_meses'] ?? 12}');
+  // Guia 90: módulo Comercial nos planos que não o incluem.
+  late final _comercialValor = TextEditingController(text: '${widget.regras['comercial_valor'] ?? 29}');
 
   @override
   void dispose() {
     _dias.dispose();
     _pagar.dispose();
     _bloquear.dispose();
-    _notasModulo.dispose();
-    _notasIncluidas.dispose();
+    for (final c in [..._faixaNotas, ..._faixaValor]) {
+      c.dispose();
+    }
     _notasExtra.dispose();
+    for (final c in [_anualPagos, _anualRenovar, _arrependimento, _parceiroPct, _parceiroMeses, _comercialValor]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -202,11 +232,28 @@ class _FormRegrasState extends State<_FormRegras> {
           campoTexto(_bloquear, 'Bloquear sozinho depois de quantos dias de atraso',
               ajuda: 'Vazio = nunca bloqueia sozinho (você decide na tela do cliente). Cortesia nunca é bloqueada.',
               teclado: TextInputType.number),
-          const SizedBox(height: 8),
-          const Text('Notas fiscais (módulo por empresa)', style: TextStyle(fontWeight: FontWeight.w600)),
-          campoTexto(_notasModulo, 'Mensalidade do módulo (R\$)', teclado: TextInputType.number),
-          campoTexto(_notasIncluidas, 'Notas incluídas por mês', teclado: TextInputType.number),
-          campoTexto(_notasExtra, 'Nota extra (R\$)', teclado: TextInputType.number),
+          const Subtitulo('Notas fiscais (módulo por empresa, em 3 faixas)'),
+          for (var i = 0; i < 3; i++)
+            Row(children: [
+              Expanded(child: campoTexto(_faixaNotas[i], 'Faixa ${i + 1}: até quantas notas por mês', teclado: TextInputType.number)),
+              const SizedBox(width: 12),
+              Expanded(child: campoTexto(_faixaValor[i], 'Faixa ${i + 1}: mensalidade (R\$)', teclado: TextInputType.number)),
+            ]),
+          campoTexto(_notasExtra, 'Nota além da faixa (R\$ por nota)', teclado: TextInputType.number),
+          const Subtitulo('Plano anual e parceiros'),
+          Row(children: [
+            Expanded(child: campoTexto(_anualPagos, 'Anual: paga quantos meses (usa 12)', teclado: TextInputType.number)),
+            const SizedBox(width: 12),
+            Expanded(child: campoTexto(_anualRenovar, 'Fatura da renovação: dias antes do fim', teclado: TextInputType.number)),
+            const SizedBox(width: 12),
+            Expanded(child: campoTexto(_arrependimento, 'Desistir com devolução: até quantos dias', teclado: TextInputType.number)),
+          ]),
+          Row(children: [
+            Expanded(child: campoTexto(_parceiroPct, 'Comissão padrão do parceiro (%)', teclado: TextInputType.number)),
+            const SizedBox(width: 12),
+            Expanded(child: campoTexto(_parceiroMeses, 'Durante quantos meses', teclado: TextInputType.number)),
+          ]),
+          campoTexto(_comercialValor, 'Módulo Comercial nos planos que não incluem (R\$/mês)', teclado: TextInputType.number),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton(
@@ -215,9 +262,17 @@ class _FormRegrasState extends State<_FormRegras> {
                 'conta_quem_atendeu': _atendeu,
                 'dias_para_pagar': numero(_pagar.text).toInt(),
                 'bloquear_apos_dias': _bloquear.text.trim().isEmpty ? null : numero(_bloquear.text).toInt(),
-                'notas_valor_modulo': numero(_notasModulo.text),
-                'notas_incluidas': numero(_notasIncluidas.text).toInt(),
+                for (var i = 0; i < 3; i++) ...{
+                  'notas_faixa${i + 1}_notas': numero(_faixaNotas[i].text).toInt(),
+                  'notas_faixa${i + 1}_valor': numero(_faixaValor[i].text),
+                },
                 'notas_valor_extra': numero(_notasExtra.text),
+                'anual_meses_pagos': numero(_anualPagos.text).toInt().clamp(1, 12),
+                'anual_renovar_dias': numero(_anualRenovar.text).toInt(),
+                'arrependimento_dias': numero(_arrependimento.text).toInt(),
+                'parceiro_comissao_pct': numero(_parceiroPct.text),
+                'parceiro_comissao_meses': numero(_parceiroMeses.text).toInt(),
+                'comercial_valor': numero(_comercialValor.text),
               }),
               child: const Text('Salvar regras'),
             ),

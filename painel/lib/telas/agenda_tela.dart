@@ -53,8 +53,8 @@ class _AgendaTelaState extends State<AgendaTela> {
           .eq('papel_equipe', 'responsavel')
           .neq('status', 'removido')
           .isFilter('excluido_em', null)
-          .order('data')
-          .order('ordem');
+          .order('data', ascending: true)
+          .order('ordem', ascending: true);
       if (mounted) {
         setState(() {
           _fila = fila;

@@ -78,6 +78,7 @@
       <p class="plano-desc">Para quem trabalha sozinho, com tudo incluso: app, relato por áudio, orçamentos, preventivas e PMOC.</p>
       <div class="preco"><span class="rs">R$</span><span class="valor"><span data-a="valor_mensal" data-fmt="reais">99</span><span class="cent" data-a="valor_mensal" data-fmt="centavos">,99</span></span><span class="mes">/mês</span></div>
       <p class="preco-nota">para <b><span data-a="usuarios_incluidos">1</span> usuário</b>: você mesmo, no app e no painel</p>
+      <p class="preco-anual">ou <b><span data-a="valor_anual" data-fmt="moeda">R$ 999,90</span> por ano</b>: <span data-r="anual_meses_gratis">2</span> meses grátis</p>
       <ul class="inclui">
         <li><span class="ic">👤</span><div><b>1 usuário com login</b>
           <small>Contratou alguém? Mude para o Equipe pelo painel, na hora.</small></div></li>
@@ -98,6 +99,7 @@
       <p class="plano-desc" data-v="descricao">Painel do gestor, app do técnico, relato por áudio com IA, orçamentos com assinatura, preventivas e PMOC.</p>
       <div class="preco"><span class="rs">R$</span><span class="valor" data-v="valor_mensal" data-fmt="inteiro">199</span><span class="mes">/mês</span></div>
       <p class="preco-nota">para a empresa toda, com <b><span data-v="usuarios_incluidos">2</span> usuários</b> (o dono e um técnico, por exemplo)</p>
+      <p class="preco-anual">ou <b><span data-v="valor_anual" data-fmt="moeda">R$ 1.990,00</span> por ano</b>: <span data-r="anual_meses_gratis">2</span> meses grátis</p>
       <ul class="inclui">
         <li><span class="ic">👥</span><div><b><span data-v="usuarios_incluidos">2</span> usuários com login</b>
           <small>Cada usuário a mais: <b><span data-v="valor_usuario_extra" data-fmt="moeda">R$ 69,00</span>/mês</b>, e ele já traz mais minutos e mensagens.</small></div></li>
@@ -239,7 +241,16 @@
         <tr><td>Pacote: 1.000 mensagens de WhatsApp<small>pagamento único</small></td><td>R$ 69,00</td></tr>
       </tbody>
       <tbody>
+        <tr><td>Módulo Notas fiscais (opcional): até <span data-n="faixa1_notas" data-fmt="milhar">50</span> notas por mês<small>por empresa (CNPJ) que emite, NFS-e e NF-e direto da OS</small></td><td><span data-n="faixa1_valor" data-fmt="moeda">R$ 49,00</span>/mês</td></tr>
+        <tr><td>Módulo Notas fiscais: até <span data-n="faixa2_notas" data-fmt="milhar">200</span> notas por mês<small>por empresa (CNPJ) que emite</small></td><td><span data-n="faixa2_valor" data-fmt="moeda">R$ 99,00</span>/mês</td></tr>
+        <tr><td>Módulo Notas fiscais: até <span data-n="faixa3_notas" data-fmt="milhar">1.000</span> notas por mês<small>por empresa (CNPJ) que emite</small></td><td><span data-n="faixa3_valor" data-fmt="moeda">R$ 249,00</span>/mês</td></tr>
+        <tr><td>Nota fiscal além da faixa<small>entra na mensalidade seguinte</small></td><td><span data-n="valor_nota_extra" data-fmt="moeda">R$ 0,49</span> por nota</td></tr>
+      </tbody>
+      <tbody>
         <tr><td>Teste grátis<small>todos os recursos, sem cartão</small></td><td><span data-v="dias_teste">14</span> dias</td></tr>
+        <tr><td>Pagamento anual (opcional)<small>o plano à vista; usuários a mais e notas seguem mensais</small></td><td><span data-r="anual_meses_gratis">2</span> meses grátis</td></tr>
+        <tr><td>Indique o ServPilot<small>por empresa indicada que pagar a 1ª mensalidade</small></td><td>1 mês grátis</td></tr>
+        <tr><td>Módulo Comercial (opcional)<small>funil de vendas, tarefas de follow-up e metas; incluído no Equipe</small></td><td>Autônomo: <span data-m="comercial_valor" data-fmt="moeda">R$ 29,00</span>/mês</td></tr>
         <tr><td>Fotos, relatórios e histórico<small>guardados por 5 anos</small></td><td>incluso</td></tr>
         <tr><td>Atualizações, vídeos e suporte pelo WhatsApp</td><td>incluso</td></tr>
         <tr><td>Fidelidade ou multa de cancelamento</td><td>não tem</td></tr>
@@ -272,9 +283,21 @@
       <details class="revelar"><summary>O que acontece se eu atrasar o pagamento?</summary>
         <p>Você recebe o aviso no painel. O trabalho não para no primeiro dia de atraso: o acesso só é suspenso depois de conversarmos, e os seus dados continuam guardados.</p></details>
       <details class="revelar"><summary>Posso cancelar quando quiser?</summary>
-        <p>Pode. Não tem fidelidade nem multa. Você usa até o fim do mês que já pagou e pode exportar os seus dados.</p></details>
+        <p>Pode. Não tem fidelidade nem multa. Você usa até o fim do mês que já pagou e pode exportar os seus dados. No pagamento anual, você usa até o fim do ano pago; até <span data-r="arrependimento_dias">7</span> dias depois de pagar, dá para desistir com devolução integral.</p></details>
+      <details class="revelar"><summary>Tem desconto para pagar por ano?</summary>
+        <p>Tem: no anual você paga <span data-r="anual_meses_pagos">10</span> meses e usa 12, à vista (Pix, boleto ou cartão). Escolha em Plano e consumo, no painel, até no teste grátis. Usuários a mais e o módulo de notas continuam na mensalidade, e a renovação é automática. Se a fatura anual não for paga até o início do período, você continua no mensal, sem multa.</p></details>
+      <details class="revelar"><summary>Ganho alguma coisa indicando o ServPilot?</summary>
+        <p>Ganha: no painel, em Plano e consumo, está o seu link. Cada empresa que assinar por ele e pagar a 1ª mensalidade vale 1 mês do seu plano grátis, que entra sozinho na próxima fatura. Não tem limite de indicações.</p></details>
       <details class="revelar"><summary>Vocês emitem nota fiscal?</summary>
         <p>Sim, nota fiscal de serviço em todo pagamento, no CNPJ ou CPF informado no cadastro.</p></details>
+      <details class="revelar"><summary>Como funciona o módulo de notas fiscais?</summary>
+        <p>É opcional: você liga no painel quando quiser emitir a NFS-e dos serviços e a NF-e das peças direto das OS,
+          e escolhe a faixa de cada empresa (CNPJ) que emite: até <span data-n="faixa1_notas" data-fmt="milhar">50</span> notas
+          por <span data-n="faixa1_valor" data-fmt="moeda">R$ 49,00</span>, até <span data-n="faixa2_notas" data-fmt="milhar">200</span>
+          por <span data-n="faixa2_valor" data-fmt="moeda">R$ 99,00</span> ou até <span data-n="faixa3_notas" data-fmt="milhar">1.000</span>
+          por <span data-n="faixa3_valor" data-fmt="moeda">R$ 249,00</span> por mês. Passou da faixa, cada nota a mais custa
+          <span data-n="valor_nota_extra" data-fmt="moeda">R$ 0,49</span>. Dá para trocar de faixa quando quiser. Nota de
+          teste não conta.</p></details>
       <details class="revelar"><summary>Tenho um cupom de desconto. Onde uso?</summary>
         <p>No cadastro, no campo "Cupom". Se já é cliente, o administrador usa em Plano e consumo, no painel. O desconto aparece como uma linha da fatura.</p></details>
     </div>
@@ -289,6 +312,7 @@
     <p><span data-v="dias_teste">14</span> dias com tudo liberado. Se fizer sentido, você continua. Se não, não paga nada.</p>
     <div class="abertura-acoes centro">
       <a class="botao coral grande" href="/assinar">Começar o teste grátis</a>
+      <a class="botao contorno-claro grande" href="/demonstracao">Quero uma demonstração</a>
       <a class="botao contorno-claro grande" data-whatsapp href="/refrigeracao#contato">Tirar uma dúvida no WhatsApp</a>
     </div>
   </div>
@@ -310,7 +334,8 @@
       <a href="/termos">Termos de uso</a>
       <a href="/blog">Blog</a>
       <a href="/privacidade">Privacidade</a>
-      <a href="#" data-cookies>Cookies</a>
+      <a href="#" data-cookies>Cookies</a> <a href="https://www.instagram.com/servpilot" target="_blank" rel="noopener">Instagram</a> <a href="https://www.tiktok.com/@servpilot" target="_blank" rel="noopener">TikTok</a> <a href="https://www.facebook.com/1345149045355955" target="_blank" rel="noopener">Facebook</a>
+      <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
     </nav>
     <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
   </div>

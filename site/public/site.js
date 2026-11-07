@@ -44,6 +44,14 @@ const MENSAGEM = 'Olá! Vi o site do ServPilot e quero conhecer o sistema para a
     itens.forEach((el) => el.classList.add('visivel'));
   }
 
+  // Guia 89: link de indicação (?indicacao=SP...): guarda por 90 dias para o cadastro usar.
+  try {
+    const cod = (new URLSearchParams(location.search).get('indicacao') || '').trim().toUpperCase();
+    if (/^[A-Z0-9-]{4,30}$/.test(cod)) {
+      localStorage.setItem('sp_indicacao', JSON.stringify({ codigo: cod, ate: Date.now() + 90 * 864e5 }));
+    }
+  } catch (_) { /* sem armazenamento: o cadastro lê o próprio link */ }
+
   // Ano no rodapé
   const ano = document.getElementById('ano');
   if (ano) ano.textContent = String(new Date().getFullYear());

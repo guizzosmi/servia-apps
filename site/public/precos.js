@@ -9,10 +9,12 @@
     servpilot: {
       codigo: 'servpilot', nome: 'Equipe', valor_mensal: 199, usuarios_incluidos: 2, minutos_incluidos: 600, mensagens_incluidas: 500,
       valor_usuario_extra: 69, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 14,
+      valor_anual: 1990,
     },
     autonomo: {
       codigo: 'autonomo', nome: 'Autônomo', valor_mensal: 99.99, usuarios_incluidos: 1, minutos_incluidos: 300, mensagens_incluidas: 250,
       valor_usuario_extra: 99.99, minutos_por_usuario_extra: 300, mensagens_por_usuario_extra: 250, dias_teste: 14,
+      valor_anual: 999.9,
     },
   };
   const equipe = () => planos.servpilot;
@@ -62,8 +64,8 @@
 
   function pacotes(lista) {
     if (!lista || !lista.length) return;
-    const icone = { minutos: '🎙️', mensagens: '💬' };
-    const dica = { minutos: (q) => `Uns ${S.milhar(Math.round(q / 2))} relatos por áudio a mais.`, mensagens: () => 'Para meses de muito atendimento.' };
+    const icone = { minutos: '🎙️', mensagens: '💬', notas: '🧾' };
+    const dica = { minutos: (q) => `Uns ${S.milhar(Math.round(q / 2))} relatos por áudio a mais.`, mensagens: () => 'Para meses de muito atendimento.', notas: () => 'Para quem tem o módulo de notas e emitiu mais que o incluído.' };
     const cartoes = document.getElementById('pacotes-lista');
     if (cartoes) {
       cartoes.innerHTML = '';
@@ -133,6 +135,17 @@
       planos[p.codigo] = pl;
     });
     preencher(d && d.regras);
+    const notas = d && d.modulos && d.modulos.notas ? Object.assign({}, d.modulos.notas) : null;
+    if (notas) {
+      (notas.faixas || []).forEach((f) => { notas['faixa' + f.faixa + '_notas'] = f.notas; notas['faixa' + f.faixa + '_valor'] = f.valor; });
+      document.querySelectorAll('[data-n]').forEach((el) => {
+        const v = notas[el.dataset.n];
+        if (v !== undefined && v !== null) el.textContent = formatar(Number(v), el.dataset.fmt);
+      });
+    }
+    // Guia 90: módulo Comercial (valor no Autônomo).
+    const com = d && d.modulos && d.modulos.comercial;
+    if (com) document.querySelectorAll('[data-m="comercial_valor"]').forEach((el) => { el.textContent = formatar(Number(com.valor), 'moeda'); });
     pacotes(d && d.pacotes);
     simular();
   }).catch(() => { /* fica com os valores do HTML */ });

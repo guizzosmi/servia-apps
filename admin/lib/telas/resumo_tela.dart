@@ -14,9 +14,14 @@ class ResumoTela extends StatefulWidget {
 
 class _ResumoTelaState extends State<ResumoTela> {
   late Future<Map<String, dynamic>> _dados = rpcMapa('admin_resumo');
+  // Guia 90: empresa que recebe os contatos do site.
+  late Future<Map<String, dynamic>> _comercial = rpcMapa('admin_comercial_info');
   bool _rodando = false;
 
-  void _recarregar() => setState(() => _dados = rpcMapa('admin_resumo'));
+  void _recarregar() => setState(() {
+        _dados = rpcMapa('admin_resumo');
+        _comercial = rpcMapa('admin_comercial_info');
+      });
 
   Future<void> _rodarRotina() async {
     setState(() => _rodando = true);
@@ -78,7 +83,29 @@ class _ResumoTelaState extends State<ResumoTela> {
                   aoTocar: () => context.go('/faturas?situacao=vencida')),
               Indicador(rotulo: 'Notas fiscais a emitir', valor: '${d['notas_pendentes'] ?? 0}', cor: Cores.alerta,
                   aoTocar: () => context.go('/faturas?situacao=sem_nota')),
+              // Guia 89
+              Indicador(rotulo: 'Comissões a pagar (${mapa(d['comissoes'])['parceiros'] ?? 0} parceiro(s))',
+                  valor: moeda(mapa(d['comissoes'])['a_pagar']), cor: Cores.alerta,
+                  aoTocar: () => context.go('/parceiros')),
+              Indicador(rotulo: 'Clientes no anual', valor: '${c['anual'] ?? 0}'),
+              Indicador(rotulo: 'Indicações neste mês', valor: '${d['indicacoes_mes'] ?? 0}'),
             ]),
+            const SizedBox(height: 16),
+            FutureBuilder<Map<String, dynamic>>(
+              future: _comercial,
+              builder: (context, s) {
+                final c = s.data ?? const <String, dynamic>{};
+                if (!s.hasData) return const SizedBox.shrink();
+                return Secao(
+                  titulo: 'Comercial do ServPilot',
+                  child: c['empresa_id'] == null
+                      ? const Text('Nenhuma empresa recebe os contatos do site. Na tela do cliente da sua empresa, use '
+                          '"Receber os contatos do site".', style: TextStyle(color: Cores.alerta))
+                      : Text('Contatos do site entram em ${c['empresa']} · ${c['contatos_hoje']} hoje · '
+                          '${c['abertas']} oportunidade(s) em aberto (veja no painel dessa empresa, menu Comercial).'),
+                );
+              },
+            ),
             const SizedBox(height: 16),
             Text('Uso neste mês (todas as empresas)', style: Theme.of(context).textTheme.titleMedium),
             Wrap(children: [

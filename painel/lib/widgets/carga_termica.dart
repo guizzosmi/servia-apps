@@ -154,18 +154,18 @@ class _CargaTermicaState extends State<_CargaTermica> {
             if (_erro != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_erro!, style: const TextStyle(color: Cores.erro))),
             if (r != null) ...[
               const Divider(height: 24),
-              Text('${numeroBr(r['btu_h'])} BTU/h', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+              Text('${_milhar(r['btu_h'])} BTU/h', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
               Text('${r['conta']}', style: const TextStyle(color: Cores.neutro, fontSize: 12)),
               const SizedBox(height: 4),
               Text(
                 (num.tryParse('${r['quantidade']}') ?? 1) > 1
-                    ? 'Sugestão: ${r['quantidade']} aparelhos de ${numeroBr(r['capacidade'])} BTU/h'
-                    : 'Sugestão: 1 aparelho de ${numeroBr(r['capacidade'])} BTU/h',
+                    ? 'Sugestão: ${r['quantidade']} aparelhos de ${_milhar(r['capacidade'])} BTU/h'
+                    : 'Sugestão: 1 aparelho de ${_milhar(r['capacidade'])} BTU/h',
                 style: const TextStyle(fontWeight: FontWeight.w700, color: Cores.indigo700),
               ),
               if (instalado > 0)
                 Text(
-                  'Já instalado no ambiente: ${numeroBr(instalado)} BTU/h'
+                  'Já instalado no ambiente: ${_milhar(instalado)} BTU/h'
                   '${instalado < (num.tryParse('${r['btu_h']}') ?? 0) ? ' (falta capacidade)' : ' (dá conta)'}',
                   style: TextStyle(color: instalado < (num.tryParse('${r['btu_h']}') ?? 0) ? Cores.erro : Cores.sucesso),
                 ),
@@ -213,4 +213,17 @@ class _CargaTermicaState extends State<_CargaTermica> {
       ],
     );
   }
+}
+
+/// 20470 -> "20.470" (BTU/h com separador de milhar).
+String _milhar(Object? v) {
+  final n = num.tryParse('${v ?? ''}')?.round();
+  if (n == null) return '';
+  final t = n.abs().toString();
+  final b = StringBuffer(n < 0 ? '-' : '');
+  for (var i = 0; i < t.length; i++) {
+    if (i > 0 && (t.length - i) % 3 == 0) b.write('.');
+    b.write(t[i]);
+  }
+  return b.toString();
 }

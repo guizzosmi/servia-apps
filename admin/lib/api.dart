@@ -63,7 +63,11 @@ const rotulosSituacao = {
   'aberta': 'Em aberto',
   'vencida': 'Vencida',
   'paga': 'Paga',
+  'estornada': 'Devolvida',
 };
+
+/// Guia 89: situação da indicação.
+const rotulosIndicacao = {'aguardando': 'aguardando', 'valida': 'valeu', 'recusada': 'não valeu'};
 
 Color corSituacao(String s) => switch (s) {
       'teste' => Cores.info,
@@ -74,7 +78,7 @@ Color corSituacao(String s) => switch (s) {
       _ => Cores.neutro,
     };
 
-const rotulosTipoFatura = {'mensalidade': 'Mensalidade', 'pacote': 'Pacote', 'avulsa': 'Avulsa'};
+const rotulosTipoFatura = {'mensalidade': 'Mensalidade', 'anual': 'Anual', 'pacote': 'Pacote', 'avulsa': 'Avulsa'};
 
 /// Link de pagamento do Mercado Pago (cria ou reaproveita) e copia.
 Future<String> copiarLinkPagamento(String faturaId) async {

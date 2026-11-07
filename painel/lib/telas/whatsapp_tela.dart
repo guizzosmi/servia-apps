@@ -146,7 +146,7 @@ class _WhatsappTelaState extends State<WhatsappTela> {
       if (ParametrosEmpresa.instancia.modoSimples && r['agendamento_id'] != null) {
         await agendarSimples(context, agendamentoId: '${r['agendamento_id']}');
       } else {
-        _avisar('OS ${r['codigo'] ?? ''} aberta: está na fila para programar.');
+        _avisar('${r['codigo'] ?? 'OS'} aberta: está na fila para programar.');
       }
       _carregar();
     } catch (e) {

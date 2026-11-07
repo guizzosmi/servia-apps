@@ -1,0 +1,18 @@
+/* Página do Kit PMOC grátis (usa as classes de formulário do assinar) */
+@import url("/conteudo.css");
+@import url("/precos.css");
+.kit-grade { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: start; }
+.kit-conteudo h2, .kit-faq h2 { font-size: 26px; font-weight: 800; }
+.kit-nota { margin-top: 22px; color: var(--neutro); font-size: 15px; }
+.kit-form .campos { margin-top: 18px; }
+.kit-erro { color: #C8372D; font-size: 14px; margin-top: 12px; }
+.kit-privacidade { color: var(--neutro); font-size: 13px; margin-top: 12px; }
+.kit-pronto { display: grid; gap: 12px; }
+.kit-pronto .botao { justify-content: center; width: 100%; }
+.kit-sec { background: var(--branco); color: var(--indigo-700); border: 1px solid var(--linha); }
+.kit-faq { max-width: 760px; }
+.kit-faq h3 { font-size: 18px; margin-top: 22px; }
+.kit-faq p { color: var(--neutro); }
+@media (max-width: 860px) { .kit-grade { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .kit-form .campos { grid-template-columns: 1fr; } }
+.kit-pronto[hidden], .kit-form form[hidden] { display: none; }

@@ -111,7 +111,7 @@ class _LembretesTelaState extends State<LembretesTela> {
       if (ParametrosEmpresa.instancia.modoSimples && r['agendamento_id'] != null) {
         await agendarSimples(context, agendamentoId: '${r['agendamento_id']}', titulo: 'Agendar a limpeza');
       } else {
-        _avisar('OS ${r['codigo'] ?? ''} aberta: a limpeza está na fila para programar.');
+        _avisar('${r['codigo'] ?? 'OS'} aberta: a limpeza está na fila para programar.');
       }
       _carregar();
     } catch (e) {

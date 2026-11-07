@@ -1,7 +1,7 @@
 name: servia_app
 description: "ServPilot - app do técnico (parte do dia, atendimento, offline)."
 publish_to: 'none'
-version: 0.17.0+17
+version: 0.18.0+18
 
 environment:
   sdk: ^3.9.0
@@ -35,6 +35,8 @@ dependencies:
   printing: ^5.13.0
   # Relato do atendimento por áudio (m4a/AAC, gravado no aparelho).
   record: ^6.0.0
+  # Guia 87: o desafio do CAPTCHA (Cloudflare Turnstile) numa página do site, no login.
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

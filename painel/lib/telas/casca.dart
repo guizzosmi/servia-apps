@@ -123,6 +123,11 @@ class _Menu extends StatelessWidget {
         if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.person_search_outlined, 'Clientes parados', '/parados'),
         // Guia 65: pedidos que chegam pelo WhatsApp oficial (ou simulados).
         if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.chat_outlined, 'Pedidos do WhatsApp', '/whatsapp'),
+        // Guia 90: módulo Comercial (só admin e gestor).
+        if (param.usaComercial && (Sessao.atual?.tem(Papel.gestor) ?? false)) ...[
+          grupo('Comercial'),
+          item(Icons.filter_alt_outlined, 'Funil', '/comercial'),
+        ],
         grupo('Financeiro'),
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.receipt_long_outlined, 'A cobrar', '/cobrar'),

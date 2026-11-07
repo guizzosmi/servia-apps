@@ -90,26 +90,26 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
             .select('*, equipamentos(codigo)')
             .eq('orcamento_id', _id)
             .isFilter('excluido_em', null)
-            .order('ordem')
-            .order('criado_em'),
+            .order('ordem', ascending: true)
+            .order('criado_em', ascending: true),
         _db
             .from('orcamentos')
             .select('id, versao_orcamento, status, total, validade_ate, criado_em')
             .eq('numero', orc['numero'] as int)
-            .order('versao_orcamento'),
+            .order('versao_orcamento', ascending: true),
         _db
             .from('aceites')
             .select('*')
             .eq('entidade', 'orcamento')
             .eq('entidade_id', _id)
-            .order('criado_em'),
+            .order('criado_em', ascending: true),
         _db
             .from('contatos')
             .select('id, nome, telefone, funcoes')
             .eq('cliente_id', os['cliente_id'] as String)
             .eq('ativo', true)
             .isFilter('excluido_em', null)
-            .order('nome'),
+            .order('nome', ascending: true),
         _db
             .from('os_equipamentos')
             .select('equipamento_id, equipamentos(codigo, descricao)')
@@ -227,7 +227,11 @@ class _OrcamentoTelaState extends State<OrcamentoTela> {
   Future<void> _editarItem([Map<String, dynamic>? item]) async {
     final r = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => DialogoItem(item: item, equipamentos: _equipamentos, tipos: tiposItemOrcamento),
+      builder: (_) => DialogoItem(
+          item: item,
+          equipamentos: _equipamentos,
+          tipos: tiposItemOrcamento,
+          clienteId: (_orc?['ordens_servico'] as Map?)?['cliente_id'] as String?),
     );
     if (r == null) return;
     await _acao({'acao': 'item_salvar', if (item != null) 'item_id': item['id'], ...r},

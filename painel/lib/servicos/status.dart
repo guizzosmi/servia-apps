@@ -136,7 +136,7 @@ String _dd(int n) => n.toString().padLeft(2, '0');
 
 /// '2026-11-05' -> '05/11/2026'
 String dataBr(Object? v) {
-  final d = DateTime.tryParse('${v ?? ''}');
+  final d = DateTime.tryParse('${v ?? ''}')?.toLocal();
   if (d == null) return '';
   return '${_dd(d.day)}/${_dd(d.month)}/${d.year}';
 }

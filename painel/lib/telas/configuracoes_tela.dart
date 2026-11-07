@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/parametros.dart';
 import '../servicos/status.dart' show dataHoraBr;
 import '../widgets/margem.dart';
+
+/// Conector do Claude (guia 91): endereço do servidor MCP e o app "Claude AI" cadastrado no OAuth do Supabase
+/// (cliente público, sem segredo).
+const _conectorUrl = 'https://srtokvosnwtyewiempyw.supabase.co/functions/v1/mcp';
+const _conectorClientId = 'b2fe06d9-a2a0-42c7-950f-44b3e7eba7f8';
 
 /// Configurações da empresa (só o admin altera): preventivas, orçamento no
 /// app, assinatura do cliente e mensagens. Os valores ficam em empresa_config.parametros.
@@ -70,6 +76,11 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
   bool _manutencaoPropria = false;
   bool _modoSimples = false;
   bool _usaEstoque = false;
+  // Guia 90: módulo Comercial (incluído no plano ou com valor por mês).
+  bool _usaComercial = false;
+  Map<String, dynamic>? _precoComercial;
+  // Guia 91: o que o Claude (conector) pode fazer nesta empresa. Consultar é sempre liberado.
+  final Map<String, bool> _conector = {'comercial': true, 'cadastros': false, 'operacao': false, 'financeiro': false};
   // Guia 60: garantia padrão e numeração (próximo número da OS, orçamento e contrato).
   final _garantiaDias = TextEditingController();
   final _numeros = {for (final t in const ['os', 'orcamento', 'contrato']) t: TextEditingController()};
@@ -167,9 +178,14 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       try {
         numeros = Map<String, dynamic>.from(await _db.rpc('numeracao') as Map);
       } catch (_) {}
+      Map<String, dynamic>? precoComercial;
+      try {
+        precoComercial = Map<String, dynamic>.from(await _db.rpc('comercial_preco') as Map);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _parametros = p;
+        _precoComercial = precoComercial;
         _quem = _quemMonta.containsKey(orc['quem_monta']) ? orc['quem_monta'] as String : 'gestor_lider';
         _avulsos = _itensAvulsos.containsKey(orc['itens_avulsos_app']) ? orc['itens_avulsos_app'] as String : 'desligado';
         _conclusao = _aceiteConclusao.containsKey(p['aceite_conclusao']) ? p['aceite_conclusao'] as String : 'opcional';
@@ -188,6 +204,12 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
         _manutencaoPropria = ParametrosEmpresa.instancia.manutencaoPropria;
         _modoSimples = p['modo_simples'] == true;
         _usaEstoque = (p['estoque'] as Map?)?['usa'] == true;
+        _usaComercial = (p['comercial'] as Map?)?['usa'] == true;
+        final con = Map<String, dynamic>.from((p['conector'] as Map?) ?? const {});
+        _conector['comercial'] = con['comercial'] != false;
+        for (final k in const ['cadastros', 'operacao', 'financeiro']) {
+          _conector[k] = con[k] == true;
+        }
         final lemb = Map<String, dynamic>.from((p['lembrete_limpeza'] as Map?) ?? const {});
         _lembUsa = lemb['usa'] == true;
         _lembAuto = lemb['automatico'] == true;
@@ -329,6 +351,8 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
           'antecedencia_dias': (int.tryParse(_lembAntec.text.trim()) ?? 7).clamp(0, 60),
         },
         'estoque': {...Map<String, dynamic>.from((_parametros['estoque'] as Map?) ?? const {}), 'usa': _usaEstoque},
+        'comercial': {...Map<String, dynamic>.from((_parametros['comercial'] as Map?) ?? const {}), 'usa': _usaComercial},
+        'conector': {..._conector},
         'pix': {
           'tipo': _pixTipo,
           'chave': _pixChave.text.trim(),
@@ -377,7 +401,7 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       return Center(child: Text(_erro!, style: const TextStyle(color: Cores.erro)));
     }
     final admin = Sessao.atual?.tem(Papel.admin) ?? false;
-    return ListView(padding: margemDaTela(context), children: [
+    final lista = ListView(padding: margemDaTela(context), children: [
       Text('Configurações', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: 4),
       const Text('Valem para a empresa ativa. O app recebe as mudanças na próxima sincronização.',
@@ -613,6 +637,69 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
                       _sujo = true;
                     }) : null,
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 90: módulo Comercial.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Comercial (funil de vendas)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                subtitle: Text('Menu Comercial: oportunidades da indicação ao contrato, tarefas de follow-up, metas e '
+                    'indicadores. Orçamento aprovado ou contrato ativado ganham a oportunidade sozinhos. Só o admin e o '
+                    'gestor veem.${_precoComercial == null ? '' : _precoComercial!['incluido'] == true ? ' Incluído no seu plano.' : ' No seu plano: R\$ ${(num.tryParse('${_precoComercial!['valor']}') ?? 0).toStringAsFixed(2).replaceAll('.', ',')} por mês, na mensalidade.'}'),
+                value: _usaComercial,
+                onChanged: admin ? (v) => setState(() {
+                      _usaComercial = v;
+                      _sujo = true;
+                    }) : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Guia 91: conector do ServPilot para o Claude.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Conector do Claude', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                const Text('No Claude (claude.ai ou o app), em Configurações › Conectores › Adicionar conector personalizado, '
+                    'cole o endereço abaixo e, em Configurações avançadas, o OAuth Client ID (segredo em branco). Depois entre '
+                    'com o seu login do ServPilot. O Claude vê só esta empresa e só o que o usuário que conectou pode ver; '
+                    'consultar é sempre liberado.', style: TextStyle(color: Cores.neutro)),
+                const SizedBox(height: 8),
+                for (final (rotulo, valor) in const [('Endereço', _conectorUrl), ('OAuth Client ID', _conectorClientId)])
+                  Row(children: [
+                    SizedBox(width: 130, child: Text(rotulo, style: const TextStyle(color: Cores.neutro))),
+                    Expanded(
+                      child: SelectableText(valor, style: const TextStyle(fontWeight: FontWeight.w700, color: Cores.indigo700)),
+                    ),
+                    IconButton(
+                      tooltip: 'Copiar',
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () => Clipboard.setData(ClipboardData(text: valor)),
+                    ),
+                  ]),
+                for (final (chave, titulo, ajuda) in const [
+                  ('comercial', 'Comercial', 'Criar e atualizar oportunidades, tarefas e anotações (com o módulo Comercial ligado).'),
+                  ('cadastros', 'Cadastros', 'Cadastrar e alterar clientes.'),
+                  ('operacao', 'Operação', 'Abrir OS.'),
+                  ('financeiro', 'Financeiro', 'Registrar recebimentos (ex.: lendo o comprovante) e lançar no caixa.'),
+                ])
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Pode mexer em: $titulo'),
+                    subtitle: Text(ajuda),
+                    value: _conector[chave] ?? false,
+                    onChanged: admin ? (v) => setState(() {
+                          _conector[chave] = v;
+                          _sujo = true;
+                        }) : null,
+                  ),
+              ]),
             ),
           ),
           const SizedBox(height: 12),
@@ -965,8 +1052,26 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
           else
             const Text('Só o administrador da empresa altera as configurações.',
                 style: TextStyle(color: Cores.neutro)),
+          // Espaço para o botão flutuante não cobrir o último cartão.
+          if (admin && _sujo) const SizedBox(height: 72),
         ]),
       ),
+    ]);
+    // A página é longa: com alteração pendente, o Salvar fica sempre à vista.
+    return Stack(children: [
+      lista,
+      if (admin && _sujo)
+        Positioned(
+          right: 24,
+          bottom: 24,
+          child: FilledButton.icon(
+            onPressed: _salvando ? null : _salvar,
+            icon: _salvando
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.save_outlined),
+            label: const Text('Salvar alterações'),
+          ),
+        ),
     ]);
   }
 

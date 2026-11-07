@@ -72,8 +72,8 @@ class _EstoqueTelaState extends State<EstoqueTela> {
           .eq('ativo', true)
           .isFilter('excluido_em', null)
           .order('padrao', ascending: false)
-          .order('tipo')
-          .order('nome');
+          .order('tipo', ascending: true)
+          .order('nome', ascending: true);
       final saldos = await _db
           .from('estoque_saldos')
           .select('estoque_id, produto_id, quantidade, minimo, produtos(descricao, codigo, unidade)')
@@ -82,8 +82,8 @@ class _EstoqueTelaState extends State<EstoqueTela> {
           .from('cilindros')
           .select('id, identificacao, fluido, tipo, capacidade_kg, saldo_kg, status, estoque_id, estoques(nome)')
           .isFilter('excluido_em', null)
-          .order('fluido')
-          .order('identificacao');
+          .order('fluido', ascending: true)
+          .order('identificacao', ascending: true);
       final mov = await _db
           .from('estoque_movimentos')
           .select('criado_em, tipo, quantidade, documento, observacao, os_id, custo_unitario, '
@@ -475,7 +475,7 @@ class _DialogoMovimentoState extends State<_DialogoMovimento> {
         .eq('tipo', 'produto')
         .eq('ativo', true)
         .isFilter('excluido_em', null)
-        .order('descricao')
+        .order('descricao', ascending: true)
         .limit(3000)
         .then((r) {
       if (mounted) setState(() => _produtos = List<Map<String, dynamic>>.from(r));

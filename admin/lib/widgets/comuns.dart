@@ -28,6 +28,20 @@ class Secao extends StatelessWidget {
       );
 }
 
+/// Subtítulo dentro de uma [Secao] (separa grupos de campos), com a fonte do tema
+/// e espaço para o rótulo flutuante do campo de baixo não encostar no texto.
+class Subtitulo extends StatelessWidget {
+  const Subtitulo(this.texto, {super.key});
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 16),
+        child: Text(texto, style: Theme.of(context).textTheme.titleSmall),
+      );
+}
+
 class ChipSituacao extends StatelessWidget {
   const ChipSituacao(this.situacao, {super.key});
 

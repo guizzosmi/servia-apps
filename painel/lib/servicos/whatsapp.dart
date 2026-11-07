@@ -15,7 +15,7 @@ Future<List<Map<String, dynamic>>> contatosDoCliente(String clienteId) async {
       .eq('cliente_id', clienteId)
       .eq('ativo', true)
       .isFilter('excluido_em', null)
-      .order('nome');
+      .order('nome', ascending: true);
   return List<Map<String, dynamic>>.from(r);
 }
 

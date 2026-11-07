@@ -8,6 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cadastros/catalogo.dart';
 import 'quadro/quadro_tela.dart';
 import 'telas/agenda_tela.dart';
+import 'telas/comercial_funil_tela.dart';
+import 'telas/comercial_indicadores_tela.dart';
+import 'telas/comercial_tarefas_tela.dart';
+import 'telas/oauth_consentimento_tela.dart';
+import 'telas/oportunidade_tela.dart';
 import 'telas/estoque_tela.dart';
 import 'telas/lembretes_tela.dart';
 import 'telas/whatsapp_tela.dart';
@@ -84,10 +89,17 @@ final rotas = GoRouter(
   redirect: (context, state) {
     final sessao = Sessao.atual;
     final local = state.matchedLocation;
-    if (sessao == null) return local == '/login' ? null : '/login';
+    // Guia 91: o pedido de acesso do Claude (/oauth/consent) volta para ele depois do login.
+    if (sessao == null) {
+      if (local == '/login') return null;
+      return local.startsWith('/oauth/') ? '/login?voltar=${Uri.encodeComponent(state.uri.toString())}' : '/login';
+    }
     if (sessaoMudou.recuperandoSenha) return local == '/nova-senha' ? null : '/nova-senha';
     if (local == '/nova-senha') return null;
-    if (local == '/login') return '/';
+    if (local == '/login') {
+      final voltar = state.uri.queryParameters['voltar'];
+      return voltar != null && voltar.startsWith('/oauth/') ? voltar : '/';
+    }
     if (local == '/empresa') return null;
     // Sem empresa ativa ou sem papel de painel nesta empresa: escolher outra.
     if (!sessao.temEmpresa || !sessao.temAlgum(papeisDoPainel)) {
@@ -102,6 +114,10 @@ final rotas = GoRouter(
   errorBuilder: (context, state) => const _NaoEncontrada(),
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginTela()),
+    GoRoute(
+      path: '/oauth/consent',
+      builder: (_, state) => OauthConsentimentoTela(authorizationId: state.uri.queryParameters['authorization_id']),
+    ),
     GoRoute(path: '/nova-senha', builder: (_, __) => const NovaSenhaTela()),
     GoRoute(path: '/empresa', builder: (_, __) => const EmpresaTela()),
     ShellRoute(
@@ -121,6 +137,23 @@ final rotas = GoRouter(
         GoRoute(path: '/notas/configuracao', builder: (_, __) => const FiscalTela()),
         GoRoute(path: '/parados', builder: (_, __) => const ParadosTela()),
         GoRoute(path: '/assistente', builder: (_, __) => const AssistenteTela()),
+        // Guia 90: módulo Comercial.
+        GoRoute(
+          path: '/comercial',
+          builder: (_, __) => const ComercialFunilTela(),
+          routes: [
+            GoRoute(path: 'nova', builder: (_, __) => const OportunidadeTela(key: ValueKey('oportunidade-nova'))),
+            GoRoute(path: 'tarefas', builder: (_, __) => const ComercialTarefasTela()),
+            GoRoute(path: 'indicadores', builder: (_, __) => const ComercialIndicadoresTela()),
+            GoRoute(
+              path: ':id',
+              builder: (_, state) {
+                final id = state.pathParameters['id']!;
+                return OportunidadeTela(key: ValueKey('oportunidade-$id'), id: id);
+              },
+            ),
+          ],
+        ),
         GoRoute(
           path: '/quadro',
           builder: (_, state) {

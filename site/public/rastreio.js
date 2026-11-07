@@ -3,10 +3,10 @@
 // (ficam no navegador de qualquer forma); vazio = aquela ferramenta fica desligada.
 (function () {
   const IDS = {
-    ga4: '',        // ex.: 'G-ABC123XYZ'   (Google Analytics > Administrador > Fluxos de dados)
+    ga4: 'G-E5W2TH2Q97', // Google Analytics 4 · propriedade servpilot.com.br (criada em 06/11/2026)   (Google Analytics > Administrador > Fluxos de dados)
     googleAds: '',  // ex.: 'AW-123456789'  (Google Ads > Metas > Conversões > Tag)
     adsCadastro: '', // rótulo da conversão "Cadastro" do Google Ads, ex.: 'AbCdEfGh123'
-    metaPixel: '',  // ex.: '1234567890'   (Gerenciador de Eventos da Meta)
+    metaPixel: '1361420407065572', // Pixel da Meta · conjunto "ServPilot site" no portfólio Servpilot (criado em 06/11/2026)
     tiktokPixel: '', // ex.: 'CABCDEF123456789' (TikTok Ads > Ferramentas > Eventos > Web)
   };
   const CHAVE = 'servpilot_cookies';   // 'sim' | 'nao'
@@ -63,22 +63,23 @@
   //   ServPilotRastreio.evento('cadastro')   conta criada pelo site (a conversão principal)
   //   ServPilotRastreio.evento('whatsapp')   clicou para falar no WhatsApp
   //   ServPilotRastreio.evento('teste')      clicou em "Testar 14 dias grátis"
+  //   ServPilotRastreio.evento('kit')        pediu o Kit PMOC grátis (lead)
   function evento(nome, extra) {
     if (!ligado) return;
     const dados = Object.assign({}, extra || {});
     if (window.gtag) {
-      const ga = { cadastro: 'sign_up', whatsapp: 'contact', teste: 'begin_checkout', precos: 'view_item' }[nome] || nome;
+      const ga = { cadastro: 'sign_up', whatsapp: 'contact', teste: 'begin_checkout', precos: 'view_item', kit: 'generate_lead' }[nome] || nome;
       window.gtag('event', ga, dados);
       if (nome === 'cadastro' && IDS.googleAds && IDS.adsCadastro) {
         window.gtag('event', 'conversion', { send_to: IDS.googleAds + '/' + IDS.adsCadastro });
       }
     }
     if (window.fbq) {
-      const fb = { cadastro: 'StartTrial', whatsapp: 'Contact', teste: 'Lead', precos: 'ViewContent' }[nome];
+      const fb = { cadastro: 'StartTrial', whatsapp: 'Contact', teste: 'Lead', precos: 'ViewContent', kit: 'Lead' }[nome];
       if (fb) window.fbq('track', fb, nome === 'cadastro' ? { value: 199, currency: 'BRL' } : {});
     }
     if (window.ttq && IDS.tiktokPixel) {
-      const tt = { cadastro: 'CompleteRegistration', whatsapp: 'Contact', teste: 'ClickButton', precos: 'ViewContent' }[nome];
+      const tt = { cadastro: 'CompleteRegistration', whatsapp: 'Contact', teste: 'ClickButton', precos: 'ViewContent', kit: 'SubmitForm' }[nome];
       if (tt) window.ttq.track(tt, nome === 'cadastro' ? { value: 199, currency: 'BRL', content_id: 'servpilot', content_type: 'product' } : {});
     }
   }

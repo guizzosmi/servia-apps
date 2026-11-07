@@ -38,6 +38,9 @@ class ParametrosEmpresa extends ChangeNotifier {
   /// Guia 63: controla estoque (menu Estoque e baixa automática pela OS).
   bool get usaEstoque => (_p['estoque'] as Map?)?['usa'] == true;
 
+  /// Guia 90: módulo Comercial (funil, tarefas e metas).
+  bool get usaComercial => (_p['comercial'] as Map?)?['usa'] == true;
+
   /// Guia 64: lembrete de limpeza (menu Lembretes).
   bool get usaLembretes => (_p['lembrete_limpeza'] as Map?)?['usa'] == true;
 

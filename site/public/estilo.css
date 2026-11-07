@@ -110,6 +110,8 @@ p { margin: 0; }
   mask-image: radial-gradient(ellipse at 60% 40%, #000 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse at 60% 40%, #000 30%, transparent 75%);
 }
+/* O conteúdo da abertura fica acima do fundo, com ou sem a grade de duas colunas. */
+.abertura > .faixa { position: relative; z-index: 1; }
 .abertura-grade { position: relative; display: grid; grid-template-columns: 1.02fr 1fr; gap: 56px; align-items: center; }
 .selo {
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; border-radius: 999px;

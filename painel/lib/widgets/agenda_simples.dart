@@ -20,7 +20,7 @@ Future<List<Map<String, dynamic>>> equipesAtivas() async {
       .select('id, nome')
       .eq('ativa', true)
       .isFilter('excluido_em', null)
-      .order('nome');
+      .order('nome', ascending: true);
   return List<Map<String, dynamic>>.from(r);
 }
 

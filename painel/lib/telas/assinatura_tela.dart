@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:web/web.dart' as web;
 
+import '../servicos/arquivo_web.dart';
 import '../servicos/funcoes.dart';
 import '../widgets/aviso_plano.dart';
 
 /// Plano e consumo (guia 44): situação da assinatura, o que já foi usado no ciclo,
 /// usuários que contam, pacotes extras, cupom e faturas com o botão de pagar.
+/// Guia 89: pagamento anual (2 meses grátis), desistência em 7 dias e "Indique e ganhe".
 class AssinaturaTela extends StatefulWidget {
   const AssinaturaTela({super.key, this.pagamento});
 
@@ -39,6 +42,11 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
       final cp = await cliente.rpc('cupom_ativo');
       if (cp is Map) d['cupom'] = Map<String, dynamic>.from(cp);
     } catch (_) {/* sem cupom */}
+    // Guia 89: link de indicação, meses grátis e indicados.
+    try {
+      final ind = await cliente.rpc('indicacao_painel');
+      if (ind is Map) d['indicacao'] = Map<String, dynamic>.from(ind);
+    } catch (_) {/* sem indicação */}
     _planoAtual = d['plano'] is Map ? '${(d['plano'] as Map)['nome']}' : null;
     _cupomAtivo = d['cupom'] as Map<String, dynamic>?;
     return d;
@@ -218,6 +226,75 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
     });
   }
 
+  /// Guia 89: muda para o anual (a fatura sai na hora) ou volta para o mensal.
+  Future<void> _periodicidade(Map<String, dynamic> anual, String para) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(para == 'anual' ? 'Pagar por ano?' : 'Voltar para o mensal?'),
+        content: SizedBox(
+          width: 480,
+          child: Text(para == 'anual'
+              ? 'Plano por ${_moeda(anual['valor_anual'])} à vista: paga ${anual['meses_pagos']} meses e usa 12 '
+                  '(economia de ${_moeda(anual['economia'])}). Começa em ${_data(anual['comeca_em'])}.\n\n'
+                  '• A fatura anual sai agora. Se não for paga até o início, você continua no mensal, sem multa.\n'
+                  '• Usuários a mais e o módulo de notas continuam na mensalidade.\n'
+                  '• O plano fica o mesmo até a renovação, que é automática (a fatura sai 7 dias antes do fim).\n'
+                  '• Até ${anual['arrependimento_dias']} dias depois de pagar, dá para desistir com devolução integral. '
+                  'Depois disso, não há devolução: o plano vale até o fim do período.'
+              : 'A fatura anual em aberto é cancelada. O que já está pago continua valendo até o fim do período; '
+                  'depois, a cobrança volta a ser mensal.'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(para == 'anual' ? 'Gerar a fatura anual' : 'Voltar para o mensal')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _acao(() async {
+      final r = await Supabase.instance.client.rpc('assinatura_periodicidade', params: {'p_periodicidade': para});
+      final m = r is Map ? Map<String, dynamic>.from(r) : <String, dynamic>{};
+      final aberta = m['aberta'] is Map ? Map<String, dynamic>.from(m['aberta'] as Map) : null;
+      if (mounted) {
+        _avisar(para == 'anual'
+            ? (aberta != null
+                ? 'Fatura anual nº ${aberta['numero']} gerada: ${_moeda(aberta['valor_total'])}, vence em ${_data(aberta['vencimento'])}.'
+                : 'Pagamento anual ligado: a renovação sai 7 dias antes do fim do período.')
+            : 'Pronto: a cobrança volta a ser mensal.');
+      }
+      if (mounted) _recarregar();
+    });
+  }
+
+  /// Guia 89: arrependimento do anual (até 7 dias depois de pagar), com devolução pelo Mercado Pago.
+  Future<void> _desistirAnual(Map<String, dynamic> vigente) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desistir do pagamento anual?'),
+        content: SizedBox(
+          width: 460,
+          child: Text('Devolvemos ${_moeda(vigente['valor_pago'])} pelo Mercado Pago, na mesma forma do pagamento '
+              '(no cartão, o crédito aparece na fatura do cartão). A conta volta ao pagamento mensal'
+              '${DateTime.tryParse('${vigente['inicio']}')?.isAfter(DateTime.now()) == false ? ' e a mensalidade deste ciclo é gerada' : ''}.'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Cores.erro),
+              onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Desistir e devolver')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _acao(() async {
+      await chamarFuncao('cobranca', {'acao': 'estornar', 'fatura_id': vigente['fatura_id']});
+      if (mounted) _avisar('Pronto: o valor foi devolvido no Mercado Pago e a conta voltou ao mensal.');
+      if (mounted) _recarregar();
+    });
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
         future: _dados,
@@ -256,6 +333,11 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
             ]),
             const SizedBox(height: 12),
             _Situacao(d),
+            if (d['anual'] is Map && (d['anual'] as Map)['disponivel'] == true)
+              _Anual(Map<String, dynamic>.from(d['anual'] as Map),
+                  aoMudar: financeiro && !_ocupado ? _periodicidade : null,
+                  aoPagar: _ocupado ? null : _pagar,
+                  aoDesistir: financeiro && !_ocupado ? _desistirAnual : null),
             if (d['sugestao'] is Map)
               _Sugestao(Map<String, dynamic>.from(d['sugestao'] as Map),
                   aoTrocar: financeiro && !_ocupado ? (codigo) => _trocarPlano(codigo) : null),
@@ -265,6 +347,7 @@ class _AssinaturaTelaState extends State<AssinaturaTela> {
             if (!urgente) pacotes,
             _Usuarios(d),
             _Faturas(lista(d['faturas']), aoPagar: _ocupado ? null : _pagar, aoConferir: _ocupado ? null : _conferir),
+            if (d['indicacao'] is Map) _Indicacao(Map<String, dynamic>.from(d['indicacao'] as Map)),
             const SizedBox(height: 8),
             const Text('Preços, regras e perguntas frequentes: servpilot.com.br/precos', style: TextStyle(color: Cores.neutro)),
           ]);
@@ -281,6 +364,10 @@ num _n(dynamic v) => v is num ? v : num.tryParse('${v ?? ''}') ?? 0;
 num _comCupom(dynamic valor, Map<String, dynamic>? cupom, String tipo) {
   final v = _n(valor);
   if (cupom == null || cupom['vale_$tipo'] != true || v <= 0) return v;
+  // Guia 89: na mensalidade vale a fração do próximo mês (1 = mês grátis).
+  if (tipo == 'mensalidade' && cupom['fracao_proximo_mes'] != null) {
+    return v - (v * _n(cupom['fracao_proximo_mes']) * 100).round() / 100;
+  }
   final desconto = cupom['tipo'] == 'percentual'
       ? (v * _n(cupom['valor'])).round() / 100
       : _n(cupom['valor']);
@@ -333,8 +420,16 @@ class _Situacao extends StatelessWidget {
     final c = Map<String, dynamic>.from(d['consumo'] as Map);
     final est = Map<String, dynamic>.from(d['estimativa'] as Map);
     final cupom = d['cupom'] as Map<String, dynamic>?;
-    final estimado = _comCupom(est['valor'], cupom, 'mensalidade');
+    // Guia 89: no mês pago pelo anual o plano não entra (nem o cupom); o mês grátis de indicação tira o plano.
+    final comPlano = est['plano_incluido'] != false;
+    final comCupom = comPlano ? _comCupom(est['valor'], cupom, 'mensalidade') : _n(est['valor']);
+    final fracao = comPlano && cupom?['vale_mensalidade'] == true ? _n(cupom?['fracao_proximo_mes']) : 0;
+    final credito = comPlano && _n(d['creditos_disponiveis']) > 0 ? _n(est['valor_plano']) * (1 - fracao) : 0;
+    final estimado = comCupom - credito < 0 ? 0 : comCupom - credito;
     final restantes = cupom?['mensalidades_restantes'];
+    final gratis = _n(cupom?['gratis_restantes']);
+    final anual = d['anual'] is Map ? Map<String, dynamic>.from(d['anual'] as Map) : const <String, dynamic>{};
+    final vigente = anual['vigente'] is Map ? Map<String, dynamic>.from(anual['vigente'] as Map) : null;
     final (texto, cor) = switch (d['situacao']) {
       _ when d['cobrar'] == false => ('Cortesia: sem mensalidade', Cores.andamento),
       'teste' => ('Teste grátis: faltam ${d['dias_teste_restantes']} dia(s), até ${_data(d['teste_ate'])}', Cores.info),
@@ -352,7 +447,9 @@ class _Situacao extends StatelessWidget {
             'com +${p['minutos_por_usuario_extra']} minutos e +${p['mensagens_por_usuario_extra']} mensagens.'
             '${_n(p['desconto_pct']) > 0 ? ' Desconto de ${_n(p['desconto_pct'])}%.' : ''}'),
         const SizedBox(height: 4),
-        Text('Ciclo atual: ${_data(c['ciclo_inicio'])} a ${_data(c['ciclo_fim'])}.', style: const TextStyle(color: Cores.neutro)),
+        Text('Ciclo atual: ${_data(c['ciclo_inicio'])} a ${_data(c['ciclo_fim'])}.'
+            '${vigente != null ? ' Plano pago no anual até ${_data(vigente['fim'])}.' : ''}',
+            style: const TextStyle(color: Cores.neutro)),
         if (cupom != null) ...[
           const SizedBox(height: 8),
           Row(children: [
@@ -360,7 +457,7 @@ class _Situacao extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text('Cupom ${cupom['codigo']}: ${cupom['resumo']}'
-                  '${restantes != null && cupom['aplica_em'] != 'pacote' ? ' (falta(m) ${_n(restantes)} mensalidade(s) com desconto)' : ''}.',
+                  '${gratis > 0 ? ' (${gratis == 1 ? 'falta 1 mês grátis' : 'faltam $gratis meses grátis'})' : restantes != null && cupom['aplica_em'] != 'pacote' ? ' (falta(m) ${_n(restantes)} mês(es) com desconto)' : ''}.',
                   style: const TextStyle(color: Cores.sucesso, fontWeight: FontWeight.w600)),
             ),
           ]),
@@ -368,7 +465,9 @@ class _Situacao extends StatelessWidget {
         if (d['cobrar'] != false && d['situacao'] != 'cancelada') ...[
           const SizedBox(height: 8),
           Text('Próxima mensalidade estimada: ${_moeda(estimado)}'
-              '${estimado < _n(est['valor']) ? ' (${_moeda(est['valor'])} menos o cupom ${cupom?['codigo']})' : ''} · '
+              '${comCupom < _n(est['valor']) ? ' (${_moeda(est['valor'])} menos o cupom ${cupom?['codigo']})' : ''}'
+              '${credito > 0 ? ', com 1 mês do plano grátis por indicação' : ''}'
+              '${comPlano ? '' : ' (o plano está pago no anual; aqui só usuários a mais e notas)'} · '
               '${est['usuarios_cobrados']} usuário(s) contando a regra dos ${_n(d['dias_minimos'])} dias, se nada mudar.',
               style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
@@ -630,9 +729,11 @@ class _Faturas extends StatelessWidget {
                 for (final f in faturas)
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
-                    title: Text('Nº ${f['numero']} · ${{'mensalidade': 'Mensalidade', 'pacote': 'Pacote extra', 'avulsa': 'Cobrança'}[f['tipo']] ?? ''}'
+                    title: Text('Nº ${f['numero']} · ${{'mensalidade': 'Mensalidade', 'anual': 'Plano anual', 'pacote': 'Pacote extra', 'avulsa': 'Cobrança'}[f['tipo']] ?? ''}'
                         '${f['periodo_inicio'] != null ? ' · ${_data(f['periodo_inicio'])} a ${_data(f['periodo_fim'])}' : ''}'),
-                    subtitle: Text(f['situacao'] == 'paga'
+                    subtitle: Text(f['situacao'] == 'estornada'
+                        ? 'Devolvida em ${_data(f['estornada_em'])} · ${_moeda(f['valor_total'])}'
+                        : f['situacao'] == 'paga'
                         ? 'Paga em ${_data(f['pago_em'])} · ${_moeda(f['valor_total'])}${f['nf_numero'] != null ? ' · nota ${f['nf_numero']}' : ''}'
                         : '${f['vencida'] == true ? 'VENCIDA em' : 'Vence em'} ${_data(f['vencimento'])} · ${_moeda(f['valor_total'])}',
                         style: TextStyle(color: f['vencida'] == true ? Cores.erro : null)),
@@ -658,6 +759,14 @@ class _Faturas extends StatelessWidget {
       );
 }
 
+/// Guia 86: "50, 200 ou 1000" a partir das faixas do módulo.
+String _faixasTexto(Map<String, dynamic> n) {
+  final f = ((n['faixas'] as List?) ?? const []).map((e) => _n((e as Map)['notas'])).toList();
+  if (f.isEmpty) return '${_n(n['notas_por_empresa'])}';
+  if (f.length == 1) return '${f.first}';
+  return '${f.sublist(0, f.length - 1).join(', ')} ou ${f.last}';
+}
+
 /// Guia 81: notas fiscais no ciclo (ou o convite para contratar).
 class _Notas extends StatelessWidget {
   const _Notas(this.n);
@@ -674,8 +783,8 @@ class _Notas extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Text('NFS-e dos serviços e NF-e das peças direto das OS, uma a uma ou o mês inteiro. '
-                '${_moeda(n['valor_modulo'])} por mês com ${_n(n['notas_por_empresa'])} notas; '
-                'nota extra ${_moeda(n['valor_extra'])}.'),
+                'A partir de ${_moeda(n['valor_modulo'])} por mês com ${_n(n['notas_por_empresa'])} notas '
+                '(faixas de até ${_faixasTexto(n)} notas); nota além da faixa ${_moeda(n['valor_extra'])}.'),
           ),
           const SizedBox(width: 12),
           OutlinedButton(onPressed: () => context.go('/notas/configuracao'), child: const Text('Conhecer')),
@@ -698,8 +807,141 @@ class _Notas extends StatelessWidget {
         Text(
             _n(n['excedente']) > 0
                 ? '${_n(n['excedente'])} notas além das incluídas: ${_moeda(_n(n['excedente']) * _n(n['valor_extra']))} na próxima mensalidade.'
-                : 'Módulo: ${_moeda(_n(n['valor_modulo']) * _n(n['empresas']))} por mês. As notas de teste não contam.',
+                : 'Módulo: ${_moeda(n['valor_modulo_total'] ?? _n(n['valor_modulo']) * _n(n['empresas']))} por mês. '
+                    'Troque a faixa em Notas fiscais › Configuração. As notas de teste não contam.',
             style: const TextStyle(color: Cores.neutro)),
+      ]),
+    );
+  }
+}
+
+/// Guia 89: pagamento anual (paga 10, usa 12). Oferta, fatura em aberto, período pago e desistência.
+class _Anual extends StatelessWidget {
+  const _Anual(this.a, {required this.aoMudar, required this.aoPagar, required this.aoDesistir});
+
+  final Map<String, dynamic> a;
+  final void Function(Map<String, dynamic> anual, String para)? aoMudar;
+  final void Function(String faturaId)? aoPagar;
+  final void Function(Map<String, dynamic> vigente)? aoDesistir;
+
+  @override
+  Widget build(BuildContext context) {
+    final vigente = a['vigente'] is Map ? Map<String, dynamic>.from(a['vigente'] as Map) : null;
+    final aberta = a['aberta'] is Map ? Map<String, dynamic>.from(a['aberta'] as Map) : null;
+    final renova = a['periodicidade'] == 'anual';
+    final linhas = <Widget>[];
+    if (vigente != null) {
+      linhas.add(Text('Plano pago de ${_data(vigente['inicio'])} a ${_data(vigente['fim'])} '
+          '(${_moeda(vigente['valor_pago'])}, pago em ${_data(vigente['pago_em'])}).',
+          style: const TextStyle(fontWeight: FontWeight.w600)));
+      linhas.add(Text(renova
+          ? 'Renova sozinho: a fatura do próximo ano sai em ${_data(vigente['renovacao_em'])}.'
+          : 'Não renova: depois de ${_data(vigente['fim'])}, a cobrança volta a ser mensal.',
+          style: const TextStyle(color: Cores.neutro)));
+    }
+    if (aberta != null) {
+      linhas.add(Text('Fatura anual nº ${aberta['numero']} de ${_moeda(aberta['valor_total'])} aguardando pagamento, '
+          'para ${_data(aberta['inicio'])} a ${_data(aberta['fim'])}. Vence em ${_data(aberta['vencimento'])}; '
+          'se não for paga até o início, você continua no mensal.'));
+    }
+    if (vigente == null && aberta == null) {
+      linhas.add(Text('Pague por ano e ganhe ${a['meses_gratis']} meses: ${_moeda(a['valor_anual'])} à vista '
+          '(equivale a ${_moeda(_n(a['valor_anual']) / 12)} por mês, economia de ${_moeda(a['economia'])}). '
+          'Começa em ${_data(a['comeca_em'])}.'));
+    }
+    final botoes = <Widget>[
+      if (aberta != null && aoPagar != null)
+        FilledButton(onPressed: () => aoPagar!(aberta['fatura_id'] as String), child: const Text('Pagar a anual')),
+      if (aoMudar != null && (aberta != null || (vigente != null && renova)))
+        TextButton(onPressed: () => aoMudar!(a, 'mensal'),
+            child: Text(vigente != null ? 'Voltar para o mensal no fim do período' : 'Continuar no mensal')),
+      if (aoMudar != null && aberta == null && !renova)
+        FilledButton.icon(onPressed: () => aoMudar!(a, 'anual'), icon: const Icon(Icons.savings_outlined),
+            label: Text(vigente != null ? 'Renovar no anual' : 'Mudar para o anual')),
+      if (vigente != null && vigente['pode_desistir'] == true && aoDesistir != null)
+        TextButton(onPressed: () => aoDesistir!(vigente),
+            style: TextButton.styleFrom(foregroundColor: Cores.erro),
+            child: Text('Desistir do anual (devolução até ${_data(vigente['desistir_ate'])})')),
+    ];
+    return _Cartao(
+      titulo: 'Pagamento anual',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final l in linhas) Padding(padding: const EdgeInsets.only(bottom: 6), child: l),
+        if (botoes.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(spacing: 8, runSpacing: 8, children: botoes),
+        ],
+      ]),
+    );
+  }
+}
+
+/// Guia 89: indique o ServPilot e ganhe 1 mês do plano por indicado que pagar.
+class _Indicacao extends StatelessWidget {
+  const _Indicacao(this.i);
+
+  final Map<String, dynamic> i;
+
+  String _situacao(Map<String, dynamic> x) => switch (x['situacao']) {
+        'valida' => 'valeu 1 mês grátis',
+        'recusada' => 'não valeu${x['motivo'] != null ? ' (${x['motivo']})' : ''}',
+        _ when x['cancelada'] == true => 'cancelou',
+        _ when x['em_teste'] == true => 'em teste grátis',
+        _ => 'aguardando o 1º pagamento',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final link = '${i['link']}';
+    final disponiveis = _n(i['creditos_disponiveis']);
+    final indicacoes = lista(i['indicacoes']);
+    final texto = 'Uso o ServPilot para organizar as OS, o PMOC e a equipe. Teste 14 dias grátis pelo meu link: $link';
+    return _Cartao(
+      titulo: 'Indique o ServPilot e ganhe',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Para cada empresa que assinar pelo seu link e pagar a 1ª mensalidade, você ganha 1 mês do plano grátis. '
+            'O desconto entra sozinho na sua próxima mensalidade.'),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(color: Cores.indigo100, borderRadius: BorderRadius.circular(8)),
+          child: SelectableText(link, style: const TextStyle(fontWeight: FontWeight.w700, color: Cores.indigo700)),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(
+            icon: const Icon(Icons.copy),
+            label: const Text('Copiar o link'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: link));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copiado.')));
+              }
+            },
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.chat_outlined),
+            label: const Text('Mandar pelo WhatsApp'),
+            onPressed: () => abrirEmNovaAba('https://wa.me/?text=${Uri.encodeComponent(texto)}'),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        Text(disponiveis > 0
+            ? '${disponiveis == 1 ? '1 mês grátis' : '$disponiveis meses grátis'} para usar nas próximas mensalidades.'
+            : 'Nenhum mês grátis para usar agora.',
+            style: TextStyle(fontWeight: FontWeight.w600, color: disponiveis > 0 ? Cores.sucesso : Cores.neutro)),
+        if (indicacoes.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          for (final x in indicacoes)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(x['situacao'] == 'valida' ? Icons.check_circle : Icons.schedule,
+                  color: x['situacao'] == 'valida' ? Cores.sucesso : Cores.neutro),
+              title: Text('${x['nome']}'),
+              subtitle: Text('Desde ${_data(x['criado_em'])} · ${_situacao(x)}'),
+            ),
+        ],
       ]),
     );
   }

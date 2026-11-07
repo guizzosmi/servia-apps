@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Página do parceiro · ServPilot</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/doc.css">
+<link rel="stylesheet" href="/parceiro.css">
+</head>
+<body>
+<!-- Guia 89: página privada do parceiro (link com token, sem login). Não entra no sitemap. -->
+<header class="doc-topo"><div class="faixa">
+  <a href="/"><img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38"></a>
+  <a href="/termos">Termos de uso</a>
+</div></header>
+
+<main class="doc parceiro">
+  <p id="carregando">Carregando...</p>
+  <div id="invalido" hidden>
+    <h1>Link inválido</h1>
+    <p>Este link de parceiro não existe ou foi trocado. Fale com o ServPilot:
+      <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>.</p>
+  </div>
+
+  <div id="pagina" hidden>
+    <h1>Olá, <span id="nome"></span></h1>
+    <p class="atualizado">Comissão de <b id="pct"></b> sobre o que cada cliente indicado paga de mensalidade, nos primeiros
+      <b id="meses"></b> meses. O pagamento é feito por Pix<span id="pix"></span>.</p>
+    <p id="inativo" class="aviso" hidden>Seu código está pausado: novos cadastros por ele não contam. As comissões de quem já
+      indicou continuam.</p>
+
+    <h2>Seu link de indicação</h2>
+    <div class="link-caixa">
+      <code id="link"></code>
+      <button type="button" class="botao" id="copiar">Copiar</button>
+    </div>
+    <p class="dica">Quem abrir o site pelo seu link e criar a conta (14 dias grátis, sem cartão) fica ligado a você.
+      O código <b id="codigo"></b> também pode ser digitado no cadastro, no endereço do link.</p>
+
+    <div class="totais">
+      <div><span>A receber</span><b id="aReceber"></b></div>
+      <div><span>Liberando</span><b id="aLiberar"></b><small>pagamentos anuais liberam 8 dias depois</small></div>
+      <div><span>Já recebido</span><b id="recebido"></b></div>
+    </div>
+
+    <h2>Clientes indicados</h2>
+    <table>
+      <thead><tr><th>Empresa</th><th>Desde</th><th>Situação</th><th>Comissão até</th></tr></thead>
+      <tbody id="indicados"></tbody>
+    </table>
+
+    <h2>Comissões</h2>
+    <table>
+      <thead><tr><th>Cliente</th><th>Período</th><th>Pago pelo cliente</th><th>Comissão</th><th>Situação</th></tr></thead>
+      <tbody id="comissoes"></tbody>
+    </table>
+  </div>
+</main>
+<script src="/api.js" defer></script>
+<script src="/parceiro.js" defer></script>
+</body>
+</html>

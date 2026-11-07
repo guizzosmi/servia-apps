@@ -187,7 +187,7 @@ class _AtendimentosDaOsState extends State<AtendimentosDaOs> {
             .select('id, nome')
             .eq('ativo', true)
             .isFilter('excluido_em', null)
-            .order('nome');
+            .order('nome', ascending: true);
       } catch (e) {
         _avisar(mensagemDeErro(e), erro: true);
         return;

@@ -79,7 +79,8 @@ RODAPE = '''
       <a href="/blog">Blog</a>
       <a href="/termos">Termos de uso</a>
       <a href="/privacidade">Privacidade</a>
-      <a href="#" data-cookies>Cookies</a>
+      <a href="#" data-cookies>Cookies</a> <a href="https://www.instagram.com/servpilot" target="_blank" rel="noopener">Instagram</a> <a href="https://www.tiktok.com/@servpilot" target="_blank" rel="noopener">TikTok</a> <a href="https://www.facebook.com/1345149045355955" target="_blank" rel="noopener">Facebook</a>
+      <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
     </nav>
     <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
   </div>
@@ -92,9 +93,10 @@ RODAPE = '''
 '''
 
 ORG = {"@context": "https://schema.org", "@type": "Organization", "name": "ServPilot", "url": SITE,
-       "logo": f"{SITE}/img/logo.svg", "email": "anadgtec@gmail.com",
+       "logo": f"{SITE}/img/logo.svg", "email": "contato@servpilot.com.br",
        "legalName": "Ana DG Tecnologia da Informação Ltda", "taxID": "43.904.201/0001-26",
-       "address": {"@type": "PostalAddress", "addressLocality": "São Miguel do Iguaçu", "addressRegion": "PR", "addressCountry": "BR"}}
+       "address": {"@type": "PostalAddress", "addressLocality": "São Miguel do Iguaçu", "addressRegion": "PR", "addressCountry": "BR"},
+       "sameAs": ["https://www.instagram.com/servpilot", "https://www.tiktok.com/@servpilot", "https://www.facebook.com/1345149045355955"]}
 
 APP = {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "ServPilot",
        "applicationCategory": "BusinessApplication", "applicationSubCategory": "Gestão de serviços de campo",

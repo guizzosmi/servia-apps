@@ -111,40 +111,102 @@ class _FiscalTelaState extends State<FiscalTela> {
 
   Map<String, dynamic> get _config => _r?['config'] is Map ? Map<String, dynamic>.from(_r!['config'] as Map) : {};
 
-  // ---------- Contratar / cancelar ----------
-  Future<void> _modulo(String acao) async {
-    final precos = Map<String, dynamic>.from((_r?['precos'] as Map?) ?? const {});
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(acao == 'contratar' ? 'Contratar a emissão de notas' : 'Cancelar a emissão de notas'),
-        content: Text(acao == 'contratar'
-            ? 'Por ${dinheiro(precos['valor_modulo'])} por mês, com ${precos['notas_incluidas']} notas por mês incluídas '
-                '(NFS-e e NF-e somadas). Nota além disso: ${dinheiro(precos['valor_extra'])} cada, na mensalidade seguinte. '
-                'As notas de teste (homologação) não contam.\n\nO valor entra na próxima mensalidade.'
-            : 'As notas já emitidas continuam valendo e aparecendo aqui. Não dá mais para emitir novas até contratar de novo. '
-                'O módulo sai da próxima mensalidade.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(acao == 'contratar' ? 'Contratar' : 'Cancelar o módulo')),
-        ],
-      ),
-    );
-    if (ok != true) return;
+  // ---------- Contratar (com a faixa), trocar a faixa ou cancelar (guia 86) ----------
+  Map<String, dynamic> get _precos => Map<String, dynamic>.from((_r?['precos'] as Map?) ?? const {});
+
+  List<Map<String, dynamic>> get _faixas =>
+      ((_precos['faixas'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+
+  int get _faixaAtual => (_r?['faixa'] as num?)?.toInt() ?? 1;
+
+  String get _faixaContratada {
+    for (final f in _faixas) {
+      if ((f['faixa'] as num).toInt() == _faixaAtual) return _textoFaixa(f);
+    }
+    return 'faixa $_faixaAtual';
+  }
+
+  String _textoFaixa(Map<String, dynamic> f) => 'Até ${f['notas']} notas por mês · ${dinheiro(f['valor'])} por mês';
+
+  Future<int?> _escolherFaixa(String titulo, String botao, int atual) => showDialog<int>(
+        context: context,
+        builder: (_) {
+          var escolha = atual;
+          return StatefulBuilder(
+            builder: (context, setD) => AlertDialog(
+              title: Text(titulo),
+              content: SizedBox(
+                width: 480,
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (final f in _faixas)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      selected: (f['faixa'] as num).toInt() == escolha,
+                      leading: Icon((f['faixa'] as num).toInt() == escolha
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked),
+                      title: Text(_textoFaixa(f)),
+                      onTap: () => setD(() => escolha = (f['faixa'] as num).toInt()),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                      'NFS-e e NF-e somadas, por empresa (CNPJ) que emite. Nota além da faixa: '
+                      '${dinheiro(_precos['valor_extra'])} cada, na mensalidade seguinte. As notas de teste '
+                      '(homologação) não contam. O valor do módulo entra na próxima mensalidade.',
+                      style: const TextStyle(color: Cores.neutro)),
+                ]),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Voltar')),
+                FilledButton(onPressed: () => Navigator.pop(context, escolha), child: Text(botao)),
+              ],
+            ),
+          );
+        },
+      );
+
+  Future<void> _chamarModulo(Map<String, dynamic> p, String aviso) async {
     try {
-      final r = Map<String, dynamic>.from(await _db.rpc('notas_modulo', params: {
-        'p': {'acao': acao}
-      }) as Map);
+      final r = Map<String, dynamic>.from(await _db.rpc('notas_modulo', params: {'p': p}) as Map);
+      if (!mounted) return;
       setState(() {
         _r = r;
         _preencher(r);
       });
-      _avisar(acao == 'contratar' ? 'Emissão de notas contratada. Agora configure abaixo.' : 'Módulo cancelado.');
+      _avisar(aviso);
     } catch (e) {
       _avisar(mensagemDeErro(e), erro: true);
     }
+  }
+
+  Future<void> _trocarFaixa() async {
+    final atual = _faixaAtual;
+    final f = await _escolherFaixa('Trocar a faixa de notas', 'Trocar', atual);
+    if (f == null || f == atual) return;
+    await _chamarModulo({'acao': 'faixa', 'faixa': f}, 'Faixa trocada. O novo valor entra na próxima mensalidade.');
+  }
+
+  Future<void> _modulo(String acao) async {
+    if (acao == 'contratar') {
+      final f = await _escolherFaixa('Contratar a emissão de notas', 'Contratar', 1);
+      if (f == null) return;
+      await _chamarModulo({'acao': 'contratar', 'faixa': f}, 'Emissão de notas contratada. Agora configure abaixo.');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancelar a emissão de notas'),
+        content: const Text('As notas já emitidas continuam valendo e aparecendo aqui. Não dá mais para emitir novas até '
+            'contratar de novo. O módulo sai da próxima mensalidade.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cancelar o módulo')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _chamarModulo({'acao': 'cancelar'}, 'Módulo cancelado.');
   }
 
   // ---------- Receita (CNPJ) e CEP ----------
@@ -303,12 +365,13 @@ class _FiscalTelaState extends State<FiscalTela> {
       );
 
   Widget _contratar() {
-    final precos = Map<String, dynamic>.from((_r?['precos'] as Map?) ?? const {});
     return _secao('Emissão de notas fiscais', [
-      Text('NFS-e dos serviços e NF-e das peças direto das OS: uma a uma ou o mês inteiro de uma vez, '
-          'juntando as OS de cada cliente. O cliente recebe a nota por e-mail.\n\n'
-          '${dinheiro(precos['valor_modulo'])} por mês com ${precos['notas_incluidas']} notas incluídas; '
-          'nota extra ${dinheiro(precos['valor_extra'])}.'),
+      const Text('NFS-e dos serviços e NF-e das peças direto das OS: uma a uma ou o mês inteiro de uma vez, '
+          'juntando as OS de cada cliente. O cliente recebe a nota por e-mail.'),
+      const SizedBox(height: 8),
+      for (final f in _faixas) Text('• ${_textoFaixa(f)}'),
+      const SizedBox(height: 4),
+      Text('Nota além da faixa: ${dinheiro(_precos['valor_extra'])} cada.', style: const TextStyle(color: Cores.neutro)),
       const SizedBox(height: 12),
       FilledButton.icon(
           onPressed: () => _modulo('contratar'),
@@ -337,6 +400,11 @@ class _FiscalTelaState extends State<FiscalTela> {
             focus == 'ok' ? Cores.sucesso : (focus == 'erro' ? Cores.erro : Cores.alerta)),
         if (consumo.isNotEmpty)
           _linha(Icons.receipt_outlined, '${consumo['usadas']} de ${consumo['incluidas']} notas neste ciclo', Cores.indigo500),
+      ]),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        Text('Faixa: $_faixaContratada', style: const TextStyle(fontWeight: FontWeight.w600)),
+        TextButton(onPressed: _trocarFaixa, child: const Text('Trocar a faixa')),
       ]),
       if (focus == 'erro' && (cfg['focus_erro'] ?? '') != '') ...[
         const SizedBox(height: 8),

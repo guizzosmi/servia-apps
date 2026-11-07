@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import '../api.dart';
 import '../widgets/aplicacoes_conta.dart';
 import '../widgets/comuns.dart';
+import '../widgets/conta_comercial.dart';
 import '../widgets/fatura_acoes.dart';
 import 'conta_formularios.dart';
 
@@ -153,6 +154,7 @@ class _ContaTelaState extends State<ContaTela> {
                     Campo('Custo estimado da IA', 'US\$ ${numero(c['custo_ia_usd']).toStringAsFixed(3)}'),
                   ]),
                 ),
+                ContaComercial(contaId: widget.id, dados: d, aoMudar: _recarregar),
                 _Usuarios(lista(d['usuarios'])),
                 _Empresas(lista(d['empresas'])),
                 AplicacoesDaConta(contaId: widget.id),
@@ -277,7 +279,8 @@ class _Cupons extends StatelessWidget {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text('${c['codigo']}${c['ativo'] == true ? '' : ' (substituído)'}'),
-                subtitle: Text('${c['resumo']} · usado em ${c['faturas_usadas']} mensalidade(s) · pelo ${c['origem']} em ${dataBr(c['aplicado_em'])}'),
+                subtitle: Text('${c['resumo']} · ${c['meses_usados']} mês(es) usado(s)'
+                    '${c['meses_restantes'] != null ? ', faltam ${c['meses_restantes']}' : ''} · pelo ${c['origem']} em ${dataBr(c['aplicado_em'])}'),
               ),
           ]),
         );

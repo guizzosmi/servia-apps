@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Confirmando · ServPilot</title>
+<link rel="stylesheet" href="/captcha.css">
+<!-- Guia 87: o app do técnico abre esta página no login. O token volta pelo canal ServPilotCaptcha. -->
+<script src="/captcha-app.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=spCaptchaPronto" async defer></script>
+</head>
+<body>
+  <main class="cp">
+    <div id="widget"></div>
+    <p id="estado">Confirmando que é você…</p>
+  </main>
+</body>
+</html>

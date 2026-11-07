@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conector do Claude · ServPilot</title>
+<meta name="description" content="Ligue o Claude ao ServPilot: pergunte pela agenda, OS, clientes e funil, e peça para registrar tarefas e oportunidades.">
+<link rel="canonical" href="https://servpilot.com.br/conector">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/doc.css">
+</head>
+<body>
+<header class="doc-topo"><div class="faixa">
+  <a href="/"><img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38"></a>
+  <a href="https://painel.servpilot.com.br">Entrar no painel</a>
+</div></header>
+
+<main class="doc">
+<h1>Conector do Claude</h1>
+<p class="atualizado">Incluído em todos os planos</p>
+
+<p>Com o conector, o <b>Claude</b> (claude.ai, app do celular ou do computador) conversa com o ServPilot da sua empresa:
+"o que tem na agenda de amanhã?", "quem está me devendo?", "resuma as OS do Mercado Bom", "crie a oportunidade do
+contrato de PMOC da Padaria Central e marque para eu ligar na segunda".</p>
+
+<h2>Como ligar (2 minutos)</h2>
+<ol>
+  <li>No Claude, abra <b>Configurações › Conectores</b> e clique em <b>Adicionar conector personalizado</b>.</li>
+  <li>Nome: <b>ServPilot</b>. Endereço: <code>https://srtokvosnwtyewiempyw.supabase.co/functions/v1/mcp</code></li>
+  <li>Abra <b>Configurações avançadas</b> e preencha <b>OAuth Client ID</b>: <code>b2fe06d9-a2a0-42c7-950f-44b3e7eba7f8</code> (deixe o segredo em branco).</li>
+  <li>Clique em <b>Conectar</b>: abre o painel do ServPilot. Entre com o seu login e clique em <b>Permitir</b>.</li>
+</ol>
+
+<h2>O que ele pode fazer</h2>
+<table>
+  <tr><th>Sempre</th><td>Consultar clientes, OS, agenda, orçamentos, contratos, a receber, caixa e indicadores.</td></tr>
+  <tr><th>Comercial</th><td>Criar e atualizar oportunidades, tarefas e anotações (ligado por padrão, com o módulo Comercial).</td></tr>
+  <tr><th>Cadastros</th><td>Cadastrar e alterar clientes (desligado; o administrador liga).</td></tr>
+  <tr><th>Operação</th><td>Abrir OS (desligado; o administrador liga).</td></tr>
+  <tr><th>Financeiro</th><td>Registrar recebimentos, por exemplo lendo o comprovante, e lançar no caixa (desligado; o administrador liga).</td></tr>
+</table>
+<p>O administrador escolhe no painel, em <b>Configurações › Conector do Claude</b>.</p>
+
+<h2>Segurança</h2>
+<ul>
+  <li>O Claude entra com <b>o seu login</b>: vê só a empresa ativa e só o que o seu usuário pode ver.</li>
+  <li>Tudo o que ele grava fica marcado como feito pelo Claude e registrado na auditoria da empresa.</li>
+  <li>Para desligar, remova o conector no Claude.</li>
+  <li>Os dados que o Claude lê seguem a <a href="/privacidade">política de privacidade</a> do ServPilot e os termos do Claude.</li>
+</ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR" class="sem-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quero uma demonstração · ServPilot</title>
+<meta name="description" content="Peça uma demonstração do ServPilot: 15 minutos pelo WhatsApp ou vídeo, com OS, PMOC e o app do técnico na prática.">
+<meta name="theme-color" content="#121A2B">
+<link rel="canonical" href="https://servpilot.com.br/demonstracao">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/precos.css">
+<link rel="stylesheet" href="/conteudo.css">
+</head>
+<body>
+
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="topo" id="topo">
+  <div class="faixa topo-dentro">
+    <a href="/" class="marca" aria-label="ServPilot, início">
+      <img class="marca-escura" src="/img/logo-escuro.svg" alt="ServPilot" width="150" height="40">
+      <img class="marca-clara" src="/img/logo.svg" alt="" width="150" height="40">
+    </a>
+    <nav class="menu" aria-label="Seções">
+      <a href="/">Início</a>
+      <a href="/precos">Preços</a>
+    </nav>
+    <div class="topo-acoes">
+      <a class="botao fantasma" href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
+    </div>
+  </div>
+</header>
+
+<main id="conteudo">
+
+<section class="abertura curta">
+  <div class="abertura-fundo" aria-hidden="true"></div>
+  <div class="faixa">
+    <div class="abertura-texto">
+      <p class="selo"><span class="ponto-vivo verde"></span> 15 minutos · sem compromisso</p>
+      <h1>Veja o ServPilot <span class="destaque">na sua rotina.</span></h1>
+      <p class="lead">Mostramos a OS do pedido ao relatório, o PMOC e o app do técnico, com o seu tipo de serviço. Respondemos pelo WhatsApp no mesmo dia útil.</p>
+    </div>
+  </div>
+</section>
+
+<section class="secao" style="padding-top: 0">
+  <div class="faixa assinar-grade">
+
+    <div class="formulario">
+      <form id="form" novalidate>
+        <h2>Seus dados</h2>
+        <div class="campos">
+          <div class="campo"><label for="nome">Seu nome</label>
+            <input id="nome" name="nome" autocomplete="name" required maxlength="100"></div>
+          <div class="campo"><label for="whatsapp">WhatsApp com DDD</label>
+            <input id="whatsapp" name="telefone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="(45) 99999-0000"></div>
+          <div class="campo largo"><label for="empresa">Empresa</label>
+            <input id="empresa" name="empresa" autocomplete="organization" maxlength="120"></div>
+          <div class="campo"><label for="cidade">Cidade</label>
+            <input id="cidade" name="cidade" autocomplete="address-level2" maxlength="80"></div>
+          <div class="campo"><label for="uf">UF</label>
+            <input id="uf" name="uf" maxlength="2" style="text-transform: uppercase"></div>
+          <div class="campo"><label for="tecnicos">Quantos técnicos?</label>
+            <select id="tecnicos" name="tecnicos">
+              <option value="">Escolha</option>
+              <option>Só eu</option><option>2 a 3</option><option>4 a 10</option><option>Mais de 10</option>
+            </select></div>
+          <div class="campo"><label for="email">E-mail (opcional)</label>
+            <input id="email" name="email" type="email" autocomplete="email" maxlength="120"></div>
+          <div class="campo largo"><label for="mensagem">O que você quer ver? (opcional)</label>
+            <textarea id="mensagem" name="mensagem" rows="3" maxlength="1000" placeholder="Ex.: PMOC, contratos de manutenção, app sem internet"></textarea></div>
+        </div>
+        <div class="isca" aria-hidden="true"><label for="site">Site</label><input id="site" name="site" tabindex="-1" autocomplete="off"></div>
+        <p class="nota-form">Usamos estes dados só para falar com você sobre o ServPilot (veja a <a href="/privacidade" target="_blank" rel="noopener">política de privacidade</a>).</p>
+        <button class="botao coral grande" type="submit" id="enviar">Quero uma demonstração</button>
+        <div class="erro-form" id="erro" role="alert"></div>
+      </form>
+
+      <div class="sucesso" id="sucesso" aria-live="polite">
+        <div class="ic">✓</div>
+        <h2>Recebemos o seu pedido!</h2>
+        <p>Vamos chamar você no WhatsApp para combinar o melhor horário. Se preferir, já pode testar sozinho:</p>
+        <p style="margin-top: 18px"><a class="botao coral grande" href="/assinar">Testar 14 dias grátis</a></p>
+      </div>
+    </div>
+
+    <aside class="resumo-lado">
+      <h3>Na demonstração</h3>
+      <ol class="linha-tempo-simples">
+        <li><span class="bola">1</span><div><b>A OS completa</b><span>Do pedido do cliente ao relatório assinado, com o relato por áudio.</span></div></li>
+        <li><span class="bola">2</span><div><b>PMOC e contratos</b><span>Preventivas automáticas, documento do PMOC e o que cobrar no mês.</span></div></li>
+        <li><span class="bola">3</span><div><b>O app do técnico</b><span>Funciona sem internet, com foto, checklist e assinatura.</span></div></li>
+      </ol>
+      <div class="resumo-preco">Prefere falar agora? <a data-whatsapp="Olá! Quero ver uma demonstração do ServPilot.">Chame no WhatsApp</a>.</div>
+    </aside>
+  </div>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <div class="faixa rodape-dentro">
+    <div>
+      <img src="/img/logo-escuro.svg" alt="ServPilot" width="140" height="38">
+      <p>Gestão inteligente de serviços de campo.</p>
+    </div>
+    <nav aria-label="Rodapé">
+      <a href="/">Início</a>
+      <a href="/precos">Preços</a>
+      <a href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
+      <a href="/termos">Termos de uso</a>
+      <a href="/privacidade">Privacidade</a>
+      <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
+    </nav>
+    <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script src="/site.js" defer></script>
+<script src="/rastreio.js" defer></script>
+<script src="/api.js" defer></script>
+<script src="/demonstracao.js" defer></script>
+</body>
+</html>

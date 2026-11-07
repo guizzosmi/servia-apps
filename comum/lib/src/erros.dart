@@ -20,6 +20,9 @@ String mensagemDeErro(Object e) {
   if (e is AuthException) {
     final m = e.message.toLowerCase();
     if (m.contains('invalid login')) return 'E-mail ou senha incorretos.';
+    if (m.contains('captcha')) {
+      return 'Não deu para confirmar que você não é um robô. Recarregue a página e tente de novo.';
+    }
     if (m.contains('banned')) {
       return 'Usuário desativado. Fale com o administrador da sua empresa.';
     }

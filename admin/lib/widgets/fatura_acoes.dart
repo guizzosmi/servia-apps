@@ -14,6 +14,7 @@ class MenuFatura extends StatelessWidget {
   Widget build(BuildContext context) {
     final aberta = fatura['situacao'] == 'aberta';
     final paga = fatura['situacao'] == 'paga';
+    final pagaNoMp = paga && fatura['mp_pagamento_id'] != null && numero(fatura['valor_pago']) > 0;
     return PopupMenuButton<String>(
       tooltip: 'Ações',
       onSelected: (acao) async {
@@ -25,6 +26,7 @@ class MenuFatura extends StatelessWidget {
         if (aberta) const PopupMenuItem(value: 'baixa', child: Text('Dar baixa (pago fora do Mercado Pago)')),
         if (paga) const PopupMenuItem(value: 'nf', child: Text('Registrar a nota fiscal')),
         if (aberta) const PopupMenuItem(value: 'cancelar', child: Text('Cancelar fatura')),
+        if (pagaNoMp) const PopupMenuItem(value: 'estornar', child: Text('Devolver no Mercado Pago (estorno)')),
       ],
     );
   }
@@ -75,6 +77,18 @@ class MenuFatura extends StatelessWidget {
           if (!ok) return false;
           await rpcMapa('admin_fatura_acao', {'p': {'acao': 'cancelar', 'fatura_id': id, 'motivo': motivo.text.trim()}});
           if (context.mounted) avisar(context, 'Fatura cancelada.');
+          return true;
+        case 'estornar':
+          // Guia 89: devolve o pagamento inteiro no Mercado Pago e desfaz créditos, cupom e comissão da fatura.
+          final ok = await dialogoForm(context, titulo: 'Devolver ${moeda(fatura['valor_pago'])} da fatura ${fatura['numero']}?',
+              confirmar: 'Devolver', campos: [
+            Text(fatura['tipo'] == 'anual'
+                ? 'O cliente volta ao pagamento mensal. Se o período já começou, a mensalidade do ciclo atual é gerada.'
+                : 'A fatura fica como devolvida. Comissão já paga ao parceiro é descontada do próximo pagamento.'),
+          ]);
+          if (!ok) return false;
+          await db.functions.invoke('cobranca', body: {'acao': 'estornar', 'fatura_id': id});
+          if (context.mounted) avisar(context, 'Valor devolvido no Mercado Pago.');
           return true;
       }
     } catch (e) {

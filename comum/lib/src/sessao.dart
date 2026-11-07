@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'captcha/captcha.dart';
+
 /// Papéis possíveis de um usuário dentro de uma empresa
 /// (mesma lista do check em usuario_empresas.papeis).
 /// "Líder" não é papel: é uma posição dentro da equipe.
@@ -85,12 +87,14 @@ class Sessao {
 
   /// Entra com e-mail e senha. Guia 58: 5 senhas erradas em 15 minutos
   /// bloqueiam o e-mail por 15 minutos (a conferência fica no banco).
-  static Future<void> entrar(String email, String senha) async {
+  /// Guia 87: manda o token do CAPTCHA (Turnstile): o do app vem em [captchaToken];
+  /// no navegador, a própria sessão pede.
+  static Future<void> entrar(String email, String senha, {String? captchaToken}) async {
     final e = email.trim();
     final situacao = await _consultar('login_situacao', e);
     if (situacao?['bloqueado'] == true) throw LoginBloqueado(situacao?['minutos'] as int?);
     try {
-      await _db.auth.signInWithPassword(email: e, password: senha);
+      await _db.auth.signInWithPassword(email: e, password: senha, captchaToken: captchaToken ?? await obterCaptcha());
     } on AuthException catch (erro) {
       if (erro.message.toLowerCase().contains('invalid login')) {
         final r = await _consultar('login_falhou', e);
@@ -119,8 +123,8 @@ class Sessao {
   }
 
   /// Recuperar a senha (guia 58): manda o e-mail com o link para criar outra.
-  static Future<void> recuperarSenha(String email, {required String voltarPara}) =>
-      _db.auth.resetPasswordForEmail(email.trim(), redirectTo: voltarPara);
+  static Future<void> recuperarSenha(String email, {required String voltarPara}) async =>
+      _db.auth.resetPasswordForEmail(email.trim(), redirectTo: voltarPara, captchaToken: await obterCaptcha());
 
   /// Grava a senha nova (depois de abrir o link do e-mail).
   static Future<void> trocarSenha(String nova) => _db.auth.updateUser(UserAttributes(password: nova));

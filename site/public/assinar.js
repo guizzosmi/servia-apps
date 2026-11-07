@@ -9,6 +9,21 @@
   const cupomUrl = new URLSearchParams(location.search).get('cupom');
   if (cupomUrl) $('cupom').value = cupomUrl.toUpperCase();
 
+  // Guia 89: código de indicação (do link desta página ou guardado pelo site em outra página).
+  let indicacao = (new URLSearchParams(location.search).get('indicacao') || '').trim().toUpperCase();
+  if (!indicacao) {
+    try {
+      const g = JSON.parse(localStorage.getItem('sp_indicacao') || 'null');
+      if (g && g.codigo && g.ate > Date.now()) indicacao = String(g.codigo);
+    } catch (_) { /* sem armazenamento */ }
+  }
+  if (indicacao) {
+    S.rpc('indicacao_conferir', { p_codigo: indicacao }).then((r) => {
+      if (r && r.valido) $('indicacaoMsg').hidden = false;
+      else indicacao = '';
+    }).catch(() => {});
+  }
+
   // Plano: vem da página de preços (/assinar?plano=autonomo) ou fica o Equipe.
   const planos = {
     autonomo: { nome: 'Autônomo', valor_mensal: 99.99, usuarios_incluidos: 1, valor_usuario_extra: 99.99 },
@@ -96,6 +111,7 @@
         dono: { nome: v('nome'), email: v('email'), telefone: v('whatsapp'), senha: $('senha').value },
         plano: planoEscolhido(),
         cupom: v('cupom'),
+        indicacao,
         aceite: true,
         site: $('site').value,
       });
@@ -105,6 +121,7 @@
       form.style.display = 'none';
       $('sucesso').classList.add('ver');
       if (window.ServPilotRastreio) window.ServPilotRastreio.evento('cadastro');   // conversão (guia 48)
+      try { localStorage.removeItem('sp_indicacao'); } catch (_) { /* sem armazenamento */ }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       mostrarErro(err.message);

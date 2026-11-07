@@ -1,0 +1,15 @@
+/* ServPilot · página do parceiro (guia 89) */
+.parceiro .link-caixa { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #F5F6FA;
+  border: 1px solid #DCE1EA; border-radius: 10px; padding: 10px 12px; }
+.parceiro .link-caixa code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; color: #3E3BB5; }
+.parceiro .dica { color: #5B6474; font-size: 14px; }
+.parceiro .aviso { background: #FFF6E5; border: 1px solid #F2C46D; border-radius: 10px; padding: 10px 12px; }
+.parceiro .totais { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 28px 0 8px; }
+.parceiro .totais div { border: 1px solid #DCE1EA; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.parceiro .totais span { color: #5B6474; font-size: 14px; }
+.parceiro .totais b { font-size: 24px; }
+.parceiro .totais small { color: #5B6474; font-size: 12px; }
+.parceiro td.vazio { color: #5B6474; text-align: center; }
+.parceiro td.negativo { color: #C0392B; }
+.parceiro td.sit-cliente { color: #1E8E5A; font-weight: 600; }
+.parceiro table { display: block; overflow-x: auto; }

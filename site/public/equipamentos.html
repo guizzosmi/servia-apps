@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestão de Equipamentos: locação, obras e manutenção · ServPilot</title>
-<meta name="description" content="Em breve no ServPilot: onde está cada equipamento, checklist de saída e retorno com fotos e aceite, manutenção por tempo e por uso, custo e margem por equipamento e integração com Protheus.">
+<meta name="description" content="Em breve no ServPilot: onde está cada equipamento, checklist de saída e retorno com fotos e aceite, manutenção por tempo e por uso, custo e margem por equipamento e integração com o seu ERP.">
 <meta name="theme-color" content="#121A2B">
 <link rel="canonical" href="https://servpilot.com.br/equipamentos">
 <meta property="og:type" content="website">
@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="/conteudo.css">
 <link rel="stylesheet" href="/hub.css">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "ServPilot", "item": "https://servpilot.com.br/"}, {"@type": "ListItem", "position": 2, "name": "Gestão de Equipamentos", "item": "https://servpilot.com.br/equipamentos"}]}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "name": "Gestão de Equipamentos do ServPilot (em breve)", "url": "https://servpilot.com.br/equipamentos", "inLanguage": "pt-BR", "description": "Aplicação do ServPilot em desenvolvimento para controlar equipamentos de locação, de obras próprias e de uso próprio: localização e agenda, checklist de saída e retorno com fotos e aceite, manutenção preventiva por tempo e por uso e corretiva, custo e margem por equipamento e integração com Protheus.", "isPartOf": {"@type": "WebSite", "name": "ServPilot", "url": "https://servpilot.com.br/"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "name": "Gestão de Equipamentos do ServPilot (em breve)", "url": "https://servpilot.com.br/equipamentos", "inLanguage": "pt-BR", "description": "Aplicação do ServPilot em desenvolvimento para controlar equipamentos de locação, de obras próprias e de uso próprio: localização e agenda, checklist de saída e retorno com fotos e aceite, manutenção preventiva por tempo e por uso e corretiva, custo e margem por equipamento e integração com ERP.", "isPartOf": {"@type": "WebSite", "name": "ServPilot", "url": "https://servpilot.com.br/"}}</script>
 </head>
 <body>
 
@@ -41,7 +41,7 @@
     <nav class="menu" aria-label="Seções">
       <a href="#recursos">Recursos</a>
       <a href="#ciclo">Como vai funcionar</a>
-      <a href="#protheus">Protheus</a>
+      <a href="#integracao">Integração</a>
       <a href="#para-quem">Para quem</a>
       <a href="/">Aplicações</a>
     </nav>
@@ -73,7 +73,7 @@
       </div>
       <ul class="abertura-garantias">
         <li>Locação, obras próprias e uso próprio</li>
-        <li>Integração com Protheus</li>
+        <li>Integração com o seu ERP</li>
         <li>Aviso pelo WhatsApp, sem compromisso</li>
       </ul>
     </div>
@@ -117,7 +117,7 @@
       <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">✅</span><h3>Checklist de saída e retorno</h3><p>Conferência com fotos e aceite de quem recebe. No retorno, o que faltou ou quebrou fica registrado.</p></article>
       <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🛠️</span><h3>Manutenção por tempo e por uso</h3><p>Preventiva pelo calendário ou pelas horas de uso, e a corretiva quando precisar, com a OS do ServPilot.</p></article>
       <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">📊</span><h3>Custo e margem por equipamento</h3><p>Quanto cada equipamento custa por mês, por tipo de gasto, comparado com o que ele rende.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🔗</span><h3>Integração com Protheus</h3><p>O campo e o depósito no ServPilot; compras, custos e financeiro seguem no Protheus.</p></article>
+      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🔗</span><h3>Integração com o seu ERP</h3><p>O campo e o depósito no ServPilot; compras, custos e financeiro seguem no sistema de gestão da empresa.</p></article>
     </div>
   </div>
 </section>
@@ -138,20 +138,20 @@
   </div>
 </section>
 
-<!-- ================================================================ Protheus -->
-<section class="secao clara" id="protheus">
+<!-- ================================================================ integração -->
+<section class="secao clara" id="integracao">
   <div class="faixa">
     <div class="destaque-linha revelar">
       <div class="destaque-texto">
         <p class="sobretitulo">Integração</p>
-        <h2>Feita para conversar com o Protheus.</h2>
-        <p>O ServPilot cuida do campo e do depósito. O Protheus continua dono de compras, custos e financeiro.
+        <h2>Feita para conversar com o seu ERP.</h2>
+        <p>O ServPilot cuida do campo e do depósito. O ERP da empresa continua dono de compras, custos e financeiro.
           Sem digitar a mesma coisa duas vezes.</p>
         <ul class="lista-check">
-          <li>Equipamentos, clientes e produtos vindos do Protheus</li>
-          <li>Peça ou serviço necessário na OS vira solicitação de compra no Protheus</li>
+          <li>Equipamentos, clientes e produtos vindos do ERP</li>
+          <li>Peça ou serviço necessário na OS vira solicitação de compra no ERP</li>
           <li>O custo realizado volta para fechar o custo do mês por equipamento</li>
-          <li>Outros ERPs pela API OData do ServPilot</li>
+          <li>Conexão pela <a href="/api">API do ServPilot</a>, documentada para o seu time de TI</li>
         </ul>
       </div>
       <div class="destaque-visual" aria-hidden="true">
@@ -163,7 +163,7 @@
             <li class="sai"><span>→</span>Material usado do estoque</li>
             <li class="entra"><span>←</span>Custo realizado por equipamento</li>
           </ul>
-          <div class="fluxo-caixa erp"><b>Protheus</b><small>compras, custos e financeiro</small></div>
+          <div class="fluxo-caixa erp"><b>Seu ERP</b><small>compras, custos e financeiro</small></div>
         </div>
       </div>
     </div>
@@ -202,8 +202,8 @@
     <div class="perguntas">
       <details class="revelar"><summary>Quando a Gestão de Equipamentos fica pronta?</summary>
         <p>Ainda não tem data. Ela está sendo desenhada a partir de conversas com quem vive esse problema. Peça o aviso pelo WhatsApp e avisamos quando estiver disponível.</p></details>
-      <details class="revelar"><summary>Funciona com o Protheus?</summary>
-        <p>Sim, essa é uma das bases do desenho: cadastros vindos do Protheus, solicitação de compra a partir da OS e o custo realizado voltando para o ServPilot. Outros ERPs podem ler os dados pela API OData do ServPilot.</p></details>
+      <details class="revelar"><summary>Funciona com o meu ERP?</summary>
+        <p>Sim, essa é uma das bases do desenho: cadastros vindos do ERP, solicitação de compra a partir da OS e o custo realizado voltando para o ServPilot, pela <a href="/api">API documentada</a> do ServPilot.</p></details>
       <details class="revelar"><summary>Já dá para usar alguma coisa hoje?</summary>
         <p>Sim. O cadastro de equipamentos com etiqueta QR, a OS de manutenção, os planos de preventiva e o histórico por equipamento já existem no ServPilot, na <a href="/refrigeracao">Gestão de Serviços de Refrigeração</a>.</p></details>
     </div>
@@ -242,7 +242,8 @@
       <a href="/blog">Blog</a>
       <a href="/termos">Termos de uso</a>
       <a href="/privacidade">Privacidade</a>
-      <a href="#" data-cookies>Cookies</a>
+      <a href="#" data-cookies>Cookies</a> <a href="https://www.instagram.com/servpilot" target="_blank" rel="noopener">Instagram</a> <a href="https://www.tiktok.com/@servpilot" target="_blank" rel="noopener">TikTok</a> <a href="https://www.facebook.com/1345149045355955" target="_blank" rel="noopener">Facebook</a>
+      <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
     </nav>
     <p class="direitos">© <span id="ano">2026</span> ServPilot. Todos os direitos reservados.</p>
   </div>

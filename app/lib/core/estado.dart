@@ -179,10 +179,10 @@ class EstadoApp extends ChangeNotifier {
   }
 
   /// Login por e-mail e senha, ou por código da empresa + matrícula + PIN.
-  Future<void> entrar({required String email, required String senha}) async {
+  Future<void> entrar({required String email, required String senha, String? captchaToken}) async {
     final db = Supabase.instance.client;
     try {
-      await Sessao.entrar(email, senha);
+      await Sessao.entrar(email, senha, captchaToken: captchaToken);
     } catch (e) {
       throw ErroLogin(mensagemDeErro(e));
     }

@@ -40,11 +40,23 @@ class _ItensDaOsState extends State<ItensDaOs> {
   String? _erro;
   List<Map<String, dynamic>> _itens = [];
   List<Map<String, dynamic>> _equipamentos = [];
+  String? _clienteId;
 
   @override
   void initState() {
     super.initState();
     _carregar();
+    _carregarCliente();
+  }
+
+  /// Cliente da OS: para a peça já entrar com o preço da tabela dele (guia 59).
+  Future<void> _carregarCliente() async {
+    try {
+      final r = await _db.from('ordens_servico').select('cliente_id').eq('id', widget.osId).maybeSingle();
+      if (mounted) _clienteId = r?['cliente_id'] as String?;
+    } catch (_) {
+      // Sem o cliente, o diálogo mostra o preço do catálogo (o banco aplica o do cliente ao salvar).
+    }
   }
 
   @override
@@ -108,7 +120,7 @@ class _ItensDaOsState extends State<ItensDaOs> {
   Future<void> _editar([Map<String, dynamic>? item]) async {
     final r = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => DialogoItem(item: item, equipamentos: _equipamentos),
+      builder: (_) => DialogoItem(item: item, equipamentos: _equipamentos, clienteId: _clienteId),
     );
     if (r == null || !mounted) return;
     // Guia 59: o número de série (peça nova e retirada) vai depois, no item salvo.
@@ -279,10 +291,14 @@ class _ItensDaOsState extends State<ItensDaOs> {
 /// Incluir ou editar um item (da OS ou do orçamento). Devolve os campos
 /// para item_salvar.
 class DialogoItem extends StatefulWidget {
-  const DialogoItem({super.key, this.item, required this.equipamentos, this.tipos = tiposItemOs});
+  const DialogoItem(
+      {super.key, this.item, required this.equipamentos, this.tipos = tiposItemOs, this.clienteId});
 
   final Map<String, dynamic>? item;
   final List<Map<String, dynamic>> equipamentos;
+
+  /// Cliente da OS: com tabela de preços (guia 59), a peça já entra com o preço dele.
+  final String? clienteId;
 
   /// Tipos que o item pode ter (código -> nome).
   final Map<String, String> tipos;
@@ -332,6 +348,10 @@ class _DialogoItemState extends State<DialogoItem> {
       : {'id': widget.item!['produto_id'], 'descricao': widget.item!['descricao']};
   List<Map<String, dynamic>> _produtos = [];
 
+  /// Preço do cliente por produto (tabela de preços do cliente).
+  Map<String, num> _precosCliente = {};
+  bool _precoDoCliente = false;
+
   @override
   void initState() {
     super.initState();
@@ -345,11 +365,28 @@ class _DialogoItemState extends State<DialogoItem> {
           .select('id, codigo, descricao, tipo, unidade, preco_venda, controla_serie')
           .eq('ativo', true)
           .isFilter('excluido_em', null)
-          .order('descricao')
+          .order('descricao', ascending: true)
           .limit(2000);
       if (mounted) setState(() => _produtos = r);
     } catch (_) {
       // Sem a lista, o item entra sem cadastro.
+    }
+    if (widget.clienteId == null) return;
+    try {
+      final r = await Supabase.instance.client
+          .from('cliente_precos')
+          .select('produto_id, preco')
+          .eq('cliente_id', widget.clienteId!)
+          .eq('ativo', true)
+          .isFilter('excluido_em', null);
+      if (mounted) {
+        setState(() => _precosCliente = {
+              for (final x in r)
+                if (num.tryParse('${x['preco']}') != null) '${x['produto_id']}': num.parse('${x['preco']}')
+            });
+      }
+    } catch (_) {
+      // Sem a tabela, vale o catálogo (o banco ainda aplica o preço do cliente ao salvar).
     }
   }
 
@@ -371,7 +408,9 @@ class _DialogoItemState extends State<DialogoItem> {
       _descricao.text = '${p['descricao']}';
       _tipo = '${p['tipo'] ?? 'produto'}';
       _unidade.text = '${p['unidade'] ?? 'un'}';
-      _preco.text = (num.tryParse('${p['preco_venda']}') ?? 0).toStringAsFixed(2).replaceAll('.', ',');
+      final doCliente = _precosCliente['${p['id']}'];
+      _precoDoCliente = doCliente != null;
+      _preco.text = (doCliente ?? num.tryParse('${p['preco_venda']}') ?? 0).toStringAsFixed(2).replaceAll('.', ',');
     });
   }
 
@@ -492,9 +531,12 @@ class _DialogoItemState extends State<DialogoItem> {
                 Expanded(
                   child: TextFormField(
                     controller: _preco,
-                    decoration: const InputDecoration(labelText: 'Preço unitário (R\$)'),
+                    decoration: InputDecoration(
+                      labelText: 'Preço unitário (R\$)',
+                      helperText: _precoDoCliente ? 'Preço da tabela do cliente' : null,
+                    ),
                     validator: (v) => _numeroValido(v, obrigatorio: true),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) => setState(() => _precoDoCliente = false),
                   ),
                 ),
                 const SizedBox(width: 12),

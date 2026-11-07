@@ -118,7 +118,7 @@ class _IntegracoesTelaState extends State<IntegracoesTela> {
                 TextField(
                   controller: nome,
                   autofocus: true,
-                  decoration: const InputDecoration(labelText: 'Nome (ex.: ERP Protheus, Power BI)'),
+                  decoration: const InputDecoration(labelText: 'Nome (ex.: ERP, Power BI)'),
                 ),
                 const SizedBox(height: 16),
                 const Text('A API age como você, só com os papéis marcados:', style: TextStyle(color: Cores.neutro)),
@@ -329,7 +329,7 @@ class _IntegracoesTelaState extends State<IntegracoesTela> {
           IconButton(tooltip: 'Atualizar', onPressed: _carregando ? null : _carregar, icon: const Icon(Icons.refresh)),
         ]),
         const Text(
-          'Ligue o ServPilot ao seu ERP (Protheus, por exemplo), ao BI ou a outro sistema pela API no padrão OData v4. '
+          'Ligue o ServPilot ao seu ERP, ao BI ou a outro sistema pela API no padrão OData v4. '
           'Cada sistema usa uma credencial própria; dá para revogar a qualquer momento.',
           style: TextStyle(color: Cores.neutro),
         ),
@@ -432,9 +432,8 @@ class _IntegracoesTelaState extends State<IntegracoesTela> {
         );
     return _cartao(
       titulo: 'Estrutura e códigos no ERP (esta empresa)',
-      ajuda: 'A conta é o grupo de empresas; cada empresa (CNPJ) pode ser matriz ou filial. Os códigos do Protheus '
-          'deixam o ERP escolher a filial em cada chamada com o header "TenantId: grupo,filial" (ex.: 01,0101), '
-          'igual ao REST do Protheus.',
+      ajuda: 'A conta é o grupo de empresas; cada empresa (CNPJ) pode ser matriz ou filial. Os códigos do ERP '
+          'deixam o sistema escolher a filial em cada chamada com o header "TenantId: grupo,filial" (ex.: 01,0101).',
       acoes: [
         FilledButton(onPressed: _ocupado ? null : _salvarEstrutura, child: const Text('Salvar')),
       ],

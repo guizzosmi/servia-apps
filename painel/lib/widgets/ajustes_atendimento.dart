@@ -378,7 +378,7 @@ class _DialogoMedicoesState extends State<DialogoMedicoes> {
             .eq('tipo_equipamento_id', '${equip['tipo_equipamento_id']}')
             .eq('ativo', true)
             .isFilter('excluido_em', null)
-            .order('ordem');
+            .order('ordem', ascending: true);
       }
     } catch (e) {
       if (mounted) setState(() => _erro = mensagemDeErro(e));

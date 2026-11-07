@@ -67,6 +67,7 @@ nav.lp-trilha { display: block; }
 .hub-app > p { color: var(--neutro); }
 .hub-app .lista-check { margin-top: 20px; margin-bottom: 26px; }
 .hub-app-acoes { margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px; }
+.hub-app-acoes .botao { flex: 1 1 200px; }
 
 /* ---------------------------------------------------------------- início: missão */
 .titulo-secao h2.sobretitulo { font-size: 13px; font-weight: 800; letter-spacing: .12em; line-height: 1.6; }

@@ -2,11 +2,15 @@
 User-agent: *
 Allow: /
 Disallow: /tutoriais
+Disallow: /midia
+Disallow: /parceiro
 
 # Assistentes de IA (busca e respostas): liberados de forma explícita.
 User-agent: GPTBot
 Allow: /
 Disallow: /tutoriais
+Disallow: /midia
+Disallow: /parceiro
 
 User-agent: OAI-SearchBot
 Allow: /
@@ -17,6 +21,8 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 Disallow: /tutoriais
+Disallow: /midia
+Disallow: /parceiro
 
 User-agent: Claude-SearchBot
 Allow: /

@@ -8,11 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'telas/api_tela.dart';
 import 'telas/aplicacoes_tela.dart';
 import 'telas/casca.dart';
+import 'telas/comissoes_tela.dart';
 import 'telas/conta_tela.dart';
 import 'telas/contas_tela.dart';
 import 'telas/cupons_tela.dart';
 import 'telas/faturas_tela.dart';
 import 'telas/login_tela.dart';
+import 'telas/parceiros_tela.dart';
 import 'telas/precos_tela.dart';
 import 'telas/resumo_tela.dart';
 import 'telas/testadores_tela.dart';
@@ -67,6 +69,8 @@ final rotas = GoRouter(
           builder: (_, state) => FaturasTela(situacao: state.uri.queryParameters['situacao']),
         ),
         GoRoute(path: '/cupons', builder: (_, __) => const CuponsTela()),
+        GoRoute(path: '/parceiros', builder: (_, __) => const ParceirosTela()),
+        GoRoute(path: '/comissoes', builder: (_, __) => const ComissoesTela()),
         GoRoute(path: '/precos', builder: (_, __) => const PrecosTela()),
         GoRoute(path: '/testadores', builder: (_, __) => const TestadoresTela()),
         GoRoute(path: '/aplicacoes', builder: (_, __) => const AplicacoesTela()),

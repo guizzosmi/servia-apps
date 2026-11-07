@@ -11,7 +11,7 @@ import 'cofre.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.14.0';
+const versaoApp = '0.18.0'; // igual à versão do pubspec.yaml (a versão mínima compara com esta)
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/estado.dart';
+import '../widgets/captcha.dart';
 
 /// Login: e-mail e senha, ou código da empresa + matrícula + PIN.
 class LoginTela extends StatefulWidget {
@@ -53,8 +54,15 @@ class _LoginTelaState extends State<LoginTela> {
       _entrando = true;
       _erro = null;
     });
+    // Guia 87: o desafio do CAPTCHA (quase sempre passa sozinho em 1 ou 2 segundos).
+    final captcha = await pedirCaptcha(context);
+    if (!mounted) return;
+    if (captcha == '') {
+      setState(() => _entrando = false);
+      return;
+    }
     try {
-      await EstadoApp.instancia.entrar(email: email, senha: senha);
+      await EstadoApp.instancia.entrar(email: email, senha: senha, captchaToken: captcha);
       // Primeiro login: as rotas levam para a tela Hoje sozinhas.
       if (widget.reentrar && mounted) context.go('/hoje');
     } catch (e) {
