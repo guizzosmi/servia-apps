@@ -14,6 +14,7 @@ class Arquivos {
   static String? _pasta;
   static String? _pastaAssinaturas;
   static String? _pastaAudios;
+  static String? _pastaEquipamentos;
 
   /// Gravação aberta na tela (ainda fora da fila): a limpeza não apaga.
   static String? audioEmUso;
@@ -23,7 +24,23 @@ class Arquivos {
     _pasta = (await pastaFotos()).path;
     _pastaAssinaturas = (await pastaAssinaturas()).path;
     _pastaAudios = (await pastaAudios()).path;
+    _pastaEquipamentos = (await pastaEquipamentos()).path;
   }
+
+  /// Guia 104: fotos e assinaturas dos registros de equipamento (entrega,
+  /// retorno), até a operação subir.
+  static Future<Directory> pastaEquipamentos() async =>
+      Directory(p.join((await getApplicationDocumentsDirectory()).path, 'equipamentos'));
+
+  /// Arquivo de um registro de equipamento, pelo nome (como nas fotos).
+  static File? equipamento(Object? caminhoGravado) {
+    if (caminhoGravado == null) return null;
+    final nome = p.basename('$caminhoGravado');
+    return File(_pastaEquipamentos == null ? '$caminhoGravado' : p.join(_pastaEquipamentos!, nome));
+  }
+
+  /// Arquivo anexado a uma operação: {local, pasta?}. Sem pasta, é uma assinatura.
+  static File? anexo(Map a) => a['pasta'] == 'equipamentos' ? equipamento(a['local']) : assinatura(a['local']);
 
   /// Pasta dos relatos gravados (m4a), até subirem.
   static Future<Directory> pastaAudios() async =>
@@ -63,7 +80,7 @@ class Arquivos {
   /// Apaga todas as fotos, assinaturas e áudios (sair do app, aparelho
   /// mandado apagar).
   static Future<void> apagarFotos() async {
-    for (final pasta in [await pastaFotos(), await pastaAssinaturas(), await pastaAudios()]) {
+    for (final pasta in [await pastaFotos(), await pastaAssinaturas(), await pastaAudios(), await pastaEquipamentos()]) {
       try {
         if (await pasta.exists()) await pasta.delete(recursive: true);
       } catch (_) {
@@ -92,7 +109,9 @@ class Arquivos {
   /// mesmo sem internet). Devolve quantas apagou.
   static Future<int> limparFotos(BancoLocal banco) async {
     final pasta = await pastaFotos();
-    if (!await pasta.exists()) return await _limparAssinaturas(banco) + await _limparAudios(banco);
+    if (!await pasta.exists()) {
+      return await _limparAssinaturas(banco) + await _limparAudios(banco) + await _limparEquipamentos(banco);
+    }
     // Pelo nome do arquivo (o caminho da pasta do app pode mudar no iPhone).
     final usados = <String>{
       for (final f in banco.todos('atendimento_fotos'))
@@ -118,7 +137,34 @@ class Arquivos {
     for (final chave in banco.chavesMeta('foto_subiu:')) {
       if (!naFila.contains(chave.substring('foto_subiu:'.length))) await banco.gravarMeta(chave, null);
     }
-    return apagadas + await _limparAssinaturas(banco) + await _limparAudios(banco);
+    return apagadas + await _limparAssinaturas(banco) + await _limparAudios(banco) + await _limparEquipamentos(banco);
+  }
+
+  /// Fotos e assinaturas de equipamento: ficam enquanto a operação está na
+  /// fila. As que não estão na fila (registro que a pessoa desistiu de
+  /// fazer) saem depois de um dia.
+  static Future<int> _limparEquipamentos(BancoLocal banco) async {
+    final usados = {
+      for (final o in banco.fila)
+        if (o.dados['arquivos'] is List)
+          for (final a in (o.dados['arquivos'] as List).cast<Map>())
+            if (a['pasta'] == 'equipamentos') p.basename('${a['local']}'),
+    };
+    var apagados = 0;
+    final pasta = await pastaEquipamentos();
+    if (!await pasta.exists()) return 0;
+    final agora = DateTime.now();
+    await for (final e in pasta.list()) {
+      if (e is! File || usados.contains(p.basename(e.path))) continue;
+      try {
+        if (agora.difference(await e.lastModified()) < const Duration(hours: 24)) continue;
+        await e.delete();
+        apagados++;
+      } catch (_) {
+        // Tenta de novo na próxima limpeza.
+      }
+    }
+    return apagados;
   }
 
   /// O áudio só fica no aparelho até a operação "relato_gravado" subir (a

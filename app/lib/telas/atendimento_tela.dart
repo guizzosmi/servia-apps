@@ -4,19 +4,23 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
 import '../core/acoes_checklist.dart';
+import '../core/acoes_encerrar.dart';
 import '../core/acoes_mensagens.dart';
 import '../core/acoes_orcamento.dart';
+import '../core/acoes_reabrir.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
 import '../core/conteudos.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../core/impressao.dart';
+import '../core/regras_encerrar.dart';
 import '../widgets/aba_checklist.dart';
 import '../widgets/aba_orcamento.dart';
 import '../widgets/abas_atendimento.dart';
 import '../widgets/entrar_no_servico.dart';
 import '../widgets/indicador_sync.dart';
+import '../widgets/reabrir_os.dart';
 import '../widgets/relato_audio.dart';
 import '../widgets/status_chip.dart';
 import 'assinatura_tela.dart';
@@ -39,9 +43,13 @@ const _camposRelato = {
 /// O atendimento no local: quem está no serviço, relato, equipamentos,
 /// medições, itens e fotos; no fim, concluir ou não realizado.
 class AtendimentoTela extends StatefulWidget {
-  const AtendimentoTela({super.key, required this.atendimentoId});
+  const AtendimentoTela({super.key, required this.atendimentoId, this.aparelhoId});
 
   final String atendimentoId;
+
+  /// Guia 108: veio da etiqueta lida fora da OS: abre no checklist deste
+  /// aparelho (ou na aba Equipamentos, se a OS não tem checklist para ele).
+  final String? aparelhoId;
 
   @override
   State<AtendimentoTela> createState() => _AtendimentoTelaState();
@@ -68,6 +76,20 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
         e.value.text = '${atd[e.key] ?? ''}';
       }
     }
+    _abrirAparelhoDaEtiqueta();
+  }
+
+  /// Guia 108: o checklist do aparelho da etiqueta, logo que a tela abre.
+  void _abrirAparelhoDaEtiqueta() {
+    final id = widget.aparelhoId;
+    if (id == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final atd = EstadoApp.instancia.banco?.um('atendimentos', widget.atendimentoId);
+      if (atd == null) return;
+      abrirChecklistDoAparelho(context, atd, id,
+          habilitado: atd['status'] == 'em_andamento' || atd['status'] == 'pausado');
+    });
   }
 
   /// Sem edição pendente, os campos acompanham o que chegou da plataforma
@@ -102,6 +124,25 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
   }
 
   Future<void> _concluir(Map<String, dynamic> atd) async {
+    // Guia 104: manutenção de equipamento só conclui com foto de antes e de depois.
+    final faltaFotos = faltaFotosDaOs(atd);
+    if (faltaFotos != null) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Faltam fotos'),
+          content: Text('Na manutenção de equipamento, tire $faltaFotos do serviço (aba Fotos) antes de concluir.'),
+          actions: [FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Entendi'))],
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    // Guia 111: o gestor pode encerrar a OS junto (a mesma regra do "Concluir OS" do painel).
+    final gestor = AcoesReabrir.souGestor;
+    final visitas = AcoesEncerrar.outrasVisitas(atd['os_id'], exceto: atd['agendamento_id']);
+    final bloqueio = bloqueioDoEncerramento(visitas.naAgenda);
+    var encerrar = encerrarPorPadrao(bloqueado: bloqueio != null, naFila: visitas.naFila);
     var presente = true;
     final nome = TextEditingController(text: '${atd['contato_cliente_nome'] ?? ''}');
     final ok = await showDialog<bool>(
@@ -109,7 +150,8 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
           title: const Text('Concluir o atendimento?'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
+          content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('O cliente acompanhou'),
@@ -134,7 +176,18 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
                   ),
                 );
               }),
-          ]),
+            if (gestor) ...[
+              const Divider(height: 20),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Encerrar a OS também'),
+                subtitle: Text(bloqueio ?? textoDoEncerramento(naFila: visitas.naFila),
+                    style: TextStyle(color: bloqueio != null ? Cores.alerta : Cores.neutro, fontSize: 12)),
+                value: encerrar && bloqueio == null,
+                onChanged: bloqueio != null ? null : (v) => setD(() => encerrar = v),
+              ),
+            ],
+          ])),
           actions: [
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
             FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Concluir')),
@@ -147,6 +200,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
     final contato = nome.text;
     if (!mounted) return;
     if (ok != true) return;
+    final encerrou = gestor && encerrar && bloqueio == null;
     await _salvarRelato(avisar: false);
     if (!mounted) return;
 
@@ -200,6 +254,11 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
       }
       await AcoesAtendimento.concluir(atd,
           clientePresente: presente, contatoNome: presente ? contato : null, semAssinaturaMotivo: semAssinatura);
+      // Guia 111: depois do atendimento (a fila sobe na ordem), o encerramento da OS.
+      if (encerrou) {
+        final feito = EstadoApp.instancia.banco?.um('atendimentos', atd['id']) ?? atd;
+        await AcoesEncerrar.encerrar(atd['os_id'], laudo: '${feito['solucao'] ?? ''}');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -208,8 +267,9 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(assinou ? 'Atendimento concluído, com a assinatura do cliente.' : 'Atendimento concluído.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${assinou ? 'Atendimento concluído, com a assinatura do cliente.' : 'Atendimento concluído.'}'
+            '${encerrou ? ' OS encerrada: vai para o "A cobrar".' : ''}')));
     // Imprimir ou mandar o recibo ali mesmo (com a assinatura, se colheu).
     if (presente) {
       final os = EstadoApp.instancia.banco?.um('ordens_servico', atual['os_id']);
@@ -329,6 +389,8 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
         final os = banco.um('ordens_servico', atd['os_id']) ?? const {};
         final cliente = banco.um('clientes', os['cliente_id']) ?? const {};
         final aberto = atd['status'] == 'em_andamento' || atd['status'] == 'pausado';
+        // Guia 109: o serviço deste atendimento (para o "Reabrir OS" depois de concluído).
+        final itemDoAtd = banco.um('partes_itens', atd['parte_item_id']);
         // OS preventiva do plano: o checklist vem primeiro.
         final checklist = AcoesChecklist.temChecklist(atd['os_id']);
         final abas = <(String, Widget)>[
@@ -351,6 +413,10 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
           ('Fotos', AbaFotos(atd: atd, habilitado: aberto)),
           ('Orçamento', AbaOrcamento(atd: atd, habilitado: aberto)),
         ];
+        // Guia 108: o aparelho da etiqueta sem checklist nesta OS: abre na aba Equipamentos.
+        final semChecklistDoAparelho = widget.aparelhoId != null &&
+            !(AcoesChecklist.porAparelho(atd['os_id'])[widget.aparelhoId]?.isNotEmpty ?? false);
+        final abaInicial = semChecklistDoAparelho ? abas.indexWhere((a) => a.$1 == 'Equipamentos') : 0;
 
         return PopScope(
           onPopInvokedWithResult: (didPop, _) {
@@ -359,6 +425,7 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
           child: DefaultTabController(
             key: ValueKey(abas.length),
             length: abas.length,
+            initialIndex: abaInicial < 0 ? 0 : abaInicial,
             child: Scaffold(
               appBar: AppBar(
                 title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -373,6 +440,12 @@ class _AtendimentoTelaState extends State<AtendimentoTela> {
                     onPressed: () => abrirDiagnostico(context,
                         osId: '${atd['os_id']}', sintoma: os['problema_relatado'] as String?),
                   ),
+                  if (!aberto && itemDoAtd != null && AcoesReabrir.podeReabrir(itemDoAtd))
+                    IconButton(
+                      tooltip: 'Reabrir OS',
+                      icon: const Icon(Icons.undo),
+                      onPressed: () => reabrirOsDoServico(context, itemDoAtd),
+                    ),
                   const IndicadorSync(),
                 ],
                 bottom: TabBar(

@@ -5,6 +5,15 @@
   const form = $('form');
   const erro = $('erro');
 
+  // Campanha e 1ª página da visita (site.js guarda; guia 97). Vazio se não houver.
+  function origemDaVisita() {
+    try {
+      return JSON.parse(sessionStorage.getItem('servpilot_origem') || '{}');
+    } catch (_) {
+      return {};
+    }
+  }
+
   function mostrarErro(texto) {
     erro.textContent = texto;
     erro.classList.add('ver');
@@ -25,6 +34,7 @@
         nome: v('nome'), telefone: v('whatsapp'), empresa: v('empresa'), cidade: v('cidade'), uf: v('uf').toUpperCase(),
         tecnicos: v('tecnicos'), email: v('email'), mensagem: v('mensagem'),
         pagina: document.referrer ? new URL(document.referrer).pathname : '', site: $('site').value,
+        utm: origemDaVisita(),
       });
       form.style.display = 'none';
       $('sucesso').classList.add('ver');

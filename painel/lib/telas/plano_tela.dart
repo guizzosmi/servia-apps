@@ -484,7 +484,7 @@ class _PlanoTelaState extends State<PlanoTela> {
             TextFormField(
               controller: _nome,
               enabled: editar,
-              decoration: const InputDecoration(labelText: 'Nome do plano *', hintText: 'Ex.: PMOC Friella 2026/2027'),
+              decoration: const InputDecoration(labelText: 'Nome do plano *', hintText: 'Ex.: PMOC Mercado Bom Preço 2026/2027'),
               validator: (v) => (v ?? '').trim().isEmpty ? 'Dê um nome ao plano' : null,
             ),
           ),

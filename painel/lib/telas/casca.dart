@@ -4,6 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cadastros/catalogo.dart';
+import '../equipamentos/rotas_equipamentos.dart';
 import '../servicos/parametros.dart';
 import '../servicos/tutoriais.dart';
 import '../widgets/aviso_plano.dart';
@@ -102,8 +103,9 @@ class _Menu extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       children: [
         item(Icons.home_outlined, 'Início', '/'),
-        // Guia 75: perguntas do dono respondidas pela IA.
-        if (Sessao.atual?.tem(Papel.gestor) ?? false) item(Icons.auto_awesome_outlined, 'Assistente', '/assistente'),
+        // Guia 93: o Claude no painel (texto e voz), com as ferramentas do conector.
+        if (Sessao.atual?.temAlgum(const [Papel.gestor, Papel.financeiro]) ?? false)
+          item(Icons.auto_awesome_outlined, 'Assistente', '/assistente'),
         grupo('Operação'),
         // Guia 62: no modo simples, a Agenda (lista) no lugar do quadro e da fila.
         if (param.modoSimples)
@@ -128,6 +130,8 @@ class _Menu extends StatelessWidget {
           grupo('Comercial'),
           item(Icons.filter_alt_outlined, 'Funil', '/comercial'),
         ],
+        // Guia 98: Gestão de Equipamentos (só com a aplicação no token).
+        ...menuEquipamentos(item, grupo),
         grupo('Financeiro'),
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.receipt_long_outlined, 'A cobrar', '/cobrar'),
@@ -137,6 +141,9 @@ class _Menu extends StatelessWidget {
         // Guia 67: caixa simples e margem.
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.account_balance_wallet_outlined, 'Caixa', '/caixa'),
+        // Guia 100: títulos de cobrança (boleto/Pix registrado, CNAB).
+        if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
+          item(Icons.receipt_outlined, 'Títulos', '/titulos'),
         // Guia 81: notas fiscais (o módulo é contratado na própria tela).
         if ((Sessao.atual?.tem(Papel.gestor) ?? false) || (Sessao.atual?.tem(Papel.financeiro) ?? false))
           item(Icons.request_quote_outlined, 'Notas fiscais', '/notas'),
@@ -156,6 +163,7 @@ class _Menu extends StatelessWidget {
           item(Icons.smartphone_outlined, 'Aparelhos', '/aparelhos'),
           item(Icons.tune_outlined, 'Configurações', '/configuracoes'),
           if (!param.modoSimples) item(Icons.hub_outlined, 'Integrações (API)', '/integracoes'),
+          if (!param.modoSimples) item(Icons.sync_alt, 'ERP (Protheus)', '/erp'), // guia 105
         ],
         const Divider(height: 24),
         // Central de tutoriais (guia 47): abre numa aba nova, com os vídeos do perfil.

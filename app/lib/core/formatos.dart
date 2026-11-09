@@ -83,6 +83,9 @@ const nomesOperacoes = {
   'parte_composicao': 'Equipe do dia',
   'replanejamento_pedir': 'Pedido de replanejamento',
   'os_puxar': 'Trazer a OS para a parte',
+  'eqp_registrar': 'Equipamento (saída, chegada, retorno)',
+  'os_reabrir': 'Reabrir OS',
+  'os_concluir': 'Encerrar a OS',
 };
 
 const statusOrcamento = {

@@ -5,6 +5,7 @@ import '../core/acoes_atendimento.dart';
 import '../core/acoes_mensagens.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
+import '../core/posicao.dart';
 
 /// "Estou neste serviço": confere se a pessoa está em outro serviço (e
 /// pergunta se sai de lá), deixa o líder escolher quem entra junto e abre
@@ -52,7 +53,14 @@ Future<bool> entrarNoServico(BuildContext context, Map<String, dynamic> item,
     }
   }
 
-  final id = await AcoesAtendimento.checkin(item, acompanhantes: acompanhantes, em: inicio);
+  // Guia 104: na manutenção de equipamento, o ponto do check-in (só agora, com o app aberto).
+  Posicao? posicao;
+  if (inicio == null && banco.osDo(item)?['aplicacao'] == 'equipamentos') {
+    posicao = await _posicaoDoCheckin(context);
+    if (!context.mounted) return false;
+  }
+
+  final id = await AcoesAtendimento.checkin(item, acompanhantes: acompanhantes, em: inicio, posicao: posicao);
   if (fim != null) {
     final quem = {AcoesAtendimento.eu, ...acompanhantes};
     for (final p in banco.participantes(id, soAbertos: true)) {
@@ -61,6 +69,22 @@ Future<bool> entrarNoServico(BuildContext context, Map<String, dynamic> item,
   }
   if (abrir && context.mounted) await context.push('/atendimento/$id');
   return true;
+}
+
+/// Lê o GPS uma vez, com um aviso na tela. Sem sinal ou sem permissão,
+/// o check-in segue sem a posição (ela não trava o serviço).
+Future<Posicao?> _posicaoDoCheckin(BuildContext context) async {
+  final mensageiro = ScaffoldMessenger.of(context);
+  mensageiro.showSnackBar(const SnackBar(
+    content: Text('Marcando o ponto do check-in (GPS)...'),
+    duration: Duration(seconds: 20),
+  ));
+  final leitura = await Gps.ler(limite: const Duration(seconds: 15));
+  mensageiro.hideCurrentSnackBar();
+  if (!leitura.ok) {
+    mensageiro.showSnackBar(SnackBar(content: Text('Check-in sem o ponto do GPS: ${leitura.motivo}')));
+  }
+  return leitura.posicao;
 }
 
 /// "Estou a caminho": oferece o aviso ao cliente pelo WhatsApp (modelo da

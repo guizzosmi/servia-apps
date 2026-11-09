@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../cobranca/widgets_cobranca.dart' show BotaoTitulo;
 import '../servicos/status.dart';
 import '../widgets/itens_os.dart' show dinheiro, lerNumero;
 import '../widgets/margem.dart';
@@ -240,6 +241,8 @@ class _CaixaTelaState extends State<CaixaTela> {
             c['forma'] == 'nota' ? 'NF ${c['nf_numero'] ?? ''}' : 'sem nota',
           ].join(' · ')),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            // Guia 100: boleto/Pix registrado (some no modo manual).
+            BotaoTitulo(cobrancaId: '${c['id']}', aoMudar: _carregar),
             OutlinedButton.icon(
               onPressed: () => mostrarPix(context, cobrancaId: '${c['id']}'),
               icon: const Icon(Icons.qr_code_2),

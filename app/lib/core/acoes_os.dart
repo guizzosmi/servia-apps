@@ -163,6 +163,20 @@ class AcoesOs {
             p,
       ];
 
+  /// Guia 95: a minha parte (não encerrada) num dia, se ela já está no aparelho.
+  static Map<String, dynamic>? minhaParteNoDia(String data) {
+    for (final p in _banco.partesDoDia(data)) {
+      if (p['status'] != 'encerrada' && _banco.presentes(p['id'] as String).any((c) => c['colaborador_id'] == _eu)) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /// Guia 95: estou em alguma equipe (no cadastro)? Sem equipe, a OS que não
+  /// é "atender agora" vai para a fila do escritório.
+  static bool get tenhoEquipe => _banco.todos('equipe_membros').any((m) => m['colaborador_id'] == _eu && _vivo(m));
+
   static bool _vivo(Map<String, dynamic> r) => r['excluido_em'] == null && r['ativo'] != false;
 
   /// Minúsculas e sem acento, para a busca.
@@ -208,15 +222,23 @@ class AcoesOs {
     ..sort((a, b) => '${a['codigo']}'.compareTo('${b['codigo']}'));
 
   /// Abre a OS. Com [parte] ("atender agora"), ela entra no fim da parte e
-  /// devolve o id do serviço (para abrir a tela dele); sem, vai para a fila
-  /// do escritório e devolve null.
+  /// devolve o id do serviço (para abrir a tela dele); sem, devolve null e ela
+  /// vai para a agenda da equipe no [dia] (aaaa-mm-dd; sem dia ou passado:
+  /// hoje), guia 95. Se a minha parte desse dia já está no aparelho, a OS já
+  /// aparece nela; senão, quando a plataforma devolver o dia. Sem equipe (ou
+  /// dia encerrado), a plataforma deixa na fila do escritório e avisa.
   /// [audioId]: a OS falada que deu origem a esta (guia 17b); [audioComoRelato]:
   /// o mesmo áudio também é o relato do serviço.
   static Future<String?> abrir(PedidoOs pedido,
-      {Map<String, dynamic>? parte, String? audioId, bool audioComoRelato = false}) async {
+      {Map<String, dynamic>? parte, String? dia, String? audioId, bool audioComoRelato = false}) async {
     final osId = AcoesAtendimento.novoId();
     final agId = AcoesAtendimento.novoId();
     final itemId = parte == null ? null : AcoesAtendimento.novoId();
+    final dataAgenda = parte != null ? null : (dia == null || dia.compareTo(_sync.hoje) < 0 ? _sync.hoje : dia);
+    final naAgenda = dataAgenda == null ? null : minhaParteNoDia(dataAgenda);
+    final agendaItemId = parte == null ? AcoesAtendimento.novoId() : null;
+    // A parte em que o serviço já aparece no aparelho (a de "atender agora" ou a do dia).
+    final parteLocal = parte ?? naAgenda;
     final clienteId = pedido.clienteNovo != null ? AcoesAtendimento.novoId() : pedido.clienteId!;
     final localId = pedido.localNovo != null ? AcoesAtendimento.novoId() : pedido.localId!;
     final agora = _agora();
@@ -229,7 +251,10 @@ class AcoesOs {
       'os_id': osId,
       'agendamento_id': agId,
       'destino': parte == null ? 'escritorio' : 'agora',
-      if (parte != null) ...{'parte_id': parte['id'], 'parte_item_id': itemId},
+      if (parte != null)
+        ...{'parte_id': parte['id'], 'parte_item_id': itemId}
+      else
+        ...{'data_prevista': dataAgenda, 'parte_item_id': agendaItemId},
       if (cn != null)
         'cliente_novo': {
           'id': clienteId,
@@ -308,7 +333,7 @@ class AcoesOs {
           'codigo': null, // a plataforma dá o número
           'origem': 'app',
           'tipo': pedido.tipo,
-          'status': parte == null ? 'aberta' : 'agendada',
+          'status': parteLocal == null ? 'aberta' : 'agendada',
           'cliente_id': clienteId,
           'local_id': localId,
           'prioridade': pedido.prioridade,
@@ -322,9 +347,9 @@ class AcoesOs {
           'id': agId,
           'os_id': osId,
           'tipo': pedido.tipo == 'preventiva' ? 'preventiva' : 'visita_tecnica',
-          'status': parte == null ? 'pendente' : 'programado',
+          'status': parteLocal == null ? 'pendente' : 'programado',
           'prioridade': pedido.prioridade,
-          if (parte != null) 'data_prevista': hoje,
+          'data_prevista': dataAgenda ?? hoje,
           'criado_em': agora,
         }
       ], avisar: false);
@@ -338,18 +363,19 @@ class AcoesOs {
             'principal': i == 0,
           }
       ], avisar: false);
-      if (parte != null) {
+      if (parteLocal != null) {
         await _banco.gravar('partes_itens', [
           {
-            'id': itemId,
-            'parte_id': parte['id'],
+            'id': itemId ?? agendaItemId,
+            'parte_id': parteLocal['id'],
             'agendamento_id': agId,
-            'data': parte['data'],
-            'ordem': _proximaOrdem(parte),
+            'data': parteLocal['data'],
+            'ordem': _proximaOrdem(parteLocal),
             'papel_equipe': 'responsavel',
             'status': 'programado',
             'designados': const <String>[],
-            'incluido_apos_publicacao': true,
+            // Na parte que o escritório ainda monta (rascunho), não é encaixe.
+            'incluido_apos_publicacao': parteLocal['status'] != 'rascunho',
             'alterado_apos_publicacao': false,
           }
         ], avisar: false);

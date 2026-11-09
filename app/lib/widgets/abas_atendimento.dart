@@ -12,8 +12,10 @@ import '../core/acoes_cadastro.dart';
 import '../core/acoes_levantamento.dart';
 import '../core/arquivos.dart';
 import '../core/consultas.dart';
+import '../core/eqp_dados.dart';
 import '../core/estado.dart';
 import 'aba_checklist.dart';
+import 'busca_aparelhos.dart';
 import 'cadastros_rapidos.dart';
 import 'status_chip.dart';
 
@@ -58,9 +60,8 @@ class AbaEquipamentos extends StatelessWidget {
     final lido = await context.push<String>('/ler-codigo');
     if (lido == null || !context.mounted) return;
     final os = banco.um('ordens_servico', atd['os_id']) ?? const {};
-    final valor = lido.trim().toLowerCase();
-    final achados = banco.todos('equipamentos').where((e) =>
-        '${e['qr_token'] ?? ''}'.toLowerCase() == valor || '${e['codigo'] ?? ''}'.toLowerCase() == valor);
+    // Guia 108: o QR, o link (…/q/<token>), o código e o código de barras.
+    final achados = aparelhosDaEtiqueta(banco.todos('equipamentos'), lido);
     final doCliente = achados.where((e) => e['cliente_id'] == os['cliente_id']).toList();
     if (doCliente.isEmpty) {
       _aviso(context, achados.isEmpty ? 'Etiqueta não encontrada: $lido' : 'Esta etiqueta é de outro cliente.');
@@ -88,19 +89,12 @@ class AbaEquipamentos extends StatelessWidget {
     final opcoes = banco
         .todos('equipamentos')
         .where((e) => e['local_id'] == os['local_id'] && e['situacao'] == 'ativo' && !ids.contains(e['id']))
-        .toList()
-      ..sort((a, b) => '${a['codigo']}'.compareTo('${b['codigo']}'));
+        .toList();
+    // Guia 108: a busca de aparelhos (código, ambiente, capacidade...), agrupada por ambiente.
     final escolhido = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => _Busca(
-        titulo: 'Equipamentos deste local',
-        lerEtiqueta: true,
-        itens: opcoes,
-        texto: (e) => [_rotuloEquipamento(e), banco.um('ambientes', e['ambiente_id'])?['nome'], e['marca']]
-            .where((x) => x != null && '$x'.isNotEmpty)
-            .join(' · '),
-      ),
+      builder: (ctx) => _EscolherDoLocal(opcoes: opcoes),
     );
     if (escolhido == null || !context.mounted) return;
     if (escolhido['_qr'] == true) {
@@ -172,8 +166,11 @@ class AbaEquipamentos extends StatelessWidget {
           child: Text('Nenhum equipamento nesta OS. Leia a etiqueta, escolha no local ou cadastre.',
               style: TextStyle(color: Cores.neutro)),
         ),
-      for (final e in lista)
-        Builder(builder: (context) {
+      // Guia 108: com muitos aparelhos (lote do PMOC), a busca no topo e a lista por ambiente.
+      BuscaAparelhos(
+        aparelhos: lista,
+        aoLerEtiqueta: habilitado ? () => _lerQr(context) : null,
+        item: (e) => Builder(builder: (context) {
           final id = banco.identificacao(atd['id'], e['id']);
           return Card(
             child: ListTile(
@@ -201,7 +198,52 @@ class AbaEquipamentos extends StatelessWidget {
             ),
           );
         }),
+      ),
     ]);
+  }
+}
+
+/// "Outro do local": os aparelhos do local com a busca do guia 108 (por
+/// ambiente, na ordem do código) e, no topo, "Ler a etiqueta".
+class _EscolherDoLocal extends StatelessWidget {
+  const _EscolherDoLocal({required this.opcoes});
+
+  final List<Map<String, dynamic>> opcoes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .85,
+        child: ListView(padding: const EdgeInsets.fromLTRB(12, 0, 12, 16), children: [
+          const ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Equipamentos deste local', style: TextStyle(fontWeight: FontWeight.w800))),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.qr_code_scanner, color: Cores.indigo500),
+            title: const Text('Ler a etiqueta', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: const Text('Mais seguro quando há muitos aparelhos no local'),
+            onTap: () => Navigator.of(context).pop(<String, dynamic>{'_qr': true}),
+          ),
+          const Divider(height: 1),
+          const SizedBox(height: 8),
+          BuscaAparelhos(
+            aparelhos: opcoes,
+            minimo: 0,
+            leitor: false,
+            textoVazio: 'Nenhum outro aparelho cadastrado neste local.',
+            item: (e) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_rotuloEquipamento(e)),
+              subtitle: Text(detalheAparelho(e, comAmbiente: false)),
+              onTap: () => Navigator.of(context).pop(e),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -212,7 +254,6 @@ class _Busca extends StatefulWidget {
     required this.itens,
     required this.texto,
     this.livre = false,
-    this.lerEtiqueta = false,
   });
 
   final String titulo;
@@ -221,9 +262,6 @@ class _Busca extends StatefulWidget {
 
   /// Oferece usar o texto digitado quando não achar (item sem cadastro).
   final bool livre;
-
-  /// Mostra no topo "Ler a etiqueta" (devolve {'_qr': true}).
-  final bool lerEtiqueta;
 
   @override
   State<_Busca> createState() => _BuscaState();
@@ -252,8 +290,7 @@ class _BuscaState extends State<_Busca> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
               controller: _busca,
-              // Com a opção de ler a etiqueta, o teclado não abre sozinho.
-              autofocus: !widget.lerEtiqueta,
+              autofocus: true,
               decoration: const InputDecoration(hintText: 'Buscar', prefixIcon: Icon(Icons.search)),
               onChanged: (_) => setState(() {}),
             ),
@@ -261,15 +298,6 @@ class _BuscaState extends State<_Busca> {
           const SizedBox(height: 8),
           Expanded(
             child: ListView(children: [
-              if (widget.lerEtiqueta) ...[
-                ListTile(
-                  leading: const Icon(Icons.qr_code_scanner, color: Cores.indigo500),
-                  title: const Text('Ler a etiqueta', style: TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: const Text('Mais seguro quando há muitos aparelhos no local'),
-                  onTap: () => Navigator.of(context).pop(<String, dynamic>{'_qr': true}),
-                ),
-                const Divider(height: 1),
-              ],
               if (widget.livre && b.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.edit_note),
@@ -307,6 +335,7 @@ class AbaMedicoes extends StatefulWidget {
 
 class _AbaMedicoesState extends State<AbaMedicoes> {
   String? _equipId;
+  final _buscaAparelho = TextEditingController();
   final Map<String, TextEditingController> _campos = {};
   final _fluido = TextEditingController();
   final _adicionado = TextEditingController();
@@ -321,6 +350,7 @@ class _AbaMedicoesState extends State<AbaMedicoes> {
     _fluido.dispose();
     _adicionado.dispose();
     _recolhido.dispose();
+    _buscaAparelho.dispose();
     super.dispose();
   }
 
@@ -408,10 +438,28 @@ class _AbaMedicoesState extends State<AbaMedicoes> {
       });
     }
     final modelos = banco.modelosDoTipo(equip['tipo_equipamento_id']);
+    // Guia 108: com muitos aparelhos, a busca filtra os botões (o escolhido fica sempre).
+    final comBusca = equipamentos.length >= minimoParaBusca;
+    final achados = comBusca
+        ? filtrarAparelhos(equipamentos, _buscaAparelho.text.trim(), ambienteDoAparelho)
+        : equipamentos;
+    final botoes = [
+      ...achados,
+      if (!achados.any((e) => e['id'] == equip['id'])) equip,
+    ]..sort((a, b) => compararCodigo(a['codigo'], b['codigo']));
 
     return ListView(padding: const EdgeInsets.all(12), children: [
+      if (comBusca) ...[
+        CampoBuscaAparelhos(
+          controle: _buscaAparelho,
+          aoMudar: (_) => setState(() {}),
+          achados: achados.length,
+          total: equipamentos.length,
+        ),
+        const SizedBox(height: 8),
+      ],
       Wrap(spacing: 6, runSpacing: 6, children: [
-        for (final e in equipamentos)
+        for (final e in botoes)
           ChoiceChip(
             label: Text('${e['codigo']}'),
             selected: e['id'] == equip['id'],
@@ -731,7 +779,7 @@ class AbaItens extends StatelessWidget {
 /// até subir para a plataforma. Com [equipamentoId], fica ligada ao aparelho
 /// (ex.: checklist da preventiva). Devolve o id da foto (null se a pessoa
 /// desistiu).
-Future<String?> tirarFoto(Map<String, dynamic> atd, {String? equipamentoId}) async {
+Future<String?> tirarFoto(Map<String, dynamic> atd, {String? equipamentoId, String? momento}) async {
   final foto = await ImagePicker().pickImage(
     source: ImageSource.camera,
     maxWidth: 1600,
@@ -751,8 +799,24 @@ Future<String?> tirarFoto(Map<String, dynamic> atd, {String? equipamentoId}) asy
     arquivoLocal: destino,
     sha256: sha256.convert(bytes).toString(),
     equipamentoId: equipamentoId,
+    momento: momento,
   );
   return id;
+}
+
+/// Guia 104: OS de manutenção da Gestão de Equipamentos (fotos de antes e depois).
+bool osDeEquipamento(Map<String, dynamic> atd) =>
+    EstadoApp.instancia.banco?.um('ordens_servico', atd['os_id'])?['aplicacao'] == 'equipamentos';
+
+/// O que falta para concluir a OS de equipamento (null = nada): foto antes e depois.
+String? faltaFotosDaOs(Map<String, dynamic> atd) {
+  final banco = EstadoApp.instancia.banco;
+  if (banco == null || !osDeEquipamento(atd) || !EqpParametros.de(banco).fotosObrigatoriasOs) return null;
+  final fotos = banco.doAtendimento('atendimento_fotos', atd['id']);
+  final antes = fotos.any((f) => f['momento'] == 'antes');
+  final depois = fotos.any((f) => f['momento'] == 'depois');
+  if (antes && depois) return null;
+  return [if (!antes) 'uma foto ANTES', if (!depois) 'uma foto DEPOIS'].join(' e ');
 }
 
 class AbaFotos extends StatefulWidget {
@@ -768,10 +832,10 @@ class AbaFotos extends StatefulWidget {
 class _AbaFotosState extends State<AbaFotos> {
   bool _tirando = false;
 
-  Future<void> _tirar() async {
+  Future<void> _tirar({String? momento}) async {
     setState(() => _tirando = true);
     try {
-      await tirarFoto(widget.atd);
+      await tirarFoto(widget.atd, momento: momento);
     } catch (e) {
       if (mounted) _aviso(context, 'Não foi possível tirar a foto: $e');
     } finally {
@@ -811,8 +875,41 @@ class _AbaFotosState extends State<AbaFotos> {
     final banco = EstadoApp.instancia.banco!;
     final fotos = banco.doAtendimento('atendimento_fotos', widget.atd['id'])
       ..sort((a, b) => '${a['tirada_em']}'.compareTo('${b['tirada_em']}'));
+    final equipamento = osDeEquipamento(widget.atd);
+    final falta = faltaFotosDaOs(widget.atd);
     return ListView(padding: const EdgeInsets.all(12), children: [
-      if (widget.habilitado)
+      // Guia 104: na manutenção de equipamento, a foto diz se é de antes ou de depois do serviço.
+      if (widget.habilitado && equipamento) ...[
+        Row(children: [
+          Expanded(
+            child: SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _tirando ? null : () => _tirar(momento: 'antes'),
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Foto antes'),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _tirando ? null : () => _tirar(momento: 'depois'),
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Foto depois'),
+              ),
+            ),
+          ),
+        ]),
+        if (falta != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('Para concluir, falta $falta do serviço.',
+                style: const TextStyle(color: Cores.alerta, fontWeight: FontWeight.w600)),
+          ),
+      ] else if (widget.habilitado)
         SizedBox(
           height: 52,
           child: FilledButton.icon(
@@ -837,15 +934,24 @@ class _AbaFotosState extends State<AbaFotos> {
           for (final f in fotos)
             InkWell(
               onTap: () => _ver(f),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Arquivos.foto(f['arquivo_local'])?.existsSync() ?? false
-                    ? Image.file(Arquivos.foto(f['arquivo_local'])!, fit: BoxFit.cover, cacheWidth: 300)
-                    : const ColoredBox(
-                        color: Cores.indigo100,
-                        child: Center(child: Icon(Icons.cloud_done_outlined, color: Cores.indigo500)),
-                      ),
-              ),
+              child: Stack(fit: StackFit.expand, children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Arquivos.foto(f['arquivo_local'])?.existsSync() ?? false
+                      ? Image.file(Arquivos.foto(f['arquivo_local'])!, fit: BoxFit.cover, cacheWidth: 300)
+                      : const ColoredBox(
+                          color: Cores.indigo100,
+                          child: Center(child: Icon(Icons.cloud_done_outlined, color: Cores.indigo500)),
+                        ),
+                ),
+                if (f['momento'] == 'antes' || f['momento'] == 'depois')
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: Selo(f['momento'] == 'antes' ? 'Antes' : 'Depois',
+                        f['momento'] == 'antes' ? Cores.info : Cores.sucesso),
+                  ),
+              ]),
             ),
         ],
       ),

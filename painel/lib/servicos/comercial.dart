@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Módulo Comercial (guia 90): funil, oportunidades, tarefas e metas.
+/// Módulo Comercial (guias 90 e 97): funil, oportunidades, tarefas e metas.
 
 /// De onde veio a oportunidade.
 const origensComercial = {
@@ -23,6 +23,16 @@ const tiposAtividade = {
   'reuniao': 'Reunião',
   'email': 'E-mail',
   'nota': 'Anotação',
+};
+
+/// Tipos de tarefa (com data): todos menos a anotação (guia 97).
+const tiposTarefa = {
+  'ligacao': 'Ligação',
+  'whatsapp': 'WhatsApp',
+  'visita': 'Visita',
+  'reuniao': 'Reunião',
+  'email': 'E-mail',
+  'tarefa': 'Tarefa',
 };
 
 /// Motivos de perda mais comuns (o campo aceita texto livre).
@@ -59,3 +69,7 @@ String? linkWhatsapp(Object? telefone) {
   if (n.length < 10) return null;
   return 'https://wa.me/${n.startsWith('55') ? n : '55$n'}';
 }
+
+/// Lista de mapas a partir da resposta do banco (guia 97).
+List<Map<String, dynamic>> listaDeMapas(Object? v) =>
+    v is List ? v.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];

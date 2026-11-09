@@ -20,7 +20,7 @@
 
 <main class="doc">
 <h1>Política de privacidade</h1>
-<p class="atualizado">Última atualização: 06/11/2026</p>
+<p class="atualizado">Última atualização: 08/11/2026</p>
 
 <p>Esta política explica como o <b>ServPilot</b> (aplicativo do técnico, painel web e páginas de aceite e de
 relatório) trata dados pessoais, de acordo com a Lei Geral de Proteção de Dados (Lei 13.709/2018, LGPD).</p>
@@ -40,12 +40,21 @@ relatório) trata dados pessoais, de acordo com a Lei Geral de Proteção de Dad
   <tr><th>De quem</th><th>Dados</th></tr>
   <tr><td>Usuários (gestores, técnicos)</td><td>Nome, e-mail ou matrícula, telefone, papéis na empresa, aparelho usado
     (modelo e identificador do app), registros de uso e de sincronização.</td></tr>
-  <tr><td>Técnicos em campo</td><td>Horário de entrada e saída nos serviços (check-in), localização aproximada no
-    check-in e nas fotos, fotos dos atendimentos, gravações de áudio dos relatos e o texto transcrito.</td></tr>
+  <tr><td>Técnicos em campo</td><td>Horário de entrada e saída nos serviços (check-in), fotos dos atendimentos,
+    gravações de áudio dos relatos e o texto transcrito.<br>
+    <b>Localização do aparelho:</b> a partir da versão 0.21.0 do app, e só nas empresas que usam a Gestão de
+    Equipamentos, o app lê o GPS <b>somente no momento em que o técnico registra</b> a entrega, a retirada, a
+    transferência ou o retorno de um equipamento, ou o check-in de uma manutenção de equipamento, <b>com o app
+    aberto</b>. Fica no registro o ponto (latitude e longitude), a precisão em metros e a hora da leitura. O app
+    <b>não acompanha o celular</b>, não lê a localização em segundo plano e não monta trajetos: a permissão pedida é só
+    "durante o uso" e pode ser negada (o registro segue sem o ponto, com o motivo). Fora desses registros, o app não
+    registra a localização (se a câmera do celular estiver configurada para gravar o local nas fotos, essa informação
+    pode ir junto no arquivo da foto).</td></tr>
   <tr><td>Clientes atendidos e seus contatos</td><td>Nome, CPF ou CNPJ, endereço dos locais, telefone e e-mail dos
     contatos, histórico de serviços e equipamentos.</td></tr>
-  <tr><td>Quem aprova um orçamento ou assina um serviço</td><td>Nome, CPF (opcional), assinatura na tela, data e hora e,
-    no aceite por link, o endereço IP e o navegador.</td></tr>
+  <tr><td>Quem aprova um orçamento, assina um serviço ou recebe e devolve um equipamento</td><td>Nome, CPF (opcional),
+    assinatura na tela, data e hora, o ponto do GPS do registro (na entrega e na devolução de equipamento) e, no aceite
+    por link, o endereço IP e o navegador.</td></tr>
 </table>
 
 <h2>3. Para que usamos</h2>
@@ -54,6 +63,9 @@ relatório) trata dados pessoais, de acordo com a Lei Geral de Proteção de Dad
   <li>Transformar o áudio do técnico em texto e organizar o relato do serviço (inteligência artificial).</li>
   <li>Enviar avisos ao celular da equipe e preparar mensagens de WhatsApp que o próprio usuário envia.</li>
   <li>Comprovar aceites e assinaturas, cumprir obrigações legais e manter a segurança do sistema.</li>
+  <li>Na Gestão de Equipamentos: comprovar onde, quando e em que condições um equipamento foi entregue, retirado ou
+  devolvido (ponto do GPS, fotos, checklist e assinatura de quem recebe) e completar as coordenadas do endereço de
+  entrega, quando ele ainda não tem.</li>
 </ul>
 <p>As bases legais são a execução do contrato com a empresa cliente, o cumprimento de obrigação legal ou regulatória
 (por exemplo, os registros do PMOC), o exercício regular de direitos (comprovação de aceites) e o legítimo interesse
@@ -95,9 +107,8 @@ ou cancelou. Nenhum outro dado é mostrado.</p>
 <table>
   <tr><th>Dado</th><th>Prazo padrão</th></tr>
   <tr><td>Arquivo de áudio dos relatos</td><td>30 dias (o texto do relato continua com a OS)</td></tr>
-  <tr><td>Localização do check-in e das fotos</td><td>90 dias</td></tr>
   <tr><td>Texto e telefone das mensagens registradas</td><td>365 dias</td></tr>
-  <tr><td>Fotos, ordens de serviço, aceites e registros financeiros</td><td>5 anos (IP e navegador dos aceites saem depois desse prazo)</td></tr>
+  <tr><td>Fotos, ordens de serviço, aceites, registros de entrega e devolução de equipamentos (com o ponto do GPS) e registros financeiros</td><td>5 anos (IP e navegador dos aceites saem depois desse prazo)</td></tr>
 </table>
 <p>A empresa cliente pode ajustar alguns desses prazos no painel. Ao fim do contrato, os dados da empresa são devolvidos
 ou apagados, conforme combinado, ressalvado o que a lei mandar guardar.</p>

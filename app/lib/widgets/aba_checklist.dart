@@ -10,6 +10,7 @@ import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import 'abas_atendimento.dart';
+import 'busca_aparelhos.dart';
 
 void _aviso(BuildContext context, String texto) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
@@ -97,10 +98,12 @@ class _AbaChecklistState extends State<AbaChecklist> {
   Future<void> _lerEtiqueta(Map<String, List<Map<String, dynamic>>> grupos) async {
     final lido = await context.push<String>('/ler-codigo');
     if (lido == null || !mounted) return;
-    final valor = lido.trim().toLowerCase();
-    final achado = grupos.keys.where((id) => id.isNotEmpty).map((id) => _banco.um('equipamentos', id)).firstWhere(
-        (e) => e != null && ('${e['qr_token'] ?? ''}'.toLowerCase() == valor || '${e['codigo'] ?? ''}'.toLowerCase() == valor),
-        orElse: () => null);
+    // Guia 108: o QR, o link (…/q/<token>), o código e o código de barras.
+    final doChecklist = [
+      for (final id in grupos.keys.where((id) => id.isNotEmpty))
+        if (_banco.um('equipamentos', id) case final Map<String, dynamic> e) e,
+    ];
+    final achado = aparelhosDaEtiqueta(doChecklist, lido).firstOrNull;
     if (achado == null) {
       _aviso(context, 'Este aparelho não está no checklist desta OS: $lido');
       return;
@@ -121,26 +124,19 @@ class _AbaChecklistState extends State<AbaChecklist> {
     final osId = widget.atd['os_id'];
     final grupos = AcoesChecklist.porAparelho(osId);
     final and = AcoesChecklist.andamento(osId);
-    final b = _busca.text.trim().toLowerCase();
+    final b = semAcento(_busca.text.trim());
     final gerais = [
       for (final x in grupos[''] ?? const <Map<String, dynamic>>[])
-        if ((!_soFaltando || !AcoesChecklist.feito(x)) && (b.isEmpty || '${x['descricao']}'.toLowerCase().contains(b))) x,
+        if ((!_soFaltando || !AcoesChecklist.feito(x)) && (b.isEmpty || semAcento(x['descricao']).contains(b))) x,
     ];
 
-    // Aparelhos por ambiente, na ordem do código.
-    final porAmbiente = <String, List<Map<String, dynamic>>>{};
-    for (final id in grupos.keys.where((k) => k.isNotEmpty)) {
-      final e = _banco.um('equipamentos', id) ?? {'id': id, 'codigo': '(aparelho)'};
-      final itens = grupos[id]!;
-      if (_soFaltando && itens.every(AcoesChecklist.feito)) continue;
-      final ambiente = '${_banco.um('ambientes', e['ambiente_id'])?['nome'] ?? 'Sem ambiente'}';
-      if (b.isNotEmpty && !'${_rotulo(e)} $ambiente'.toLowerCase().contains(b)) continue;
-      porAmbiente.putIfAbsent(ambiente, () => []).add(e);
-    }
-    final ambientes = porAmbiente.keys.toList()..sort();
-    for (final l in porAmbiente.values) {
-      l.sort((x, y) => '${x['codigo']}'.compareTo('${y['codigo']}'));
-    }
+    // Guia 108: os aparelhos do checklist (no "Faltando", só os que faltam); a
+    // busca e a lista por ambiente, na ordem natural do código, são as comuns.
+    final aparelhos = <Map<String, dynamic>>[
+      for (final id in grupos.keys.where((k) => k.isNotEmpty))
+        if (!_soFaltando || !grupos[id]!.every(AcoesChecklist.feito))
+          _banco.um('equipamentos', id) ?? {'id': id, 'codigo': '(aparelho)'},
+    ];
 
     return ListView(padding: const EdgeInsets.all(12), children: [
       Card(
@@ -166,40 +162,30 @@ class _AbaChecklistState extends State<AbaChecklist> {
         ),
       ),
       const SizedBox(height: 8),
-      Row(children: [
-        Expanded(
-          child: TextField(
-            controller: _busca,
-            decoration: const InputDecoration(hintText: 'Buscar aparelho ou ambiente', prefixIcon: Icon(Icons.search)),
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filledTonal(
-          tooltip: 'Ler a etiqueta',
-          onPressed: () => _lerEtiqueta(grupos),
-          icon: const Icon(Icons.qr_code_scanner),
-        ),
-      ]),
-      const SizedBox(height: 4),
-      Wrap(spacing: 8, children: [
-        ChoiceChip(label: const Text('Faltando'), selected: _soFaltando, onSelected: (_) => setState(() => _soFaltando = true)),
-        ChoiceChip(label: const Text('Todos'), selected: !_soFaltando, onSelected: (_) => setState(() => _soFaltando = false)),
-      ]),
-      if (gerais.isNotEmpty) ...[
-        const Padding(
-          padding: EdgeInsets.fromLTRB(4, 16, 4, 4),
-          child: Text('Gerais do plano', style: TextStyle(fontWeight: FontWeight.w800)),
-        ),
-        for (final x in gerais) _ItemChecklist(atd: widget.atd, item: x, habilitado: widget.habilitado),
-      ],
-      for (final amb in ambientes) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
-          child: Text(amb, style: const TextStyle(fontWeight: FontWeight.w800)),
-        ),
-        for (final e in porAmbiente[amb]!)
-          Builder(builder: (context) {
+      BuscaAparelhos(
+        aparelhos: aparelhos,
+        controle: _busca,
+        minimo: 0,
+        aoMudar: (_) => setState(() {}),
+        aoLerEtiqueta: () => _lerEtiqueta(grupos),
+        textoVazio: _soFaltando && grupos.keys.any((k) => k.isNotEmpty) ? 'Todos os aparelhos estão prontos.' : null,
+        abaixoDoCampo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const SizedBox(height: 4),
+          Wrap(spacing: 8, children: [
+            ChoiceChip(
+                label: const Text('Faltando'), selected: _soFaltando, onSelected: (_) => setState(() => _soFaltando = true)),
+            ChoiceChip(
+                label: const Text('Todos'), selected: !_soFaltando, onSelected: (_) => setState(() => _soFaltando = false)),
+          ]),
+          if (gerais.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(4, 16, 4, 4),
+              child: Text('Gerais do plano', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+            for (final x in gerais) _ItemChecklist(atd: widget.atd, item: x, habilitado: widget.habilitado),
+          ],
+        ]),
+        item: (e) => Builder(builder: (context) {
             final itens = grupos['${e['id']}']!;
             final feitos = itens.where(AcoesChecklist.feito).length;
             final pronto = feitos == itens.length;
@@ -228,13 +214,7 @@ class _AbaChecklistState extends State<AbaChecklist> {
               ),
             );
           }),
-      ],
-      if (ambientes.isEmpty && grupos.keys.any((k) => k.isNotEmpty))
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(_soFaltando && b.isEmpty ? 'Todos os aparelhos estão prontos.' : 'Nada encontrado.',
-              style: const TextStyle(color: Cores.neutro)),
-        ),
+      ),
     ]);
   }
 }

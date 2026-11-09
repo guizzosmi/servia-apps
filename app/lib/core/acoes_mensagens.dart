@@ -8,6 +8,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'acoes_atendimento.dart';
 import 'acoes_orcamento.dart';
 import 'estado.dart';
+import 'filtro_aparelhos.dart';
 
 /// Link que vai na mensagem, criado no aparelho (funciona sem internet):
 /// o token fica só no link; a plataforma recebe o hash na sincronização e
@@ -62,6 +63,14 @@ class AcoesMensagens {
       'cliente': '${banco.um('clientes', os['cliente_id'])?['nome'] ?? ''}',
       'local': '${local['nome'] ?? ''}',
       'endereco': endereco,
+      // Na preventiva/PMOC a OS tem todos os aparelhos do local: a linha não entra.
+      'equipamentos': os['tipo'] == 'preventiva' ? '' : textoDosAparelhos(
+        [
+          for (final l in banco.todos('os_equipamentos').where((l) => l['os_id'] == os['id']))
+            if (banco.um('equipamentos', l['equipamento_id']) case final Map<String, dynamic> e) e,
+        ],
+        (id) => banco.um('ambientes', id),
+      ),
     };
   }
 

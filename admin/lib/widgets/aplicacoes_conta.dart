@@ -57,15 +57,19 @@ class _AplicacoesDaContaState extends State<AplicacoesDaConta> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     title: Text('${a['nome']}'),
+                    // Guia 98: aplicação em teste mostra se já está ligada nesta conta.
                     subtitle: Text(a['situacao'] == 'em_breve'
-                        ? 'Em breve (ligue só para quem for testar)'
+                        ? (a['ligada'] == true
+                            ? 'Em teste: ligada nesta conta${a['desde'] != null ? ' desde ${dataBr(a['desde'])}' : ''}'
+                            : 'Em teste: ligue só para quem for testar')
                         : a['ligada'] == true && a['desde'] != null
                             ? 'Ligada desde ${dataBr(a['desde'])}'
                             : 'Desligada'),
                     value: a['ligada'] == true,
                     onChanged: _ocupado ? null : (v) => _ligar('${a['codigo']}', v),
                   ),
-                const Text('Os usuários entram de novo (ou esperam o token renovar, até 1 hora) para ver a mudança.',
+                const Text('Ligar libera para todos os usuários da conta. Eles entram de novo (ou esperam o token renovar, até 1 hora) '
+                    'para ver a mudança.',
                     style: TextStyle(color: Cores.neutro, fontSize: 12)),
               ]),
       );

@@ -5,9 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/comercial.dart';
 import '../servicos/status.dart';
+import '../widgets/comercial_analises.dart';
 import '../widgets/margem.dart';
 
 /// Indicadores do Comercial (guia 90): conversão, valor ganho, funil, origens, perdas e meta do mês.
+/// Guia 97: previsão ponderada, metas por vendedor, perdas em detalhe e campanhas (AnalisesComerciais).
 class ComercialIndicadoresTela extends StatefulWidget {
   const ComercialIndicadoresTela({super.key});
 
@@ -173,25 +175,9 @@ class _ComercialIndicadoresTelaState extends State<ComercialIndicadoresTela> {
                     SizedBox(width: 48, child: Text('${f['chegaram']}', textAlign: TextAlign.right)),
                   ]),
                 ),
+              // Origens e perdas ficam em AnalisesComerciais (com campanhas, valores e o que vale tentar de novo).
               const SizedBox(height: 16),
-              Wrap(spacing: 24, runSpacing: 16, children: [
-                SizedBox(
-                  width: 360,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('De onde vêm', style: Theme.of(context).textTheme.titleMedium),
-                    for (final o in (d['por_origem'] as List))
-                      Text('${origensComercial[(o as Map)['origem']] ?? o['origem']}: ${o['criadas']} novas, ${o['ganhas']} ganhas'),
-                  ]),
-                ),
-                SizedBox(
-                  width: 360,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Por que perdemos', style: Theme.of(context).textTheme.titleMedium),
-                    if ((d['motivos_perda'] as List).isEmpty) const Text('Nenhuma perda no período.', style: TextStyle(color: Cores.neutro)),
-                    for (final m in (d['motivos_perda'] as List)) Text('${(m as Map)['motivo']}: ${m['quantidade']}'),
-                  ]),
-                ),
-              ]),
+              AnalisesComerciais(key: ValueKey('analises-${dataIso(_de)}-${dataIso(_ate)}'), de: _de, ate: _ate),
             ],
           ]);
         },

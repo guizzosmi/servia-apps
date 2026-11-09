@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_lider.dart';
+import '../core/acoes_reabrir.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../widgets/indicador_sync.dart';
+import '../widgets/reabrir_os.dart';
 import '../widgets/status_chip.dart';
 
 /// O líder conduz a parte (guia 28): a equipe do dia (tirar, incluir,
@@ -337,7 +339,10 @@ class _CartaoItem extends StatelessWidget {
       color: _encerrado ? Cores.fundo : Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: _encerrado ? null : () => _opcoes(context),
+        // Guia 109: no serviço concluído, o líder (ou o gestor) pode reabrir a OS.
+        onTap: _encerrado
+            ? (AcoesReabrir.podeReabrir(item) ? () => reabrirOsDoServico(context, item) : null)
+            : () => _opcoes(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
           child: Row(children: [

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/estado.dart';
+import 'telas/aparelho_tela.dart';
+import 'telas/assistente_tela.dart';
 import 'telas/atendimento_tela.dart';
 import 'telas/conduzir_parte_tela.dart';
 import 'telas/encerrar_dia_tela.dart';
+import 'telas/eqp_ficha_tela.dart';
+import 'telas/eqp_inicio_tela.dart';
+import 'telas/eqp_registro_tela.dart';
 import 'telas/hoje_tela.dart';
 import 'telas/leitor_qr_tela.dart';
 import 'telas/levantamento_tela.dart';
@@ -34,14 +39,45 @@ final rotas = GoRouter(
     GoRoute(path: '/revogado', builder: (_, __) => const RevogadoTela()),
     GoRoute(path: '/apagado', builder: (_, __) => const ApagadoTela()),
     GoRoute(path: '/hoje', builder: (_, __) => const HojeTela()),
+    // Guia 93: o assistente com o Claude (texto e voz, só com internet).
+    GoRoute(
+      path: '/assistente',
+      builder: (_, state) => AssistenteTela(falarAoAbrir: state.uri.queryParameters['falar'] == '1'),
+    ),
     GoRoute(path: '/sincronizacao', builder: (_, __) => const SincronizacaoTela()),
     GoRoute(path: '/ler-codigo', builder: (_, __) => const LeitorQrTela()),
+    // Guia 108: a ficha do aparelho da etiqueta lida fora da OS.
+    GoRoute(
+      path: '/aparelho/:id',
+      builder: (_, state) => AparelhoTela(
+        key: ValueKey('aparelho-${state.pathParameters['id']}'),
+        equipamentoId: state.pathParameters['id']!,
+        lido: state.uri.queryParameters['lido'],
+      ),
+    ),
     GoRoute(path: '/levantamento', builder: (_, __) => const LevantamentoTela()),
+    // Guia 104: Gestão de Equipamentos (entrega, chegada, retorno pelo app).
+    GoRoute(path: '/equipamentos', builder: (_, __) => const EqpInicioTela()),
+    GoRoute(
+      path: '/equipamentos/:id',
+      builder: (_, state) {
+        final id = state.pathParameters['id']!;
+        return EqpFichaTela(key: ValueKey('eqp-$id'), equipamentoId: id);
+      },
+    ),
+    GoRoute(
+      path: '/equipamentos/:id/registrar/:evento',
+      builder: (_, state) => EqpRegistroTela(
+        equipamentoId: state.pathParameters['id']!,
+        evento: state.pathParameters['evento']!,
+      ),
+    ),
     GoRoute(
       path: '/nova-os',
       builder: (_, state) => NovaOsTela(
         clienteId: state.uri.queryParameters['cliente'],
         localId: state.uri.queryParameters['local'],
+        equipamentoId: state.uri.queryParameters['equipamento'],
         audioId: state.uri.queryParameters['audio'],
         falarAoAbrir: state.uri.queryParameters['falar'] == '1',
       ),
@@ -50,7 +86,8 @@ final rotas = GoRouter(
       path: '/atendimento/:id',
       builder: (_, state) {
         final id = state.pathParameters['id']!;
-        return AtendimentoTela(key: ValueKey('atendimento-$id'), atendimentoId: id);
+        return AtendimentoTela(
+            key: ValueKey('atendimento-$id'), atendimentoId: id, aparelhoId: state.uri.queryParameters['aparelho']);
       },
     ),
     GoRoute(

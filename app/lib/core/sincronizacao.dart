@@ -8,10 +8,11 @@ import 'package:uuid/uuid.dart';
 import 'arquivos.dart';
 import 'banco_local.dart';
 import 'cofre.dart';
+import 'eqp_dados.dart';
 import 'formatos.dart';
 
 /// Versão do app enviada à plataforma (aparece na tela de aparelhos).
-const versaoApp = '0.19.0'; // igual à versão do pubspec.yaml (a versão mínima compara com esta)
+const versaoApp = '0.21.0'; // igual à versão do pubspec.yaml (a versão mínima compara com esta)
 
 /// Tabelas de cadastro que descem por cursor (só o que mudou).
 const tabelasDeCadastro = [
@@ -386,9 +387,13 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       for (final a in anexos.cast<Map>()) {
         final caminho = '${a['caminho']}';
         if (banco.meta('arquivo_subiu:$caminho') != null) continue;
-        final arquivo = Arquivos.assinatura(a['local']);
+        final arquivo = Arquivos.anexo(a);
         if (arquivo == null || !await arquivo.exists()) {
-          await banco.marcarRecusada(op.opId, 'O arquivo da assinatura não está mais no aparelho.');
+          await banco.marcarRecusada(
+              op.opId,
+              a['pasta'] == 'equipamentos'
+                  ? 'Uma foto ou a assinatura deste registro não está mais no aparelho.'
+                  : 'O arquivo da assinatura não está mais no aparelho.');
           recusadas.add(op.opId);
           break;
         }
@@ -510,12 +515,28 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
         };
       }
     }
+    // Guia 108: as OS da fila do escritório (para o Ler etiqueta sem
+    // internet) também vão por cursor, com a mesma folga de 1 minuto.
+    final fila = _cursor('os_fila');
+    if (fila != null) {
+      final em = DateTime.tryParse('${fila['em']}');
+      cursores['os_fila'] = {
+        'em': em?.subtract(const Duration(minutes: 1)).toIso8601String(),
+        'id': '00000000-0000-0000-0000-000000000000',
+      };
+    }
     // O dia só é trocado se a fila estiver vazia: ações ainda não enviadas
     // continuam valendo na tela.
     var querDia = banco.pendentes == 0;
     var paginas = 0;
     while (true) {
-      final r = await _rpc('sync_baixar', {..._base(), 'cursores': cursores, 'dia': querDia});
+      final r = await _rpc('sync_baixar', {
+        ..._base(),
+        'cursores': cursores,
+        'dia': querDia,
+        'os_fila': true,
+        'os_fila_hash': banco.meta('os_fila_hash'),
+      });
       // Configuração da empresa (orçamento, assinatura) e dados do cabeçalho
       // do resumo que o cliente assina.
       if (r['config'] is Map) await banco.gravarMeta('config', jsonEncode(r['config']));
@@ -534,6 +555,7 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
           await banco.gravarMeta('cursor:$tabela', jsonEncode(bloco['cursor']));
         }
       }
+      if (r['os_fila'] is Map) await _baixarOsFila(r['os_fila'] as Map, cursores);
       final dia = r['dia'];
       // Confere de novo: uma ação feita durante o download não pode ser
       // desfeita na tela pelo dia que acabou de chegar.
@@ -561,7 +583,31 @@ class Sincronizador extends ChangeNotifier with WidgetsBindingObserver {
       paginas++;
       if (r['mais'] != true || paginas > 200) break;
     }
+    // Guia 104: Gestão de Equipamentos (só para quem tem a aplicação).
+    await EqpDados.baixar(banco, _rpc, _base());
     banco.avisar();
+  }
+
+  /// Guia 108: as OS da fila do escritório (o cabeçalho, o agendamento e os
+  /// aparelhos). Descem só as que mudaram; a lista inteira ("ids") vem quando
+  /// muda, e as que saíram da fila (programadas, puxadas, fechadas) somem.
+  Future<void> _baixarOsFila(Map f, Map<String, dynamic> cursores) async {
+    final linhas = ((f['linhas'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    if (linhas.isNotEmpty) await banco.gravar('os_fila', linhas, avisar: false);
+    final ids = f['ids'];
+    if (ids is List) {
+      final ficam = {for (final i in ids) '$i'};
+      final sairam = [
+        for (final l in banco.todos('os_fila'))
+          if (!ficam.contains('${l['id']}')) '${l['id']}',
+      ];
+      if (sairam.isNotEmpty) await banco.apagarIds('os_fila', sairam, avisar: false);
+      await banco.gravarMeta('os_fila_hash', f['hash'] as String?);
+    }
+    if (f['cursor'] is Map) {
+      cursores['os_fila'] = f['cursor'];
+      await banco.gravarMeta('cursor:os_fila', jsonEncode(f['cursor']));
+    }
   }
 
   /// Limpeza das fotos que já não são usadas, no máximo a cada 6 horas.

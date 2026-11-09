@@ -15,3 +15,6 @@ Thumbs.db
 
 # Cache do Firebase Hosting (página de aceite)
 aceite/.firebase/
+
+# Cache do Python (servia-apps/ferramentas, guia 110)
+__pycache__/

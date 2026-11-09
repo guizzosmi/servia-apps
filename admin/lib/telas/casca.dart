@@ -19,6 +19,7 @@ class Casca extends StatelessWidget {
     (Icons.sell_outlined, 'Preços e regras', '/precos'),
     (Icons.android, 'Testadores do app', '/testadores'),
     (Icons.apps_outlined, 'Aplicações do hub', '/aplicacoes'),
+    (Icons.precision_manufacturing_outlined, 'Planos de equipamentos', '/planos-equipamentos'),
     (Icons.api_outlined, 'API (OData)', '/api'),
   ];
 

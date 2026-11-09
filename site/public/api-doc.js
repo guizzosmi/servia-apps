@@ -224,11 +224,15 @@
       grupos.get(k).push(e);
     }
     for (const [app, lista] of grupos) {
-      menu.append(el('div', { class: 'ad-app', text: nomeApp(app || null) }));
-      raiz.append(el('h3', { text: nomeApp(app || null) }));
+      // data-grupo: a busca esconde o título do grupo quando nenhuma entidade dele sobra.
+      const g = app || 'nucleo';
+      menu.append(el('div', { class: 'ad-app', 'data-grupo': g, text: nomeApp(app || null) }));
+      raiz.append(el('h3', { 'data-grupo': g, text: nomeApp(app || null) }));
       for (const e of lista) {
-        menu.append(el('a', { href: '#e-' + e.nome, 'data-nome': e.nome.toLowerCase(), text: e.nome }));
-        raiz.append(montarEntidade(e));
+        menu.append(el('a', { href: '#e-' + e.nome, 'data-nome': e.nome.toLowerCase(), 'data-grupo': g, text: e.nome }));
+        const sec = montarEntidade(e);
+        sec.dataset.grupo = g;
+        raiz.append(sec);
       }
     }
     $('urlToken').textContent = ref.token;
@@ -252,6 +256,11 @@
     const q = $('busca').value.trim().toLowerCase();
     document.querySelectorAll('#menuEntidades a').forEach((a) => { a.hidden = !!q && !a.dataset.nome.includes(q); });
     document.querySelectorAll('.ad-entidade').forEach((s) => { s.hidden = !!q && !s.id.slice(2).toLowerCase().includes(q); });
+    // Título do grupo (no menu e na referência) só quando sobra alguma entidade dele.
+    document.querySelectorAll('#menuEntidades .ad-app, #referencia > h3').forEach((t) => {
+      const g = t.dataset.grupo;
+      t.hidden = !!q && ![...document.querySelectorAll('#menuEntidades a')].some((a) => a.dataset.grupo === g && !a.hidden);
+    });
   });
 
   // ------------------------------------------------------------ OpenAPI (Postman, Insomnia)

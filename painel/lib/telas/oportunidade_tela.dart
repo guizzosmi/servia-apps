@@ -7,11 +7,15 @@ import '../servicos/arquivo_web.dart';
 import '../servicos/comercial.dart';
 import '../servicos/status.dart';
 import '../widgets/campos_data_hora.dart';
+import '../widgets/comercial_itens.dart';
+import '../widgets/comercial_linha_do_tempo.dart';
 import '../widgets/margem.dart';
 import 'comercial_funil_tela.dart' show pedirMotivoPerda;
 
 /// Oportunidade do Comercial (guia 90): dados do contato ou cliente, valores, etapa,
 /// orçamento e contrato ligados e as atividades (tarefas e anotações).
+/// Guia 97: itens da proposta (com itens, os valores são a soma), histórico do cliente (OS, orçamentos,
+/// contratos, cobranças), o WhatsApp fica registrado e concluir a última tarefa pede o próximo passo.
 class OportunidadeTela extends StatefulWidget {
   const OportunidadeTela({super.key, this.id});
 
@@ -46,6 +50,7 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
   List<Map<String, dynamic>> _atividades = [];
   List<Map<String, dynamic>> _orcamentos = [];
   List<Map<String, dynamic>> _contratos = [];
+  int _itens = 0;
   bool _carregando = true;
   bool _salvando = false;
   String? _erro;
@@ -134,6 +139,8 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
         .isFilter('excluido_em', null)
         .order('criado_em', ascending: false);
     _atividades = _lista(ativ);
+    final itens = await _db.from('com_itens').select('id').eq('oportunidade_id', id).isFilter('excluido_em', null);
+    _itens = itens.length;
     final cli = _op?['cliente_id'] as String?;
     if (cli != null) {
       final orc = await _db
@@ -280,6 +287,18 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
     }
   }
 
+  /// Abre o WhatsApp e registra a conversa (tira o "parada"). Abre antes de gravar: o navegador só
+  /// deixa abrir a aba no clique.
+  void _whatsapp(String link) {
+    abrirEmNovaAba(link);
+    final id = _id;
+    if (id == null) return;
+    acaoComercial({'acao': 'whatsapp', 'oportunidade_id': id, 'resumo': 'WhatsApp aberto pelo painel'}).then((_) async {
+      await _carregarRelacionados();
+      if (mounted) setState(() {});
+    }).catchError((_) {});
+  }
+
   Future<void> _concluir(Map<String, dynamic> a) async {
     final resultado = TextEditingController();
     final ok = await showDialog<bool>(
@@ -300,12 +319,15 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
     resultado.dispose();
     if (ok != true) return;
     try {
-      await _db.from('com_atividades').update({
-        'concluida_em': DateTime.now().toUtc().toIso8601String(),
-        'resultado': texto.isEmpty ? null : texto,
-      }).eq('id', a['id'] as String);
+      final r = await acaoComercial({'acao': 'concluir', 'atividade_id': a['id'], 'resultado': texto.isEmpty ? null : texto});
       await _carregarRelacionados();
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      // Guia 97: oportunidade aberta sem próxima tarefa esfria. Já pede o próximo passo.
+      if (r['sem_proxima'] == true) {
+        _avisar('Ficou sem próxima tarefa: marque o próximo passo.');
+        await _novaAtividade();
+      }
     } catch (e) {
       if (mounted) _avisar(mensagemDeErro(e), erro: true);
     }
@@ -351,13 +373,15 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
           const SizedBox(height: 8),
           Row(children: [
             Expanded(
-              child: TextField(controller: _valor, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Valor (serviço ou instalação)', prefixText: 'R\$ ')),
+              child: TextField(controller: _valor, keyboardType: TextInputType.number, readOnly: _itens > 0,
+                  decoration: InputDecoration(labelText: 'Valor (serviço ou instalação)', prefixText: 'R\$ ',
+                      helperText: _itens > 0 ? 'Soma dos itens da proposta' : null)),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: TextField(controller: _mensal, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Valor mensal (contrato, PMOC)', prefixText: 'R\$ ')),
+              child: TextField(controller: _mensal, keyboardType: TextInputType.number, readOnly: _itens > 0,
+                  decoration: InputDecoration(labelText: 'Valor mensal (contrato, PMOC)', prefixText: 'R\$ ',
+                      helperText: _itens > 0 ? 'Soma dos itens mensais' : null)),
             ),
           ]),
           const SizedBox(height: 8),
@@ -425,7 +449,7 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
               label: Text(_id == null ? 'Criar oportunidade' : 'Salvar'),
             ),
             if (whatsapp != null)
-              OutlinedButton.icon(onPressed: () => abrirEmNovaAba(whatsapp), icon: const Icon(Icons.chat_outlined), label: const Text('WhatsApp')),
+              OutlinedButton.icon(onPressed: () => _whatsapp(whatsapp), icon: const Icon(Icons.chat_outlined), label: const Text('WhatsApp')),
             if (o != null && o['cliente_id'] == null)
               OutlinedButton.icon(
                   onPressed: _salvando ? null : _virarCliente, icon: const Icon(Icons.person_add_alt), label: const Text('Cadastrar como cliente')),
@@ -456,6 +480,9 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
                 if (o['situacao'] == 'perdida' && o['motivo_perda'] != null)
                   Text('Motivo: ${o['motivo_perda']}', style: const TextStyle(color: Cores.erro)),
                 if (o['fechada_em'] != null) Text('Fechada em ${dataBr(o['fechada_em'])}', style: const TextStyle(color: Cores.neutro)),
+                if (o['utm_source'] != null || o['utm_campaign'] != null)
+                  Text('Campanha: ${[o['utm_source'], o['utm_medium'], o['utm_campaign']].where((x) => x != null).join(' / ')}',
+                      style: const TextStyle(color: Cores.neutro)),
                 const SizedBox(height: 8),
                 if (o['situacao'] == 'aberta')
                   Wrap(spacing: 6, runSpacing: 6, children: [
@@ -489,6 +516,13 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
             ),
           );
 
+    final itens = o == null
+        ? const SizedBox.shrink()
+        : ItensProposta(key: ValueKey('itens-${o['id']}'), oportunidadeId: '${o['id']}', aoSalvar: _carregar);
+    final historico = o == null || o['cliente_id'] == null
+        ? const SizedBox.shrink()
+        : LinhaDoTempoCliente(key: ValueKey('historico-${o['cliente_id']}'), clienteId: '${o['cliente_id']}');
+
     return ListView(padding: margemDaTela(context), children: [
       Row(children: [
         IconButton(onPressed: () => context.canPop() ? context.pop() : context.go('/comercial'), icon: const Icon(Icons.arrow_back)),
@@ -500,14 +534,16 @@ class _OportunidadeTelaState extends State<OportunidadeTela> {
       const SizedBox(height: 12),
       if (largo)
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: Column(children: [etapa, dados])),
+          Expanded(child: Column(children: [etapa, dados, itens])),
           const SizedBox(width: 16),
-          Expanded(child: atividades),
+          Expanded(child: Column(children: [atividades, historico])),
         ])
       else ...[
         etapa,
         dados,
+        itens,
         atividades,
+        historico,
       ],
     ]);
   }

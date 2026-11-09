@@ -39,6 +39,7 @@ const camposMensagem = <String, String>{
   'cliente': 'nome do cliente',
   'local': 'nome do local',
   'endereco': 'endereço do local',
+  'equipamentos': 'aparelho(s) da OS com o código e o ambiente ("Aparelho: AC-03 · Split 12.000 · Câmara fria 2")',
   'data': 'data da visita',
   'horario': 'janela de horário da visita',
   'orcamento': 'número do orçamento',
@@ -61,9 +62,10 @@ const modelosMensagem = <ModeloMensagem>[
     chave: 'a_caminho',
     titulo: 'Estou a caminho',
     onde: 'App: ao tocar em "Estou a caminho"',
-    campos: ['contato', 'tecnico', 'empresa', 'os', 'cliente', 'local', 'endereco'],
+    campos: ['contato', 'tecnico', 'empresa', 'os', 'cliente', 'local', 'endereco', 'equipamentos'],
     padrao: 'Olá, {contato}!\n'
         'Aqui é {tecnico}, da {empresa}. Estou a caminho para o atendimento da {os} em {local}.\n'
+        '{equipamentos}\n'
         'Até já!',
   ),
   ModeloMensagem(

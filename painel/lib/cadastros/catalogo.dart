@@ -709,7 +709,7 @@ final List<CadastroDef> catalogo = [
           tipo: TipoCampo.opcoes, opcoes: _categoriasGlossario, obrigatorio: true,
           padrao: 'jargao', metade: true),
       CampoDef('variantes', 'Como costuma ser falado/escrito', tipo: TipoCampo.listaTexto,
-          ajuda: 'Separe por vírgula. Ex.: termo "Friella" → "friela, frieli"'),
+          ajuda: 'Separe por vírgula. Ex.: termo "Climatec" → "climatéc, climatek"'),
     ],
     aviso: 'Palavras que a transcrição costuma errar (nomes de clientes, peças, gírias). '
         'A IA usa esta lista para corrigir os textos.',

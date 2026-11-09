@@ -1,0 +1,6 @@
+# Notas da versão para a Google Play (pt-BR, até 500 caracteres). As linhas com # não vão para a loja.
+# Revise a cada versão: a esteira mostra o texto e pede confirmação antes de publicar.
+Gestão de Equipamentos: entrega e devolução com o ponto do GPS, fotos, checklist e assinatura.
+Ler etiqueta na tela Hoje e busca de aparelhos por código, ambiente e capacidade.
+O líder da equipe reabre a OS pelo app, com o motivo.
+O gestor encerra a OS no app ao concluir o atendimento.

@@ -4,7 +4,7 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Abre a janela de escolha dos equipamentos de um local. Feita para locais
-/// grandes (a Friella tem mais de 100): busca, filtro por ambiente e tipo,
+/// grandes (há clientes com mais de 100): busca, filtro por ambiente e tipo,
 /// "marcar todos os filtrados" e "Incluir equipamento" (cadastra na hora,
 /// já ligado ao cliente e ao local, e volta marcado).
 /// Devolve {id: "código · descrição"} dos escolhidos, ou null se cancelou.

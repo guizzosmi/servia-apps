@@ -12,6 +12,7 @@ import 'telas/comissoes_tela.dart';
 import 'telas/conta_tela.dart';
 import 'telas/contas_tela.dart';
 import 'telas/cupons_tela.dart';
+import 'telas/eqp_planos_tela.dart';
 import 'telas/faturas_tela.dart';
 import 'telas/login_tela.dart';
 import 'telas/parceiros_tela.dart';
@@ -74,6 +75,8 @@ final rotas = GoRouter(
         GoRoute(path: '/precos', builder: (_, __) => const PrecosTela()),
         GoRoute(path: '/testadores', builder: (_, __) => const TestadoresTela()),
         GoRoute(path: '/aplicacoes', builder: (_, __) => const AplicacoesTela()),
+        // Guia 103: planos da Gestão de Equipamentos.
+        GoRoute(path: '/planos-equipamentos', builder: (_, __) => const EqpPlanosTela()),
         GoRoute(path: '/api', builder: (_, __) => const ApiTela()),
       ],
     ),

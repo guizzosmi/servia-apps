@@ -1,5 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Guia 104: o ponto exato da entrega de equipamento e do check-in da manutenção.
+         Só "durante o uso" (com o app aberto): sem ACCESS_BACKGROUND_LOCATION. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- O plugin do GPS declara o serviço de localização em primeiro plano; o app não usa (tira daqui). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove"/>
     <!-- Gravar o relato do atendimento (guia 16). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
@@ -34,6 +41,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Guia 104: o app só lê o GPS no registro (getCurrentPosition). O serviço de localização em primeiro
+             plano do plugin não é usado: sai do app (a Play não pede a declaração de serviço de localização). -->
+        <service android:name="com.baseflow.geolocator.GeolocatorLocationService" tools:node="remove"/>
         <!-- Notificações (FCM): ícone pequeno branco e cor da marca -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"

@@ -11,6 +11,9 @@ Future<bool> abrirLink(String endereco) async {
   }
 }
 
+/// Como pedir a exclusão da conta e dos dados (exigido pelas lojas; guias 41 e 96).
+const linkExcluirConta = 'https://servpilot.com.br/excluir-conta';
+
 /// Termos de uso e política de privacidade (servpilot.com.br), para as telas de login.
 class LinksLegais extends StatelessWidget {
   const LinksLegais({super.key});

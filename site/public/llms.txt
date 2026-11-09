@@ -1,14 +1,17 @@
 # ServPilot
 
-> ServPilot é uma empresa brasileira de software de gestão para pequenas e médias empresas de serviço e de equipamentos. Missão: dar às pequenas e médias empresas de serviço e de equipamentos o controle de uma grande empresa, com a simplicidade de um app. A aplicação disponível hoje é a Gestão de Serviços de Refrigeração (sistema para empresas de refrigeração e climatização, com PMOC completo). A Gestão de Equipamentos está em desenvolvimento.
+> ServPilot é uma empresa brasileira de software de gestão para pequenas e médias empresas de serviço e de equipamentos. Missão: dar às pequenas e médias empresas de serviço e de equipamentos o controle de uma grande empresa, com a simplicidade de um app. A aplicação disponível hoje é a Gestão de Serviços de Refrigeração (sistema para empresas de refrigeração e climatização, com PMOC completo). A Gestão de Equipamentos (locadoras, construtoras e empresas com máquinas) está em lançamento, em teste com os primeiros clientes.
 
 ## Aplicações
 - Gestão de Serviços de Refrigeração (disponível): https://servpilot.com.br/refrigeracao
-- Gestão de Equipamentos (em breve): https://servpilot.com.br/equipamentos
+- Gestão de Equipamentos (lançamento, em teste com os primeiros clientes): https://servpilot.com.br/equipamentos
 
 ## Módulos
 - Integração com ERP (disponível): API OData com credencial própria e documentação aberta em https://servpilot.com.br/api, para ERPs, BI e outros sistemas.
-- Notas fiscais (em breve): NFS-e dos serviços e NF-e das peças direto das OS, uma a uma ou o mês inteiro, com o certificado A1 enviado pela própria empresa. Módulo à parte.
+- Notas fiscais (disponível, módulo à parte): NFS-e dos serviços e NF-e das peças direto das OS, uma a uma ou o mês inteiro, com o certificado A1 enviado pela própria empresa.
+- Comercial (disponível): funil de vendas, tarefas, previsão e metas; incluído no plano Equipe.
+- Assistente com IA (disponível): pedidos por texto ou voz no painel e no app do técnico, com as mesmas permissões do usuário.
+- Conector do Claude (disponível, incluído no plano): https://servpilot.com.br/conector
 
 ## Gestão de Serviços de Refrigeração: o que faz
 - Painel web do gestor: ordens de serviço, fila de pendentes, quadro do dia das equipes ao vivo, orçamentos, contratos e o que cobrar.
@@ -25,13 +28,11 @@
 - Aceite do cliente: orçamento aprovado na tela ou por link no WhatsApp, com registro de data, nome e conteúdo aprovado.
 - Para quem: empresas de refrigeração e climatização de 1 a dezenas de técnicos, contratos de PMOC (prefeituras, clínicas, escolas, lojas, escritórios), refrigeração comercial e manutenção própria.
 
-## Gestão de Equipamentos (em breve)
-- Para locação para terceiros, uso em obras próprias e uso próprio.
-- Localização e agenda de cada equipamento; checklist de saída e de retorno com fotos e aceite.
-- Manutenção preventiva por tempo e por uso, e corretiva.
-- Custos e margem por equipamento.
-- Integração com ERP.
-- Ainda sem data de lançamento.
+## Gestão de Equipamentos (lançamento, em teste com os primeiros clientes)
+- Para locadoras, construtoras e empresas com máquinas: locação para terceiros, obras próprias e uso próprio.
+- Já funciona (em teste): equipamentos com patrimônio, código, depósito, medidor e preços; status e local que só mudam por movimento, com linha do tempo; contratos de locação com reserva, retirada e devolução (checklist, fotos, horímetro e quem recebeu), avaria com OS de reparo; agenda e disponibilidade sem reserva dupla; obras próprias e setores; OS de manutenção; custos por natureza com rateio e estorno; visão geral com utilização, receita estimada e custo do mês; comandos de voz pelo assistente e pelo conector do Claude; API OData.
+- Em construção (sem data): modelos e conjuntos, medição da locação, app de entrega com GPS e fotos no momento do registro (sem rastreamento), preventiva por tempo e por uso, custos automáticos e indicadores (ocupação, margem, MTBF e MTTR), cobrança por boleto/Pix registrado nos principais bancos ou CNAB, integração com o Protheus.
+- Preço: plano próprio, valores a definir.
 
 ## Preços da Gestão de Serviços de Refrigeração (novembro de 2026)
 - Plano Autônomo: R$ 99,99/mês com 1 usuário, 300 minutos de IA e 250 mensagens automáticas de WhatsApp.
@@ -47,7 +48,7 @@
 ## Páginas
 - [Início: aplicações e módulos do ServPilot](https://servpilot.com.br/)
 - [Gestão de Serviços de Refrigeração](https://servpilot.com.br/refrigeracao)
-- [Gestão de Equipamentos (em breve)](https://servpilot.com.br/equipamentos)
+- [Gestão de Equipamentos (lançamento)](https://servpilot.com.br/equipamentos)
 - [Sistema para empresas de refrigeração](https://servpilot.com.br/sistema-para-refrigeracao)
 - [Software de PMOC](https://servpilot.com.br/software-pmoc)
 - [Kit PMOC grátis: planilha e checklist mensal](https://servpilot.com.br/modelo-pmoc)

@@ -2,9 +2,11 @@ import 'banco_local.dart';
 
 /// Leituras prontas para as telas (tudo vem do banco do aparelho).
 extension Consultas on BancoLocal {
-  /// Partes publicadas do dia, das equipes em que a pessoa está.
+  /// Partes do dia das equipes em que a pessoa está: as publicadas e (guia 95)
+  /// a parte em rascunho que tem OS aberta pelo app. Rascunho, a plataforma só
+  /// manda nesse caso e só com essas OS; o check-in espera a publicação.
   List<Map<String, dynamic>> partesDoDia(String data) {
-    final lista = todos('partes_diarias').where((p) => p['data'] == data && p['status'] != 'rascunho').toList()
+    final lista = todos('partes_diarias').where((p) => p['data'] == data).toList()
       ..sort((a, b) => nomeEquipe(a['equipe_id']).compareTo(nomeEquipe(b['equipe_id'])));
     return lista;
   }

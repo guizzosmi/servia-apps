@@ -4,12 +4,17 @@ import 'package:servia_comum/servia_comum.dart';
 
 import '../core/acoes_atendimento.dart';
 import '../core/acoes_checklist.dart';
+import '../core/acoes_encerrar.dart';
 import '../core/acoes_os.dart';
+import '../core/acoes_reabrir.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../widgets/busca_aparelhos.dart';
+import '../widgets/encerrar_os.dart';
 import '../widgets/entrar_no_servico.dart';
 import '../widgets/indicador_sync.dart';
+import '../widgets/reabrir_os.dart';
 import '../widgets/status_chip.dart';
 
 /// Um serviço da parte: cliente, local, o que fazer, equipamentos e o
@@ -139,8 +144,10 @@ class ServicoTela extends StatelessWidget {
               _Secao(titulo: 'Equipamentos (${equipamentos.length})', filhos: [
                 if (equipamentos.isEmpty)
                   const Text('Nenhum equipamento na OS.', style: TextStyle(color: Cores.neutro)),
-                for (final e in equipamentos)
-                  ListTile(
+                // Guia 108: o lote com muitos aparelhos ganha a busca, por ambiente.
+                BuscaAparelhos(
+                  aparelhos: equipamentos,
+                  item: (e) => ListTile(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                     leading: const Icon(Icons.ac_unit),
@@ -150,6 +157,7 @@ class ServicoTela extends StatelessWidget {
                       [e['marca'], e['modelo']].where((x) => x != null).join(' '),
                     ].where((x) => x != null && '$x'.isNotEmpty).join(' · ')),
                   ),
+                ),
               ]),
               const SizedBox(height: 8),
               _Acoes(item: item, parte: parte),
@@ -215,9 +223,14 @@ class _Acoes extends StatelessWidget {
           ),
         ),
       if (!aberta)
-        const Padding(
-          padding: EdgeInsets.only(bottom: 8),
-          child: Text('Parte encerrada: só consulta.', style: TextStyle(color: Cores.neutro)),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+              // Guia 95: OS aberta pelo app num dia que o escritório ainda monta.
+              parte['status'] == 'rascunho'
+                  ? 'O escritório ainda não publicou este dia: o check-in libera quando a parte for publicada.'
+                  : 'Parte encerrada: só consulta.',
+              style: const TextStyle(color: Cores.neutro)),
         ),
       if (atd != null)
         botao(FilledButton.icon(
@@ -225,6 +238,33 @@ class _Acoes extends StatelessWidget {
           icon: const Icon(Icons.assignment_outlined),
           label: Text(atdAberto ? 'Abrir atendimento' : 'Ver atendimento'),
         )),
+      // Guia 111: o gestor encerra ali mesmo a OS do serviço concluído (ainda aberta).
+      if (status == 'concluido' &&
+          AcoesReabrir.souGestor &&
+          !const ['concluida', 'cancelada'].contains(banco.osDo(item)?['status']))
+        if (AcoesEncerrar.pendente(banco.osDo(item)?['id']))
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('Encerramento da OS aguardando envio.', style: TextStyle(color: Cores.alerta)),
+          )
+        else
+          botao(FilledButton.icon(
+            onPressed: () => encerrarOsDoServico(context, item),
+            icon: const Icon(Icons.task_alt),
+            label: const Text('Encerrar a OS'),
+          )),
+      // Guia 109: o gestor ou o líder da equipe reabre a OS do serviço concluído.
+      if (encerrado && AcoesReabrir.podeReabrir(item))
+        botao(OutlinedButton.icon(
+          onPressed: () => reabrirOsDoServico(context, item),
+          icon: const Icon(Icons.undo),
+          label: const Text('Reabrir OS'),
+        ))
+      else if (status == 'concluido' && AcoesReabrir.pendente(banco.osDo(item)?['id']))
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Reabertura da OS aguardando envio.', style: TextStyle(color: Cores.alerta)),
+        ),
       if (aberta && !encerrado && !estouNele)
         botao(FilledButton.icon(
           onPressed: () => entrarNoServico(context, item),

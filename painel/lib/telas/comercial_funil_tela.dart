@@ -5,11 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../servicos/comercial.dart';
 import '../servicos/status.dart';
+import '../widgets/comercial_captura.dart';
 import '../widgets/comercial_etapas.dart';
+import '../widgets/comercial_importar.dart';
 import '../widgets/margem.dart';
 
 /// Funil do Comercial (guia 90): uma coluna por etapa; arraste o cartão para mudar de etapa.
-/// Ganho e Perdido mostram o que fechou nos últimos 30 dias.
+/// Ganho e Perdido mostram o que fechou nos últimos 30 dias. Guia 97: cartão vermelho quando está parada
+/// (sem movimento além do limite da etapa), "Só as paradas", anotar rápido e importar planilha (ClickUp).
 class ComercialFunilTela extends StatefulWidget {
   const ComercialFunilTela({super.key});
 
@@ -20,6 +23,7 @@ class ComercialFunilTela extends StatefulWidget {
 class _ComercialFunilTelaState extends State<ComercialFunilTela> {
   final _busca = TextEditingController();
   String? _responsavel;
+  bool _soParadas = false;
   List<Map<String, dynamic>> _responsaveis = [];
   List<Map<String, dynamic>> _etapas = [];
   List<Map<String, dynamic>> _ops = [];
@@ -49,7 +53,7 @@ class _ComercialFunilTelaState extends State<ComercialFunilTela> {
     try {
       final cliente = Supabase.instance.client;
       var r = await cliente.rpc('comercial_funil', params: {
-        'p': {'responsavel_id': _responsavel, 'busca': _busca.text.trim()}
+        'p': {'responsavel_id': _responsavel, 'busca': _busca.text.trim(), 'so_paradas': _soParadas}
       });
       // Empresa que acabou de ligar o módulo: cria as etapas padrão.
       if (r is Map && (r['etapas'] as List).isEmpty) {
@@ -108,6 +112,14 @@ class _ComercialFunilTelaState extends State<ComercialFunilTela> {
             label: const Text('Nova oportunidade'),
           ),
           OutlinedButton.icon(
+            onPressed: () async {
+              final id = await anotarOportunidade(context);
+              if (id != null && mounted) _abrir('/comercial/$id');
+            },
+            icon: const Icon(Icons.bolt_outlined),
+            label: const Text('Anotar rápido'),
+          ),
+          OutlinedButton.icon(
             onPressed: () => _abrir('/comercial/tarefas'),
             icon: const Icon(Icons.checklist),
             label: const Text('Tarefas'),
@@ -124,6 +136,14 @@ class _ComercialFunilTelaState extends State<ComercialFunilTela> {
             },
             icon: const Icon(Icons.tune),
             label: const Text('Etapas'),
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              final gravou = await importarPlanilhaComercial(context);
+              if (gravou && mounted) _carregar();
+            },
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Importar planilha'),
           ),
         ]),
         const SizedBox(height: 12),
@@ -145,6 +165,15 @@ class _ComercialFunilTelaState extends State<ComercialFunilTela> {
             ],
             onChanged: (v) {
               setState(() => _responsavel = v);
+              _carregar();
+            },
+          ),
+          FilterChip(
+            label: const Text('Só as paradas'),
+            avatar: const Icon(Icons.hourglass_bottom, size: 16),
+            selected: _soParadas,
+            onSelected: (v) {
+              setState(() => _soParadas = v);
               _carregar();
             },
           ),
@@ -241,8 +270,12 @@ class _Cartao extends StatelessWidget {
     final quando = DateTime.tryParse('${tarefa?['previsto_para'] ?? ''}')?.toLocal();
     final atrasada = quando != null && quando.isBefore(DateTime.now());
     final valor = valorOportunidade(o);
+    final parada = o['parada'] == true;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      shape: parada
+          ? RoundedRectangleBorder(side: const BorderSide(color: Cores.erro, width: 1.5), borderRadius: BorderRadius.circular(12))
+          : null,
       child: InkWell(
         onTap: aoAbrir,
         borderRadius: BorderRadius.circular(12),
@@ -253,6 +286,13 @@ class _Cartao extends StatelessWidget {
             if (quemOportunidade(o).isNotEmpty)
               Text(quemOportunidade(o), style: const TextStyle(color: Cores.neutro), maxLines: 1, overflow: TextOverflow.ellipsis),
             if (valor.isNotEmpty) Text(valor, style: const TextStyle(fontWeight: FontWeight.w600, color: Cores.indigo700)),
+            if (parada)
+              Row(children: [
+                const Icon(Icons.hourglass_bottom, size: 14, color: Cores.erro),
+                const SizedBox(width: 4),
+                Text('Parada há ${o['dias_sem_movimento']} dias',
+                    style: const TextStyle(fontSize: 12, color: Cores.erro, fontWeight: FontWeight.w600)),
+              ]),
             const SizedBox(height: 4),
             Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
               Text('${o['codigo']}', style: const TextStyle(fontSize: 11, color: Cores.neutro)),

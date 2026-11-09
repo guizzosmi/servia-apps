@@ -441,7 +441,7 @@ class _GravadorRelatoTelaState extends State<GravadorRelatoTela> {
                 child: Text(
                   widget.abertura
                       ? 'Comece dizendo onde está e o que vai fazer:\n'
-                          '"Estou na Friella da Cacic, trocando a torneira do bebedouro do refeitório."\n\n'
+                          '"Estou no Mercado Bom Preço, trocando a torneira do bebedouro do refeitório."\n\n'
                           'Se o serviço já foi feito, conte também o que encontrou e o que fez: '
                           'o mesmo áudio vira o relato.'
                       : 'Fale com calma:\n'

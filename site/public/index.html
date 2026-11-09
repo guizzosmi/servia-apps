@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google-site-verification" content="_hqyVxtlIwQyeSUIocz4Uda7-hDJT1DRX6M5AIdoewg">
-<title>ServPilot · Sistema para refrigeração, PMOC e gestão de serviços</title>
-<meta name="description" content="Sistema para empresas de refrigeração e ar-condicionado: OS por áudio com IA, PMOC completo e app que funciona sem internet. Em breve, gestão de equipamentos. 14 dias grátis.">
+<title>ServPilot · Sistema para refrigeração, PMOC e gestão de equipamentos</title>
+<meta name="description" content="Refrigeração e climatização com OS por áudio, PMOC completo e app offline. Gestão de Equipamentos em lançamento. Assistente com IA por voz. 14 dias grátis.">
 <meta name="theme-color" content="#121A2B">
 <link rel="canonical" href="https://servpilot.com.br/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="ServPilot">
-<meta property="og:title" content="ServPilot · Sistema para refrigeração, PMOC e gestão de serviços">
-<meta property="og:description" content="O controle de uma grande empresa, com a simplicidade de um app. Gestão de serviços de refrigeração com PMOC completo e, em breve, gestão de equipamentos.">
+<meta property="og:title" content="ServPilot · Sistema para refrigeração, PMOC e gestão de equipamentos">
+<meta property="og:description" content="O controle de uma grande empresa, com a simplicidade de um app. Gestão de Serviços de Refrigeração com PMOC completo, Gestão de Equipamentos em lançamento e assistente com IA por voz.">
 <meta property="og:url" content="https://servpilot.com.br/">
 <meta property="og:image" content="https://servpilot.com.br/img/compartilhar.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -27,8 +27,9 @@
 <link rel="stylesheet" href="/hub.css">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Organization", "name": "ServPilot", "url": "https://servpilot.com.br", "logo": "https://servpilot.com.br/img/logo.svg", "description": "Dar às pequenas e médias empresas de serviço e de equipamentos o controle de uma grande empresa, com a simplicidade de um app.", "email": "contato@servpilot.com.br", "legalName": "Ana DG Tecnologia da Informação Ltda", "taxID": "43.904.201/0001-26", "address": {"@type": "PostalAddress", "addressLocality": "São Miguel do Iguaçu", "addressRegion": "PR", "addressCountry": "BR"}, "sameAs": ["https://www.instagram.com/servpilot", "https://www.tiktok.com/@servpilot", "https://www.facebook.com/1345149045355955"]}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "ServPilot", "url": "https://servpilot.com.br/", "inLanguage": "pt-BR", "publisher": {"@type": "Organization", "name": "ServPilot", "url": "https://servpilot.com.br"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "ItemList", "name": "Aplicações do ServPilot", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Gestão de Serviços de Refrigeração", "url": "https://servpilot.com.br/refrigeracao"}, {"@type": "ListItem", "position": 2, "name": "Gestão de Equipamentos", "url": "https://servpilot.com.br/equipamentos"}]}</script>
 </head>
-<body>
+<body class="hub-pagina">
 
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
@@ -41,7 +42,7 @@
     </a>
     <nav class="menu" aria-label="Seções">
       <a href="#aplicacoes">Aplicações</a>
-      <a href="#modulos">Módulos</a>
+      <a href="#novidades">Novidades</a>
       <a href="/refrigeracao">Refrigeração</a>
       <a href="/equipamentos">Equipamentos</a>
       <a href="/precos">Preços</a>
@@ -56,7 +57,7 @@
 
 <main id="conteudo">
 
-<!-- ================================================================ abertura: missão + atalho da refrigeração -->
+<!-- ================================================================ abertura: missão + atalhos das aplicações -->
 <section class="abertura hub-abertura">
   <div class="abertura-fundo" aria-hidden="true"></div>
   <div class="faixa abertura-grade">
@@ -72,12 +73,15 @@
         </a>
         <p>Sistema para empresas de refrigeração e ar-condicionado, com PMOC completo. Teste 14 dias grátis.</p>
       </div>
-      <div class="abertura-acoes hub-acoes-2">
-        <a class="botao contorno-claro grande" href="#aplicacoes">Ver todas as aplicações</a>
+      <div class="hub-atalho hub-atalho-2">
+        <a class="botao contorno-claro grande" href="/equipamentos">
+          <span aria-hidden="true">🏗️</span> Alugo ou mantenho equipamentos <span aria-hidden="true">→</span>
+        </a>
+        <p>Gestão de Equipamentos em lançamento, em teste com os primeiros clientes.</p>
       </div>
     </div>
 
-    <!-- Mapa das aplicações (desenho, sem dados reais) -->
+    <!-- Mapa das aplicações (desenho, sem dados) -->
     <div class="hub-mapa" aria-hidden="true">
       <div class="hub-mapa-topo"><b>ServPilot</b><span>aplicações e módulos</span></div>
       <div class="hub-mapa-grade">
@@ -86,19 +90,29 @@
           <b>Refrigeração</b><small>Serviços, PMOC e equipes</small>
           <span class="chip sucesso">Disponível</span>
         </div>
-        <div class="hub-tile">
+        <div class="hub-tile ativa">
           <span class="hub-tile-icone">🏗️</span>
-          <b>Equipamentos</b><small>Locação, obras e uso próprio</small>
-          <span class="chip alerta">Em breve</span>
+          <b>Equipamentos</b><small>Locação, obras e manutenção</small>
+          <span class="chip alerta">Lançamento</span>
+        </div>
+        <div class="hub-tile">
+          <span class="hub-tile-icone">✨</span>
+          <b>Assistente com IA</b><small>Texto e voz, no painel e no app</small>
+          <span class="chip sucesso">Disponível</span>
+        </div>
+        <div class="hub-tile">
+          <span class="hub-tile-icone">🎯</span>
+          <b>Comercial</b><small>Funil de vendas e tarefas</small>
+          <span class="chip sucesso">Disponível</span>
         </div>
         <div class="hub-tile">
           <span class="hub-tile-icone">🧾</span>
           <b>Notas fiscais</b><small>NFS-e e NF-e das OS</small>
-          <span class="chip alerta">Em breve</span>
+          <span class="chip sucesso">Disponível</span>
         </div>
         <div class="hub-tile">
           <span class="hub-tile-icone">🔗</span>
-          <b>Integração com ERP</b><small>Liga ao seu sistema de gestão</small>
+          <b>Integrações</b><small>API e conector do Claude</small>
           <span class="chip sucesso">Disponível</span>
         </div>
       </div>
@@ -109,10 +123,10 @@
 <!-- ================================================================ em resumo -->
 <section class="fatos" aria-label="Em resumo">
   <div class="faixa fatos-grade">
-    <div><b>IA no campo</b><span>o técnico fala, o ServPilot escreve a OS</span></div>
+    <div><b>IA por voz</b><span>fale o pedido; o ServPilot consulta e registra</span></div>
     <div><b>Offline</b><span>o app funciona mesmo sem sinal</span></div>
     <div><b>Android e web</b><span>app do técnico e painel no navegador</span></div>
-    <div><b>API OData</b><span>para o seu ERP ler os dados</span></div>
+    <div><b>API e Claude</b><span>ligue ao seu ERP e ao Claude</span></div>
   </div>
 </section>
 
@@ -136,9 +150,9 @@
           ao vivo, o cliente aprovando pelo WhatsApp e o PMOC completo, do levantamento ao relatório do mês.</p>
         <ul class="lista-check">
           <li>PMOC com documento em PDF e OS preventivas que nascem sozinhas</li>
-          <li>App Android que funciona sem internet</li>
+          <li>App Android que funciona sem internet; a OS falada já entra no dia da equipe</li>
           <li>Portal do cliente e recebimento por Pix sem taxa</li>
-          <li>Assistente do dono e diagnóstico assistido por IA</li>
+          <li>Assistente com IA por texto e voz, e diagnóstico assistido</li>
         </ul>
         <div class="hub-app-acoes">
           <a class="botao primario" href="/refrigeracao">Conhecer a aplicação</a>
@@ -146,24 +160,101 @@
         </div>
       </article>
 
-      <article class="hub-app revelar">
+      <article class="hub-app ativa revelar">
         <div class="hub-app-topo">
           <span class="recurso-icone" aria-hidden="true">🏗️</span>
-          <span class="chip alerta">Em breve</span>
+          <span class="chip alerta">Lançamento · em teste</span>
         </div>
         <h3>Gestão de Equipamentos</h3>
-        <p>Para quem aluga equipamentos, leva para as próprias obras ou usa no dia a dia: onde cada um está,
-          em que estado saiu e voltou, e quanto custa e rende.</p>
+        <p>Para locadoras, construtoras e empresas com máquinas: onde cada equipamento está, em que estado saiu e
+          voltou, quanto custou e quanto rendeu. Em teste com os primeiros clientes.</p>
         <ul class="lista-check">
-          <li>Locação para terceiros, uso em obras próprias e uso próprio</li>
-          <li>Manutenção preventiva por tempo e por uso, e corretiva</li>
-          <li>Custos e margem por equipamento</li>
-          <li>Localização, agenda e checklist de saída e retorno com fotos e aceite</li>
-          <li>Integração com o seu ERP</li>
+          <li>Locação, obras próprias e uso próprio no mesmo controle</li>
+          <li>Agenda sem reserva dupla e retirada e devolução com checklist e fotos</li>
+          <li>OS de manutenção e custo por equipamento</li>
+          <li>Comandos de voz e API; preventiva por uso, app de entrega e Protheus em construção</li>
         </ul>
         <div class="hub-app-acoes">
           <a class="botao primario" href="/equipamentos">Conhecer a aplicação</a>
-          <a class="botao contorno" data-whatsapp="Olá! Quero ser avisado quando a Gestão de Equipamentos do ServPilot estiver disponível." href="/equipamentos#aviso">Quero ser avisado</a>
+          <a class="botao contorno" data-whatsapp="Olá! Quero testar a Gestão de Equipamentos do ServPilot." href="/equipamentos#aviso">Quero testar</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ novidades -->
+<section class="secao clara" id="novidades">
+  <div class="faixa">
+    <div class="titulo-secao revelar">
+      <p class="sobretitulo">Novidades</p>
+      <h2>O que chegou de novo no ServPilot.</h2>
+      <p>Telas reais, com dados fictícios. Cada novidade tem um tutorial curto em vídeo.</p>
+    </div>
+
+    <div class="vitrine">
+      <article class="vit revelar">
+        <div class="vit-img">
+          <img src="/img/produto/assistente-ia-painel-640.webp"
+               srcset="/img/produto/assistente-ia-painel-640.webp 640w, /img/produto/assistente-ia-painel.webp 1200w"
+               sizes="(max-width: 720px) calc(100vw - 64px), 520px" width="640" height="324" loading="lazy" decoding="async"
+               alt="Tela Assistente no painel: o pedido falado para abrir uma OS corretiva e a resposta com a OS aberta e o botão para abri-la">
+        </div>
+        <div class="vit-corpo">
+          <h3>Assistente com IA, por texto e voz</h3>
+          <p>No painel e no app do técnico: fale “abre uma corretiva na Padaria” ou “quem me deve?”. Ele consulta, grava
+            o que a empresa liberou e pede confirmação antes do que não tem volta.</p>
+          <div class="vit-links"><a class="link-video" href="https://youtu.be/F1CIoOj320Y" target="_blank" rel="noopener">Tutorial · 1:23<span class="so-leitor"> (abre o YouTube)</span></a></div>
+        </div>
+      </article>
+
+      <article class="vit revelar">
+        <div class="vit-img cel">
+          <img src="/img/produto/app-os-por-audio.webp" width="420" height="838" loading="lazy" decoding="async"
+               alt="App do técnico na tela Falar a OS, gravando o relato por voz">
+          <img src="/img/produto/app-parte-do-dia.webp" width="420" height="838" loading="lazy" decoding="async"
+               alt="App do técnico na tela Parte do dia, com a OS nova já na agenda da equipe">
+        </div>
+        <div class="vit-corpo">
+          <h3>App do técnico: a OS falada entra no dia</h3>
+          <p>O técnico fala o serviço, escolhe o dia e a OS já entra na agenda da equipe dele, sem esperar o escritório.
+            Funciona sem internet e sobe quando o sinal volta.</p>
+          <div class="vit-links"><a class="link-video" href="https://youtu.be/3aKQzhsoKII" target="_blank" rel="noopener">Tutorial · 1:31<span class="so-leitor"> (abre o YouTube)</span></a></div>
+        </div>
+      </article>
+
+      <article class="vit revelar">
+        <div class="vit-img">
+          <img src="/img/produto/comercial-funil-640.webp"
+               srcset="/img/produto/comercial-funil-640.webp 640w, /img/produto/comercial-funil.webp 1200w"
+               sizes="(max-width: 720px) calc(100vw - 64px), 520px" width="640" height="324" loading="lazy" decoding="async"
+               alt="Tela Funil comercial: colunas por etapa com as oportunidades, o valor, a próxima tarefa e as paradas marcadas em vermelho">
+        </div>
+        <div class="vit-corpo">
+          <h3>Comercial: o funil de vendas</h3>
+          <p>Oportunidades por etapa, a próxima tarefa sempre marcada, as paradas em vermelho, itens da proposta e o
+            histórico do cliente na negociação. O pedido de demonstração do site já cai no funil.</p>
+          <div class="vit-links"><a class="link-video" href="https://youtu.be/lb4yxIrAmL8" target="_blank" rel="noopener">Tutorial · 1:22<span class="so-leitor"> (abre o YouTube)</span></a></div>
+        </div>
+      </article>
+
+      <article class="vit revelar">
+        <div class="vit-img vit-chat" aria-hidden="true">
+          <div class="chat">
+            <p class="chat-eu">O que tem na agenda de amanhã?</p>
+            <p class="chat-ia"><small>✓ Consultou o ServPilot: agenda do dia</small>Amanhã são 4 OS: Mercado Central às 8h,
+              Clínica Vida às 10h, Escola Aprender às 13h e Padaria Pão Dourado às 14h.</p>
+            <p class="chat-eu">Cria a oportunidade do PMOC da escola e marca para eu ligar na segunda.</p>
+          </div>
+        </div>
+        <div class="vit-corpo">
+          <h3>Conector do Claude</h3>
+          <p>O Claude conversa com o ServPilot da sua empresa, com o seu login: consulta a agenda, as OS e o financeiro, e
+            registra o que o administrador liberar. Incluído no plano.</p>
+          <div class="vit-links">
+            <a class="link-video" href="https://youtu.be/AUNxm7leJlw" target="_blank" rel="noopener">Tutorial · 1:04<span class="so-leitor"> (abre o YouTube)</span></a>
+            <a class="texto" href="/conector">Como ligar</a>
+          </div>
         </div>
       </article>
     </div>
@@ -171,58 +262,74 @@
 </section>
 
 <!-- ================================================================ módulos -->
-<section class="secao clara" id="modulos">
+<section class="secao" id="modulos">
   <div class="faixa">
     <div class="titulo-secao revelar">
       <p class="sobretitulo">Módulos</p>
       <h2>Extras que você liga quando precisar.</h2>
-      <p>Funcionam junto com qualquer aplicação do ServPilot: emitir a nota fiscal da OS e mandar os dados para o
-        sistema de gestão que a sua empresa já usa.</p>
+      <p>Funcionam junto com as aplicações do ServPilot: vender mais, emitir a nota da OS e ligar o ServPilot aos
+        sistemas que a sua empresa já usa.</p>
     </div>
 
-    <div class="hub-apps">
+    <div class="hub-apps tres">
       <article class="hub-app modulo revelar">
         <div class="hub-app-topo">
-          <span class="recurso-icone" aria-hidden="true">🔗</span>
+          <span class="recurso-icone" aria-hidden="true">🎯</span>
           <span class="chip sucesso">Disponível</span>
         </div>
-        <h3>Integração com o seu ERP</h3>
-        <p>As OS, os clientes, os equipamentos e as peças do ServPilot chegam ao sistema de gestão da sua empresa
-          (ERP, BI ou outro) sem ninguém digitar de novo.</p>
+        <h3>Comercial</h3>
+        <p>O funil de vendas dentro do ServPilot, junto das OS, dos orçamentos e dos contratos de cada cliente.</p>
         <ul class="lista-check">
-          <li>Conexão pronta, no padrão de mercado (API OData)</li>
-          <li>Acesso próprio para a integração, separado dos usuários</li>
-          <li>A integração só vê o que a empresa liberar</li>
-          <li>Documentação aberta para o seu time de TI</li>
+          <li>Funil por etapa, tarefas e paradas</li>
+          <li>Previsão, perdas, origens e metas</li>
+          <li>Renovação de contratos e importar planilha</li>
+          <li>Incluído no plano Equipe</li>
         </ul>
         <div class="hub-app-acoes">
-          <a class="botao primario" href="/api">Ver a documentação</a>
-          <a class="botao contorno" data-whatsapp="Olá! Quero saber da integração do ServPilot com o meu sistema de gestão." href="#contato">Falar sobre integração</a>
+          <a class="botao contorno" href="/precos">Ver nos preços</a>
         </div>
       </article>
 
       <article class="hub-app modulo revelar">
         <div class="hub-app-topo">
           <span class="recurso-icone" aria-hidden="true">🧾</span>
-          <span class="chip alerta">Em breve</span>
+          <span class="chip sucesso">Disponível</span>
         </div>
         <h3>Notas fiscais</h3>
         <p>A nota fiscal sai direto da OS concluída, sem digitar tudo de novo em outro sistema.</p>
         <ul class="lista-check">
-          <li>NFS-e dos serviços e NF-e das peças, a partir das OS</li>
+          <li>NFS-e dos serviços e NF-e das peças</li>
           <li>Uma OS por vez ou o mês inteiro</li>
           <li>Certificado A1 enviado pela própria empresa</li>
-          <li>Módulo à parte, para quem precisa emitir</li>
+          <li>Módulo à parte, por faixa de notas</li>
         </ul>
         <div class="hub-app-acoes">
-          <a class="botao contorno" data-whatsapp="Olá! Quero saber do módulo de notas fiscais do ServPilot." href="#contato">Quero saber mais</a>
+          <a class="botao contorno" href="/precos">Ver nos preços</a>
+        </div>
+      </article>
+
+      <article class="hub-app modulo revelar">
+        <div class="hub-app-topo">
+          <span class="recurso-icone" aria-hidden="true">🔗</span>
+          <span class="chip sucesso">Disponível</span>
+        </div>
+        <h3>Integrações</h3>
+        <p>As OS, os clientes, os equipamentos e as peças chegam ao seu ERP, BI ou ao Claude sem ninguém digitar de novo.</p>
+        <ul class="lista-check">
+          <li>API OData com documentação aberta</li>
+          <li>Acesso próprio, que só vê o que a empresa liberar</li>
+          <li>Conector do Claude com o login de cada usuário</li>
+          <li>Protheus para equipamentos: em construção</li>
+        </ul>
+        <div class="hub-app-acoes">
+          <a class="botao contorno" href="/api">Ver a API</a>
+          <a class="botao contorno" href="/conector">Conector do Claude</a>
         </div>
       </article>
     </div>
   </div>
 </section>
 
-<!-- ================================================================ missão -->
 <section class="secao escura" id="missao">
   <div class="faixa">
     <div class="titulo-secao revelar">
@@ -280,6 +387,40 @@
   </div>
 </section>
 
+
+<!-- ================================================================ equipamentos (texto para busca) -->
+<section class="secao clara" id="equipamentos">
+  <div class="faixa hub-seo">
+    <div class="hub-seo-texto revelar">
+      <p class="sobretitulo">Para quem aluga e mantém equipamentos</p>
+      <h2>Sistema para controle de equipamentos e locação</h2>
+      <p>Se a sua empresa aluga equipamentos, leva máquinas para as próprias obras ou mantém uma frota no dia a dia, a
+        Gestão de Equipamentos do ServPilot mostra onde cada um está, quem está com ele e até quando. A agenda não deixa
+        reservar o mesmo equipamento duas vezes, e a retirada e a devolução ficam registradas com checklist, fotos,
+        horímetro e quem recebeu.</p>
+      <p>A manutenção vira OS ligada ao equipamento, os custos (preventiva, corretiva, reparo, frete) ficam na ficha de
+        cada um e a visão geral mostra a utilização, a receita estimada e o custo do mês. Ela está em teste com os
+        primeiros clientes; preventiva por uso, medição da locação, app de entrega com GPS e fotos, cobrança registrada
+        e integração com o Protheus estão em construção.</p>
+      <div class="abertura-acoes">
+        <a class="botao primario grande" href="/equipamentos">Ver a Gestão de Equipamentos</a>
+        <a class="botao contorno grande" data-whatsapp="Olá! Quero testar a Gestão de Equipamentos do ServPilot." href="/equipamentos#aviso">Quero testar</a>
+      </div>
+    </div>
+    <figure class="tela revelar">
+      <div class="tela-barra" aria-hidden="true"><i></i><i></i><i></i><span>painel.servpilot.com.br/equipamentos/agenda</span></div>
+      <picture>
+        <source media="(max-width: 720px)" srcset="/img/produto/equipamentos-agenda-celular.webp" width="697" height="280">
+        <img src="/img/produto/equipamentos-agenda-640.webp"
+             srcset="/img/produto/equipamentos-agenda-640.webp 640w, /img/produto/equipamentos-agenda.webp 1200w"
+             sizes="(max-width: 1080px) calc(100vw - 32px), 420px" width="640" height="324" loading="lazy" decoding="async"
+             alt="Tela Agenda e disponibilidade da Gestão de Equipamentos: equipamentos ocupados no período e a grade de dias com reservas e atrasos">
+      </picture>
+      <figcaption>Agenda e disponibilidade (dados fictícios).</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ================================================================ chamada final -->
 <section class="chamada" id="contato">
   <div class="faixa chamada-dentro revelar">
@@ -288,11 +429,13 @@
     <p>Conte como a sua empresa trabalha e mostramos o ServPilot com o seu dia a dia.</p>
     <div class="abertura-acoes centro">
       <a class="botao coral grande" href="/refrigeracao">Sou de refrigeração e climatização</a>
+      <a class="botao contorno-claro grande" href="/equipamentos">Alugo ou mantenho equipamentos</a>
       <a class="botao contorno-claro grande" data-whatsapp href="#contato">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3Z"/></svg>
         Falar pelo WhatsApp
       </a>
     </div>
+    <p class="hub-ja-cliente"><a href="/demonstracao">Prefere que a gente ligue? Peça uma demonstração</a></p>
     <p class="hub-ja-cliente"><a href="https://painel.servpilot.com.br" rel="noopener">Já sou cliente: entrar no painel</a></p>
   </div>
 </section>
@@ -315,6 +458,7 @@
       <a href="/blog">Blog</a>
       <a href="/termos">Termos de uso</a>
       <a href="/privacidade">Privacidade</a>
+      <a href="/suporte">Suporte</a>
       <a href="#" data-cookies>Cookies</a> <a href="https://www.instagram.com/servpilot" target="_blank" rel="noopener">Instagram</a> <a href="https://www.tiktok.com/@servpilot" target="_blank" rel="noopener">TikTok</a> <a href="https://www.facebook.com/1345149045355955" target="_blank" rel="noopener">Facebook</a>
       <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
     </nav>

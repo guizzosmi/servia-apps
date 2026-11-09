@@ -11,10 +11,12 @@ import '../core/acoes_parte.dart';
 import '../core/acoes_relato.dart';
 import '../core/banco_local.dart';
 import '../core/consultas.dart';
+import '../core/eqp_dados.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
 import '../core/sincronizacao.dart';
 import '../widgets/indicador_sync.dart';
+import '../widgets/ler_etiqueta.dart';
 import '../widgets/status_chip.dart';
 
 /// Tela principal: a parte do dia da equipe, com os serviços em ordem.
@@ -107,6 +109,19 @@ class _HojeTelaState extends State<HojeTela> {
               Text(banco.nomeColaborador(eu), style: const TextStyle(fontSize: 13, color: Cores.neutro)),
             ]),
             actions: [
+              // Guia 104: Gestão de Equipamentos (só para quem tem a aplicação).
+              if (EqpDados.ligada(banco))
+                IconButton(
+                  tooltip: 'Equipamentos',
+                  icon: const Icon(Icons.precision_manufacturing_outlined),
+                  onPressed: () => context.push('/equipamentos'),
+                ),
+              // Guia 93: o assistente com o Claude (fala ou escreve; precisa de internet).
+              IconButton(
+                tooltip: 'Assistente',
+                icon: const Icon(Icons.auto_awesome_outlined),
+                onPressed: () => context.push('/assistente'),
+              ),
               const IndicadorSync(),
               PopupMenuButton<String>(
                 onSelected: (op) {
@@ -114,6 +129,7 @@ class _HojeTelaState extends State<HojeTela> {
                   if (op == 'sair') _sair();
                   if (op == 'tutoriais') _abrirTutoriais();
                   if (op == 'levantamento') context.push('/levantamento');
+                  if (op == 'excluir_conta') abrirLink(linkExcluirConta);
                 },
                 itemBuilder: (_) => [
                   // Guia 57: cadastrar ambientes e aparelhos do cliente, sem OS.
@@ -121,15 +137,29 @@ class _HojeTelaState extends State<HojeTela> {
                     const PopupMenuItem(value: 'levantamento', child: Text('Levantamento do local')),
                   const PopupMenuItem(value: 'sync', child: Text('Sincronizar agora')),
                   const PopupMenuItem(value: 'tutoriais', child: Text('Tutoriais')),
+                  // Guia 96: exigido pelas lojas (abre servpilot.com.br/excluir-conta no navegador).
+                  const PopupMenuItem(value: 'excluir_conta', child: Text('Excluir minha conta')),
                   const PopupMenuItem(value: 'sair', child: Text('Sair')),
                 ],
               ),
             ],
           ),
-          floatingActionButton: AcoesOs.possoAbrir
-              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+          floatingActionButton: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  // Guia 108: ler a etiqueta do aparelho fora da OS (acha a OS dele ou abre a ficha).
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: FloatingActionButton.extended(
+                      heroTag: 'ler-etiqueta',
+                      tooltip: 'Ler a etiqueta do aparelho',
+                      backgroundColor: Cores.indigo100,
+                      foregroundColor: Cores.indigo700,
+                      onPressed: () => lerEtiquetaForaDaOs(context),
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: const Text('Ler etiqueta'),
+                    ),
+                  ),
                   // Falar a OS: já abre gravando (a IA preenche a Nova OS).
-                  if (AcoesRelato.ligado)
+                  if (AcoesOs.possoAbrir && AcoesRelato.ligado)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: FloatingActionButton(
@@ -141,18 +171,18 @@ class _HojeTelaState extends State<HojeTela> {
                         child: const Icon(Icons.mic),
                       ),
                     ),
-                  FloatingActionButton.extended(
-                    heroTag: 'nova-os',
-                    onPressed: () => context.push('/nova-os'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Nova OS'),
-                  ),
-                ])
-              : null,
+                  if (AcoesOs.possoAbrir)
+                    FloatingActionButton.extended(
+                      heroTag: 'nova-os',
+                      onPressed: () => context.push('/nova-os'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Nova OS'),
+                    ),
+                ]),
           body: RefreshIndicator(
             onRefresh: sync.sincronizar,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 200),
               children: [
                 for (final (chave, texto) in sync.avisos)
                   _Aviso(
@@ -352,6 +382,15 @@ class _BlocoParte extends StatelessWidget {
                     padding: EdgeInsets.only(top: 6),
                     child: Text('Você saiu desta equipe neste dia.', style: TextStyle(color: Cores.alerta)),
                   ),
+                // Guia 95: o escritório ainda monta o dia; aqui só as OS abertas pelo app.
+                if (parte['status'] == 'rascunho')
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                        'O escritório ainda está montando este dia: aqui aparecem só as OS abertas pelo app. '
+                        'O check-in libera quando a parte for publicada.',
+                        style: TextStyle(color: Cores.alerta)),
+                  ),
               ]),
             ),
           ]),
@@ -504,7 +543,7 @@ class _CartaoServico extends StatelessWidget {
   }
 }
 
-/// "OS falada 10:42: Friella da Cacic" (ou a situação, enquanto não fica pronta).
+/// "OS falada 10:42: Mercado Bom Preço" (ou a situação, enquanto não fica pronta).
 String _textoOsFalada(RelatoAudio r) {
   final onde = '${r.abertura?['onde_falado'] ?? ''}'.trim();
   final situacao = switch (r.status) {

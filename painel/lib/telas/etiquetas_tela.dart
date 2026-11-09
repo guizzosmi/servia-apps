@@ -36,6 +36,7 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
   String? _localId;
   ModeloEtiqueta _modelo = modelosEtiqueta.first;
   bool _contorno = false;
+  bool _lista = true;
   bool _gerando = false;
   int? _quantidade;
 
@@ -89,7 +90,8 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
   Future<void> _gerar({required bool baixar}) async {
     setState(() => _gerando = true);
     try {
-      final linhas = await _consulta('codigo, descricao, qr_token, clientes(nome), locais(nome)')
+      final linhas = await _consulta(
+              'codigo, descricao, numero_serie, qr_token, clientes(nome), locais(nome), ambientes(nome, setor_andar)')
           .order('codigo', ascending: true)
           .limit(3000);
       if (linhas.isEmpty) {
@@ -104,15 +106,34 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
             descricao: l['descricao'] as String?,
             cliente: (l['clientes'] as Map?)?['nome'] as String?,
             local: (l['locais'] as Map?)?['nome'] as String?,
+            ambiente: _ambiente(l['ambientes'] as Map?),
+            serie: l['numero_serie'] as String?,
           ),
       ];
+      // Sai na ordem de colar: cliente, local, ambiente (os sem ambiente por último) e código.
+      etiquetas.sort((a, b) {
+        for (final (x, y) in [(a.cliente, b.cliente), (a.local, b.local)]) {
+          final c = (x ?? '').toLowerCase().compareTo((y ?? '').toLowerCase());
+          if (c != 0) return c;
+        }
+        final semA = (a.ambiente ?? '').isEmpty, semB = (b.ambiente ?? '').isEmpty;
+        if (semA != semB) return semA ? 1 : -1;
+        final c = (a.ambiente ?? '').toLowerCase().compareTo((b.ambiente ?? '').toLowerCase());
+        return c != 0 ? c : compararCodigos(a.codigo, b.codigo);
+      });
+      final semAmbiente = etiquetas.where((e) => (e.ambiente ?? '').isEmpty).length;
       final bytes = await gerarPdfEtiquetas(
         etiquetas: etiquetas,
         modelo: _modelo,
         rodape: await _rodape(),
         pular: int.tryParse(_pular.text.trim()) ?? 0,
         contorno: _contorno,
+        listaDeColagem: _lista,
       );
+      if (semAmbiente > 0) {
+        _avisar('$semAmbiente aparelho(s) sem ambiente: a etiqueta sai com "Ambiente não informado". '
+            'Cadastre o ambiente no aparelho (ou no levantamento do app) para saber onde colar.');
+      }
       if (baixar) {
         await Printing.sharePdf(bytes: bytes, filename: 'etiquetas-qr.pdf');
       } else {
@@ -299,6 +320,14 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
                         title: const Text('Desenhar contorno'),
                         subtitle: const Text('Para testar em folha comum antes de usar o papel adesivo'),
                       ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _lista,
+                        onChanged: _gerando ? null : (v) => setState(() => _lista = v ?? true),
+                        title: const Text('Incluir a lista de colagem'),
+                        subtitle: const Text('Uma folha comum antes das etiquetas: código, ambiente, aparelho e '
+                            'nº de série, na ordem da impressão, para marcar o que já colou'),
+                      ),
                       const Divider(height: 24),
                       Text(
                         _quantidade == null
@@ -347,4 +376,28 @@ class _EtiquetasTelaState extends State<EtiquetasTela> {
       ),
     );
   }
+}
+
+/// "Recepção · 2º andar": o ambiente e o setor/andar do aparelho.
+String? _ambiente(Map? a) {
+  if (a == null) return null;
+  final partes = [a['nome'], a['setor_andar']]
+      .whereType<String>()
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+  return partes.isEmpty ? null : partes.join(' · ');
+}
+
+/// AC-2 antes de AC-10: compara a parte numérica do código como número.
+int compararCodigos(String a, String b) {
+  final re = RegExp(r'(\d+)|(\D+)');
+  final pa = re.allMatches(a).map((m) => m.group(0)!).toList();
+  final pb = re.allMatches(b).map((m) => m.group(0)!).toList();
+  for (var i = 0; i < pa.length && i < pb.length; i++) {
+    final na = int.tryParse(pa[i]), nb = int.tryParse(pb[i]);
+    final c = (na != null && nb != null) ? na.compareTo(nb) : pa[i].toLowerCase().compareTo(pb[i].toLowerCase());
+    if (c != 0) return c;
+  }
+  return pa.length.compareTo(pb.length);
 }

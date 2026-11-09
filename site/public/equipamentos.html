@@ -4,16 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestão de Equipamentos: locação, obras e manutenção · ServPilot</title>
-<meta name="description" content="Em breve no ServPilot: onde está cada equipamento, checklist de saída e retorno com fotos e aceite, manutenção por tempo e por uso, custo e margem por equipamento e integração com o seu ERP.">
+<meta name="description" content="Para locadoras, construtoras e empresas com máquinas: onde está cada equipamento, como saiu e voltou, quanto custou e rendeu. Em teste com os primeiros clientes.">
 <meta name="theme-color" content="#121A2B">
 <link rel="canonical" href="https://servpilot.com.br/equipamentos">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="ServPilot">
-<meta property="og:title" content="Gestão de Equipamentos do ServPilot (em breve)">
-<meta property="og:description" content="Locação para terceiros, obras próprias e uso próprio: onde cada equipamento está, como saiu e voltou, e quanto custa e rende.">
+<meta property="og:title" content="Gestão de Equipamentos do ServPilot: onde está, como voltou e quanto rendeu">
+<meta property="og:description" content="Locação com retirada e devolução conferidas, agenda sem reserva dupla, manutenção e custo por equipamento. Em teste com os primeiros clientes.">
 <meta property="og:url" content="https://servpilot.com.br/equipamentos">
-<meta property="og:image" content="https://servpilot.com.br/img/compartilhar.png">
+<meta property="og:image" content="https://servpilot.com.br/img/compartilhar-equipamentos.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Gestão de Equipamentos do ServPilot: a tela Visão geral com equipamentos, utilização, receita e custo do mês (dados fictícios)">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="/favicon-32.png">
@@ -21,13 +24,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="/img/produto/equipamentos-visao-geral.webp" imagesrcset="/img/produto/equipamentos-visao-geral-720.webp 720w, /img/produto/equipamentos-visao-geral.webp 1280w" imagesizes="(max-width: 1080px) calc(100vw - 32px), 600px" media="(min-width: 721px)" fetchpriority="high">
+<link rel="preload" as="image" href="/img/produto/equipamentos-visao-geral-celular.webp" media="(max-width: 720px)" fetchpriority="high">
 <link rel="stylesheet" href="/estilo.css">
 <link rel="stylesheet" href="/conteudo.css">
 <link rel="stylesheet" href="/hub.css">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "ServPilot", "item": "https://servpilot.com.br/"}, {"@type": "ListItem", "position": 2, "name": "Gestão de Equipamentos", "item": "https://servpilot.com.br/equipamentos"}]}</script>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "name": "Gestão de Equipamentos do ServPilot (em breve)", "url": "https://servpilot.com.br/equipamentos", "inLanguage": "pt-BR", "description": "Aplicação do ServPilot em desenvolvimento para controlar equipamentos de locação, de obras próprias e de uso próprio: localização e agenda, checklist de saída e retorno com fotos e aceite, manutenção preventiva por tempo e por uso e corretiva, custo e margem por equipamento e integração com ERP.", "isPartOf": {"@type": "WebSite", "name": "ServPilot", "url": "https://servpilot.com.br/"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "ServPilot · Gestão de Equipamentos", "applicationCategory": "BusinessApplication", "applicationSubCategory": "Gestão de equipamentos, locação e manutenção", "operatingSystem": "Web", "url": "https://servpilot.com.br/equipamentos", "inLanguage": "pt-BR", "description": "Aplicação do ServPilot para locadoras, construtoras e empresas com máquinas, em teste com os primeiros clientes: equipamentos com status e local, locação com retirada e devolução (checklist, fotos, horímetro e quem recebeu), agenda sem reserva dupla, obras próprias e uso próprio, OS de manutenção, custos por equipamento, visão geral, assistente por voz e API.", "featureList": ["Status e local de cada equipamento, mudados só por movimento, com linha do tempo", "Locação com contrato, reserva, retirada e devolução com checklist, fotos, horímetro e quem recebeu", "Agenda e disponibilidade sem reserva dupla", "Obras próprias e uso próprio", "OS de manutenção ligada ao equipamento", "Custos por natureza com rateio e estorno", "Visão geral com utilização, receita estimada e custo do mês", "Comandos de voz pelo assistente do ServPilot e pelo conector do Claude", "API OData"], "screenshot": ["https://servpilot.com.br/img/produto/equipamentos-visao-geral.webp", "https://servpilot.com.br/img/produto/equipamentos-agenda.webp", "https://servpilot.com.br/img/produto/equipamentos-retirada-checklist.webp"], "isPartOf": {"@type": "WebSite", "name": "ServPilot", "url": "https://servpilot.com.br/"}, "publisher": {"@type": "Organization", "name": "ServPilot", "url": "https://servpilot.com.br"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Já posso usar a Gestão de Equipamentos?", "acceptedAnswer": {"@type": "Answer", "text": "Ela está em teste com os primeiros clientes. Fale com a gente pelo WhatsApp: mostramos a aplicação com o seu dia a dia e vemos se a sua empresa entra no teste. Ainda não há data para a liberação geral."}}, {"@type": "Question", "name": "Quanto custa?", "acceptedAnswer": {"@type": "Answer", "text": "A Gestão de Equipamentos terá plano próprio, pensado pela quantidade de equipamentos. Os valores ainda estão sendo fechados com os primeiros clientes."}}, {"@type": "Question", "name": "Serve para obra própria e uso próprio, não só para locação?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. O mesmo controle vale para o equipamento alugado para terceiros, levado para as obras da empresa ou usado num setor ou filial: reserva, saída, retorno, local e linha do tempo."}}, {"@type": "Question", "name": "Funciona com o meu ERP?", "acceptedAnswer": {"@type": "Answer", "text": "Hoje os dados já saem pela API OData do ServPilot, com documentação aberta para o seu time de TI. A integração com o Protheus está sendo construída: a empresa escolhe quem é dono do cadastro, a cobrança pode ir pelo ERP e o custo realizado volta para o ServPilot."}}, {"@type": "Question", "name": "O equipamento é rastreado?", "acceptedAnswer": {"@type": "Answer", "text": "Não. O ServPilot sabe onde o equipamento está pelos movimentos registrados (saída, chegada, retorno). No app de entrega, que está sendo construído, a posição do celular é lida só no momento do registro, com o app aberto, nunca em segundo plano."}}, {"@type": "Question", "name": "Como fica a cobrança da locação?", "acceptedAnswer": {"@type": "Answer", "text": "Hoje o contrato calcula o valor previsto pelo preço por dia, semana ou mês. A medição do período e a cobrança por boleto ou Pix registrado nos principais bancos, por arquivo CNAB ou pelo ERP estão sendo construídas."}}, {"@type": "Question", "name": "Já uso o ServPilot na refrigeração. Posso ter as duas?", "acceptedAnswer": {"@type": "Answer", "text": "Sim. As duas são aplicações do mesmo ServPilot, com o mesmo login, e a Gestão de Serviços de Refrigeração continua funcionando do mesmo jeito."}}]}</script>
 </head>
-<body>
+<body class="hub-pagina">
 
 <a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
@@ -39,15 +45,16 @@
       <img class="marca-clara" src="/img/logo.svg" alt="" width="150" height="40">
     </a>
     <nav class="menu" aria-label="Seções">
-      <a href="#recursos">Recursos</a>
-      <a href="#ciclo">Como vai funcionar</a>
-      <a href="#integracao">Integração</a>
-      <a href="#para-quem">Para quem</a>
+      <a href="#problemas">Problemas</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#telas">Telas</a>
+      <a href="#o-que-vem">O que vem</a>
+      <a href="#perguntas">Perguntas</a>
       <a href="/">Aplicações</a>
     </nav>
     <div class="topo-acoes">
       <a class="botao fantasma" href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
-      <a class="botao primario so-largo" data-whatsapp="Olá! Quero ser avisado quando a Gestão de Equipamentos do ServPilot estiver disponível." href="#aviso">Quero ser avisado</a>
+      <a class="botao primario so-largo" data-whatsapp="Olá! Quero testar a Gestão de Equipamentos do ServPilot." href="#aviso">Quero testar</a>
     </div>
   </div>
 </header>
@@ -55,103 +62,306 @@
 <main id="conteudo">
 
 <!-- ================================================================ abertura -->
-<section class="abertura">
+<section class="abertura eqp-abertura">
   <div class="abertura-fundo" aria-hidden="true"></div>
   <div class="faixa abertura-grade">
     <div class="abertura-texto">
       <nav class="lp-trilha" aria-label="Trilha"><a href="/">ServPilot</a> › Gestão de Equipamentos</nav>
-      <p class="selo"><span class="ponto-vivo"></span> Em breve no ServPilot</p>
-      <h1>Cada equipamento: onde está, como voltou <span class="destaque">e quanto rende.</span></h1>
-      <p class="lead">A Gestão de Equipamentos vai juntar num lugar só a agenda, os checklists, a manutenção e o resultado
-        de cada equipamento. Para quem aluga para terceiros, leva para as próprias obras ou usa no dia a dia.</p>
+      <p class="selo"><span class="ponto-vivo"></span> Lançamento · em teste com os primeiros clientes</p>
+      <h1>Onde está, como voltou <span class="destaque">e quanto rendeu.</span></h1>
+      <p class="lead">Cada equipamento sob controle, para locadoras, construtoras e empresas com máquinas. Agenda sem reserva dupla, saída e volta
+        conferidas com fotos, manutenção e custo de cada equipamento, num lugar só. E é só perguntar:
+        “o que volta hoje?”.</p>
       <div class="abertura-acoes">
-        <a class="botao coral grande" data-whatsapp="Olá! Quero ser avisado quando a Gestão de Equipamentos do ServPilot estiver disponível." href="#aviso">
+        <a class="botao coral grande" data-whatsapp="Olá! Quero testar a Gestão de Equipamentos do ServPilot." href="#aviso">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3Z"/></svg>
-          Quero ser avisado
+          Quero testar
         </a>
-        <a class="botao contorno-claro grande" href="#recursos">Ver o que vai fazer</a>
+        <a class="botao contorno-claro grande" href="#telas">Ver as telas</a>
       </div>
       <ul class="abertura-garantias">
         <li>Locação, obras próprias e uso próprio</li>
-        <li>Integração com o seu ERP</li>
-        <li>Aviso pelo WhatsApp, sem compromisso</li>
+        <li>Voz e API incluídas</li>
+        <li>Conversa pelo WhatsApp, sem compromisso</li>
       </ul>
     </div>
 
-    <!-- Ficha de um equipamento (desenho, dados fictícios) -->
-    <div class="equip-visual" aria-hidden="true">
-      <div class="equip-cartao">
-        <div class="equip-cab">
-          <span class="equip-qr">QR</span>
-          <div><b>Gerador 150 kVA</b><small>EQ-0127 · conjunto com 6 itens</small></div>
-          <span class="chip deslocamento">Locado</span>
-        </div>
-        <div class="equip-local"><span>📍</span><div><small>Onde está</small><p>Obra Centro Logístico · desde 03/11</p></div></div>
-        <div class="equip-agenda">
-          <small>Agenda</small>
-          <div class="equip-linha"><span class="hora">03/11</span><span class="chip info">Saída</span><p>Checklist com 12 fotos · aceite do cliente</p></div>
-          <div class="equip-linha"><span class="hora">28/11</span><span class="chip alerta">Retorno</span><p>Conferência e preventiva de 250 h</p></div>
-          <div class="equip-linha"><span class="hora">02/12</span><span class="chip andamento">Reservado</span><p>Próxima saída · Construtora Alfa</p></div>
-        </div>
-        <div class="equip-numeros">
-          <div><small>Receita no mês</small><b>R$ 9.800</b></div>
-          <div><small>Custo no mês</small><b>R$ 2.150</b></div>
-          <div><small>Margem</small><b class="ok">78%</b></div>
-        </div>
+    <div class="eqp-abertura-visual">
+      <figure class="tela">
+        <picture>
+          <source media="(max-width: 720px)" srcset="/img/produto/equipamentos-visao-geral-celular.webp" width="687" height="442">
+          <img src="/img/produto/equipamentos-visao-geral.webp"
+               srcset="/img/produto/equipamentos-visao-geral-720.webp 720w, /img/produto/equipamentos-visao-geral.webp 1280w"
+               sizes="(max-width: 1080px) calc(100vw - 32px), 600px" width="1280" height="657" fetchpriority="high"
+               alt="Tela Visão geral da Gestão de Equipamentos no painel do ServPilot: 6 equipamentos, 41% de utilização no mês, disponíveis, em uso, em manutenção, contratos ativos, receita estimada e custo do mês, e a lista de atrasados">
+        </picture>
+      </figure>
+      <p>Tela real do painel, com dados fictícios.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ em resumo -->
+<section class="fatos" aria-label="Em resumo">
+  <div class="faixa fatos-grade">
+    <div><b>Sem reserva dupla</b><span>o sistema recusa o mesmo equipamento em dois contratos no mesmo período</span></div>
+    <div><b>Saída e volta</b><span>checklist, fotos, horímetro e quem recebeu</span></div>
+    <div><b>Custo por equipamento</b><span>manutenção, reparo, frete e o resultado do mês</span></div>
+    <div><b>Voz e API</b><span>“onde está o gerador?” e a integração com o seu sistema</span></div>
+  </div>
+</section>
+
+<!-- ================================================================ problemas -->
+<section class="secao" id="problemas">
+  <div class="faixa">
+    <div class="titulo-secao revelar">
+      <p class="sobretitulo">O problema</p>
+      <h2>Equipamento que roda fora de casa vira planilha, papel e memória.</h2>
+      <p>E cada informação que se perde custa: o aluguel que não fecha a conta, a avaria que ninguém cobra, a máquina parada
+        que ninguém vê.</p>
+    </div>
+    <div class="dores quatro">
+      <article class="dor revelar">
+        <span class="dor-icone" aria-hidden="true">📍</span>
+        <h3>“Onde está o gerador?”</h3>
+        <p>Ninguém sabe ao certo o que está no depósito, na obra ou no cliente, e desde quando.</p>
+        <p class="dor-solucao"><b>Com o ServPilot:</b> cada equipamento tem status e local que só mudam por um movimento
+          registrado (saída, chegada, retorno), com quem, quando, de onde e para onde.</p>
+      </article>
+      <article class="dor revelar">
+        <span class="dor-icone" aria-hidden="true">📅</span>
+        <h3>Prometido para dois clientes</h3>
+        <p>A reserva ficou no caderno de um e no WhatsApp do outro. Alguém vai ficar sem a máquina.</p>
+        <p class="dor-solucao"><b>Com o ServPilot:</b> a agenda mostra quem está livre de tal a tal data, e o sistema
+          recusa duas reservas do mesmo equipamento no mesmo período.</p>
+      </article>
+      <article class="dor revelar">
+        <span class="dor-icone" aria-hidden="true">🔧</span>
+        <h3>Voltou quebrado, e agora?</h3>
+        <p>Sem registro de como saiu, a avaria vira discussão e o prejuízo fica com você.</p>
+        <p class="dor-solucao"><b>Com o ServPilot:</b> retirada e devolução com checklist, fotos, horímetro e quem recebeu.
+          Na volta, a avaria com o valor sugerido e a OS de reparo aberta na hora.</p>
+      </article>
+      <article class="dor revelar">
+        <span class="dor-icone" aria-hidden="true">💸</span>
+        <h3>Aluga, aluga, e dá lucro?</h3>
+        <p>O custo da manutenção, do reparo e do frete se espalha e ninguém sabe quanto cada máquina rende.</p>
+        <p class="dor-solucao"><b>Com o ServPilot:</b> custos lançados por equipamento e por tipo, com rateio e estorno, e a
+          visão geral com utilização, receita estimada e custo do mês.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ para quem -->
+<section class="secao clara" id="para-quem">
+  <div class="faixa">
+    <div class="titulo-secao revelar">
+      <p class="sobretitulo">Para quem é</p>
+      <h2>Para quem aluga, leva para a obra ou usa no dia a dia.</h2>
+    </div>
+    <div class="perfis tres">
+      <article class="perfil revelar">
+        <h3>Locadoras de equipamentos</h3>
+        <p>Contrato com cliente, endereço de entrega, período e preço por dia, semana ou mês. Retirada e devolução
+          conferidas e a avaria registrada com foto.</p>
+      </article>
+      <article class="perfil revelar">
+        <h3>Construtoras</h3>
+        <p>Equipamentos circulando entre o depósito e as obras próprias: onde cada um está, quanto custa e quando
+          precisa de manutenção.</p>
+      </article>
+      <article class="perfil revelar">
+        <h3>Empresas com máquinas</h3>
+        <p>Indústria, agro e prestadoras com frota própria: uso por setor ou filial, horímetro, manutenção e custo de
+          cada máquina.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ como funciona -->
+<section class="secao escura" id="como-funciona">
+  <div class="faixa">
+    <div class="titulo-secao revelar">
+      <p class="sobretitulo coral">Como funciona</p>
+      <h2>Do cadastro ao resultado, em três passos.</h2>
+    </div>
+    <ol class="passos tres">
+      <li class="revelar"><span class="num">1</span><h3>Cadastre</h3><p>Cada equipamento com patrimônio, código da
+        etiqueta, depósito, medidor (horas, km ou ciclos) e preço por dia, semana e mês.</p></li>
+      <li class="revelar"><span class="num">2</span><h3>Reserve e entregue</h3><p>Locação ou obra própria. Confirmar reserva
+        todos de uma vez; a retirada registra checklist, fotos, horímetro e quem recebeu.</p></li>
+      <li class="revelar"><span class="num">3</span><h3>Receba e acompanhe</h3><p>Devolução conferida, avaria e OS de
+        reparo, custo lançado no equipamento e a visão geral do mês.</p></li>
+    </ol>
+    <ul class="links-video centro revelar" aria-label="Tutoriais em vídeo da Gestão de Equipamentos">
+      <li><a href="https://youtu.be/NevuM5kVHAc" target="_blank" rel="noopener">Cadastro e ficha · 1:24<span class="so-leitor"> (abre o YouTube)</span></a></li>
+      <li><a href="https://youtu.be/uEKBR40CYAw" target="_blank" rel="noopener">Obras, reservas e movimentos · 1:13<span class="so-leitor"> (abre o YouTube)</span></a></li>
+      <li><a href="https://youtu.be/oguyhHyrne8" target="_blank" rel="noopener">Locações · 1:09<span class="so-leitor"> (abre o YouTube)</span></a></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ telas -->
+<section class="secao" id="telas">
+  <div class="faixa">
+    <div class="titulo-secao revelar">
+      <p class="sobretitulo">As telas</p>
+      <h2>O que já funciona, em teste com os primeiros clientes.</h2>
+      <p>Telas reais do painel do ServPilot, com dados fictícios.</p>
+    </div>
+
+    <div class="destaque-linha revelar">
+      <div class="destaque-texto">
+        <p class="sobretitulo">Agenda e disponibilidade</p>
+        <h2>Quem está livre de dia 10 a 20?</h2>
+        <p>A grade dos equipamentos por dia mostra o que está reservado, fora e atrasado. A disponibilidade responde na
+          hora quem está livre no período, por tipo, descrição ou código.</p>
+        <ul class="lista-check">
+          <li>O banco recusa duas reservas do mesmo equipamento no mesmo período</li>
+          <li>Obras próprias e setores no mesmo controle da locação</li>
+          <li>Atrasados, “voltam hoje” e “saem hoje” na visão geral</li>
+        </ul>
+        <ul class="links-video"><li><a href="https://youtu.be/uEKBR40CYAw" target="_blank" rel="noopener">Ver o tutorial · 1:13<span class="so-leitor"> (abre o YouTube)</span></a></li></ul>
+      </div>
+      <figure class="tela">
+        <div class="tela-barra" aria-hidden="true"><i></i><i></i><i></i><span>painel.servpilot.com.br/equipamentos/agenda</span></div>
+        <picture>
+          <source media="(max-width: 720px)" srcset="/img/produto/equipamentos-agenda-celular.webp" width="697" height="280">
+          <img src="/img/produto/equipamentos-agenda.webp"
+               srcset="/img/produto/equipamentos-agenda-640.webp 640w, /img/produto/equipamentos-agenda.webp 1200w"
+               sizes="(max-width: 1080px) calc(100vw - 32px), 540px" width="1200" height="607" loading="lazy" decoding="async"
+               alt="Tela Agenda e disponibilidade: a lista dos equipamentos ocupados no período e a grade de 21 dias com reservas, equipamentos fora e um atrasado">
+        </picture>
+        <figcaption>Agenda e disponibilidade: a grade de 21 dias (dados fictícios).</figcaption>
+      </figure>
+    </div>
+
+    <div class="destaque-linha inverte revelar">
+      <div class="destaque-texto">
+        <p class="sobretitulo">Locação</p>
+        <h2>Saiu conferido. Voltou conferido.</h2>
+        <p>O contrato tem cliente, endereço de entrega, período e os equipamentos com o preço da tabela. Na retirada e na
+          devolução ficam a condição, o checklist, as fotos, o horímetro e quem recebeu.</p>
+        <ul class="lista-check">
+          <li>Confirmar reserva todos de uma vez; se um estiver ocupado, nada é reservado</li>
+          <li>Avaria na devolução com o valor sugerido e a OS de reparo na hora</li>
+          <li>Prorrogar, cancelar e encerrar sozinho na última devolução</li>
+        </ul>
+        <ul class="links-video"><li><a href="https://youtu.be/oguyhHyrne8" target="_blank" rel="noopener">Ver o tutorial · 1:09<span class="so-leitor"> (abre o YouTube)</span></a></li></ul>
+      </div>
+      <figure class="tela">
+        <div class="tela-barra" aria-hidden="true"><i></i><i></i><i></i><span>painel.servpilot.com.br/equipamentos/locacoes</span></div>
+        <picture>
+          <source media="(max-width: 720px)" srcset="/img/produto/equipamentos-retirada-checklist-celular.webp" width="715" height="690">
+          <img src="/img/produto/equipamentos-retirada-checklist.webp"
+               srcset="/img/produto/equipamentos-retirada-checklist-640.webp 640w, /img/produto/equipamentos-retirada-checklist.webp 1200w"
+               sizes="(max-width: 1080px) calc(100vw - 32px), 540px" width="1200" height="674" loading="lazy" decoding="async"
+               alt="Janela Retirada de um equipamento no contrato de locação: checklist com itens marcados, horímetro, quem recebeu, observação e o botão para adicionar fotos">
+        </picture>
+        <figcaption>A retirada no contrato: checklist, horímetro, quem recebeu e fotos (dados fictícios).</figcaption>
+      </figure>
+    </div>
+
+    <div class="destaque-linha revelar">
+      <div class="destaque-texto">
+        <p class="sobretitulo">Ficha do equipamento</p>
+        <h2>A vida inteira da máquina numa tela.</h2>
+        <p>Onde está, desde quando, horímetro, preços, reservas, manutenções e custos. A linha do tempo guarda cada
+          movimento com quem fez, de onde, para onde e a leitura do medidor.</p>
+        <ul class="lista-check">
+          <li>Abrir manutenção cria a OS do ServPilot, que não entra no “A cobrar”</li>
+          <li>Custos por natureza (preventiva, corretiva, reparo, frete...) com rateio e estorno</li>
+          <li>Leituras do horímetro que não andam para trás</li>
+        </ul>
+        <ul class="links-video"><li><a href="https://youtu.be/NevuM5kVHAc" target="_blank" rel="noopener">Ver o tutorial · 1:24<span class="so-leitor"> (abre o YouTube)</span></a></li></ul>
+      </div>
+      <figure class="tela">
+        <div class="tela-barra" aria-hidden="true"><i></i><i></i><i></i><span>painel.servpilot.com.br/equipamentos/ativo</span></div>
+        <picture>
+          <source media="(max-width: 720px)" srcset="/img/produto/equipamentos-ficha-celular.webp" width="720" height="342">
+          <img src="/img/produto/equipamentos-ficha.webp"
+               srcset="/img/produto/equipamentos-ficha-640.webp 640w, /img/produto/equipamentos-ficha.webp 1200w"
+               sizes="(max-width: 1080px) calc(100vw - 32px), 540px" width="1200" height="607" loading="lazy" decoding="async"
+               alt="Ficha do equipamento EQ-0007, plataforma elevatória: onde está, desde quando, patrimônio, horímetro, preços por dia, semana e mês, o resultado do mês e as ações Movimentar, Reservar, Abrir manutenção e Leitura">
+        </picture>
+        <figcaption>A ficha: onde está, horímetro, preços e resultado (dados fictícios).</figcaption>
+      </figure>
+    </div>
+
+    <div class="destaque-linha inverte revelar">
+      <div class="destaque-texto">
+        <p class="sobretitulo">Assistente com IA</p>
+        <h2>Pergunte por voz. Ele responde e registra.</h2>
+        <p>O assistente do ServPilot, no painel e no app, e o conector do Claude entendem a Gestão de Equipamentos:
+          consultam a agenda, os contratos e os indicadores, e registram retirada, devolução, leitura e custo.</p>
+        <ul class="lista-check">
+          <li>O que ele grava segue o que a empresa liberou e fica na auditoria</li>
+          <li>Ações que desfazem alguma coisa pedem confirmação antes</li>
+        </ul>
+        <ul class="links-video"><li><a href="https://youtu.be/F1CIoOj320Y" target="_blank" rel="noopener">Assistente com IA · 1:23<span class="so-leitor"> (abre o YouTube)</span></a></li></ul>
+      </div>
+      <div class="destaque-visual">
+        <ul class="eqp-voz" aria-label="Exemplos de pedidos ao assistente">
+          <li><span><q>O que volta hoje? Quem está atrasado?</q><small>devoluções do dia e atrasos</small></span></li>
+          <li><span><q>Tem macaco livre de 10 a 20 de dezembro?</q><small>disponibilidade no período</small></span></li>
+          <li><span><q>Onde está o EQ-0003?</q><small>ficha, local e status</small></span></li>
+          <li><span><q>O EQ-0001 voltou com a mangueira rompida, cobra 350 e abre o reparo.</q><small>devolução com avaria e OS de reparo</small></span></li>
+          <li><span><q>Horímetro do EQ-0001 está em 1310.</q><small>leitura do medidor</small></span></li>
+          <li><span><q>Qual equipamento mais rendeu este mês?</q><small>indicadores</small></span></li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ================================================================ o que vai fazer -->
-<section class="secao" id="recursos">
+<!-- ================================================================ o que vem -->
+<section class="secao clara eqp-vem" id="o-que-vem">
   <div class="faixa">
     <div class="titulo-secao revelar">
-      <p class="sobretitulo">O que ela vai fazer</p>
-      <h2>Três perguntas respondidas na hora: onde está, como voltou e quanto custou.</h2>
-      <p>Hoje isso vive em planilha, em papel e na memória de alguém. A Gestão de Equipamentos vai colocar tudo num lugar só.</p>
+      <p class="sobretitulo">O que vem</p>
+      <h2>O que estamos construindo agora, com os primeiros clientes.</h2>
+      <p>Cada parte entra quando estiver testada. Sem data prometida: avisamos quem estiver no teste.</p>
     </div>
     <div class="grade-recursos">
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🔁</span><h3>Locação, obras e uso próprio</h3><p>Equipamento alugado para terceiros, levado para as obras da empresa ou usado no dia a dia, no mesmo controle.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">📍</span><h3>Localização e agenda</h3><p>Onde cada equipamento está, quando sai, quando volta e qual é a próxima saída.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">✅</span><h3>Checklist de saída e retorno</h3><p>Conferência com fotos e aceite de quem recebe. No retorno, o que faltou ou quebrou fica registrado.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🛠️</span><h3>Manutenção por tempo e por uso</h3><p>Preventiva pelo calendário ou pelas horas de uso, e a corretiva quando precisar, com a OS do ServPilot.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">📊</span><h3>Custo e margem por equipamento</h3><p>Quanto cada equipamento custa por mês, por tipo de gasto, comparado com o que ele rende.</p></article>
-      <article class="recurso revelar"><span class="recurso-icone" aria-hidden="true">🔗</span><h3>Integração com o seu ERP</h3><p>O campo e o depósito no ServPilot; compras, custos e financeiro seguem no sistema de gestão da empresa.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>Modelos e conjuntos</h3>
+        <p>Família de equipamentos com preço e componentes padrão. O conjunto sai e volta completo, com os componentes
+          conferidos pela etiqueta.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>Locação com medição</h3>
+        <p>Fechamento do período por dia, semana ou mês, com franquia de uso, excedente, avarias e dias parados por falha
+          abatidos com aprovação do gestor.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>App de entrega com GPS e fotos</h3>
+        <p>No mesmo app do ServPilot: quem entrega marca o ponto exato pelo GPS na hora do registro, tira as fotos e o
+          cliente dá o aceite. Sem rastreamento em segundo plano.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>Preventiva por tempo e por uso</h3>
+        <p>Plano por modelo ou por equipamento, pelo calendário ou pelas horas de uso, o que vier primeiro. Falhas,
+          causa e tempo parado na corretiva.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>Custos e indicadores</h3>
+        <p>Custo da OS automático (peças e horas por função), fechamento do mês, ocupação, disponibilidade, margem,
+          MTBF e MTTR por equipamento.</p></article>
+      <article class="recurso revelar"><span class="chip construcao">Em construção</span><h3>Cobrança e Protheus</h3>
+        <p>Boleto ou Pix registrado nos principais bancos, arquivo CNAB ou pelo ERP. Integração com o Protheus, com a
+          empresa escolhendo quem é dono do cadastro.</p></article>
     </div>
-  </div>
-</section>
-
-<!-- ================================================================ ciclo -->
-<section class="secao escura" id="ciclo">
-  <div class="faixa">
-    <div class="titulo-secao revelar">
-      <p class="sobretitulo coral">Como vai funcionar</p>
-      <h2>O ciclo de cada equipamento, de ponta a ponta.</h2>
-    </div>
-    <ol class="passos">
-      <li class="revelar"><span class="num">1</span><h3>Reserva</h3><p>O equipamento fica comprometido para o contrato ou a obra, e a agenda mostra.</p></li>
-      <li class="revelar"><span class="num">2</span><h3>Saída conferida</h3><p>Checklist do conjunto com fotos e o aceite de quem recebe.</p></li>
-      <li class="revelar"><span class="num">3</span><h3>Retorno</h3><p>Mesmo checklist na volta. Diferença vira apontamento para cobrar ou reparar.</p></li>
-      <li class="revelar"><span class="num">4</span><h3>Manutenção e custo</h3><p>OS de manutenção e preparação, com cada gasto ligado ao equipamento.</p></li>
-    </ol>
   </div>
 </section>
 
 <!-- ================================================================ integração -->
-<section class="secao clara" id="integracao">
+<section class="secao" id="integracao">
   <div class="faixa">
     <div class="destaque-linha revelar">
       <div class="destaque-texto">
         <p class="sobretitulo">Integração</p>
         <h2>Feita para conversar com o seu ERP.</h2>
-        <p>O ServPilot cuida do campo e do depósito. O ERP da empresa continua dono de compras, custos e financeiro.
-          Sem digitar a mesma coisa duas vezes.</p>
+        <p>O ServPilot cuida do campo e do depósito. O ERP da empresa pode continuar dono de compras, custos e
+          financeiro, sem digitar a mesma coisa duas vezes.</p>
+        <div class="eqp-hoje"><span class="chip teste">Hoje: API OData</span><span class="chip construcao">Em construção: Protheus</span></div>
         <ul class="lista-check">
-          <li>Equipamentos, clientes e produtos vindos do ERP</li>
-          <li>Peça ou serviço necessário na OS vira solicitação de compra no ERP</li>
-          <li>O custo realizado volta para fechar o custo do mês por equipamento</li>
-          <li>Conexão pela <a href="/api">API do ServPilot</a>, documentada para o seu time de TI</li>
+          <li>Equipamentos, locações, movimentos e custos na <a href="/api">API do ServPilot</a>, documentada para o seu time de TI</li>
+          <li>Com o Protheus: cadastros vindos do ERP ou enviados a ele, como a empresa escolher</li>
+          <li>Pedido de venda e título pelo ERP, e o custo realizado de volta por equipamento</li>
+          <li>ERP fora do ar não para a operação: as mensagens esperam na fila</li>
         </ul>
       </div>
       <div class="destaque-visual" aria-hidden="true">
@@ -159,8 +369,8 @@
           <div class="fluxo-caixa"><b>ServPilot</b><small>campo e depósito</small></div>
           <ul class="fluxo-setas">
             <li class="entra"><span>←</span>Equipamentos, clientes e produtos</li>
+            <li class="sai"><span>→</span>Locações, medições e cobrança</li>
             <li class="sai"><span>→</span>Solicitação de compra da OS</li>
-            <li class="sai"><span>→</span>Material usado do estoque</li>
             <li class="entra"><span>←</span>Custo realizado por equipamento</li>
           </ul>
           <div class="fluxo-caixa erp"><b>Seu ERP</b><small>compras, custos e financeiro</small></div>
@@ -170,42 +380,37 @@
   </div>
 </section>
 
-<!-- ================================================================ para quem -->
-<section class="secao" id="para-quem">
-  <div class="faixa">
-    <div class="titulo-secao revelar">
-      <p class="sobretitulo">Para quem é</p>
-      <h2>Para quem tem equipamento rodando fora de casa.</h2>
-    </div>
-    <div class="perfis">
-      <article class="perfil revelar">
-        <h3>Quem aluga equipamentos</h3>
-        <p>Das ferramentas simples aos conjuntos com mangueiras, cabos e acessórios. Saber o que está alugado, o que volta
-          e em que estado, e cobrar a avaria com foto e aceite.</p>
-      </article>
-      <article class="perfil revelar">
-        <h3>Quem usa nas próprias obras</h3>
-        <p>Construtoras e empresas que circulam equipamentos entre obras e unidades. Saber onde cada um está, quanto custa
-          por mês e quando precisa de manutenção.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
 <!-- ================================================================ perguntas -->
 <section class="secao clara" id="perguntas">
   <div class="faixa estreita">
     <div class="titulo-secao revelar">
       <p class="sobretitulo">Perguntas frequentes</p>
-      <h2>O que dá para saber hoje.</h2>
+      <h2>O que todo mundo pergunta.</h2>
     </div>
     <div class="perguntas">
-      <details class="revelar"><summary>Quando a Gestão de Equipamentos fica pronta?</summary>
-        <p>Ainda não tem data. Ela está sendo desenhada a partir de conversas com quem vive esse problema. Peça o aviso pelo WhatsApp e avisamos quando estiver disponível.</p></details>
+      <details class="revelar"><summary>Já posso usar a Gestão de Equipamentos?</summary>
+        <p>Ela está em teste com os primeiros clientes. Fale com a gente pelo WhatsApp: mostramos a aplicação com o seu dia
+          a dia e vemos se a sua empresa entra no teste. Ainda não há data para a liberação geral.</p></details>
+      <details class="revelar"><summary>Quanto custa?</summary>
+        <p>A Gestão de Equipamentos terá plano próprio, pensado pela quantidade de equipamentos. Os valores ainda estão
+          sendo fechados com os primeiros clientes.</p></details>
+      <details class="revelar"><summary>Serve para obra própria e uso próprio, não só para locação?</summary>
+        <p>Sim. O mesmo controle vale para o equipamento alugado para terceiros, levado para as obras da empresa ou usado num
+          setor ou filial: reserva, saída, retorno, local e linha do tempo.</p></details>
       <details class="revelar"><summary>Funciona com o meu ERP?</summary>
-        <p>Sim, essa é uma das bases do desenho: cadastros vindos do ERP, solicitação de compra a partir da OS e o custo realizado voltando para o ServPilot, pela <a href="/api">API documentada</a> do ServPilot.</p></details>
-      <details class="revelar"><summary>Já dá para usar alguma coisa hoje?</summary>
-        <p>Sim. O cadastro de equipamentos com etiqueta QR, a OS de manutenção, os planos de preventiva e o histórico por equipamento já existem no ServPilot, na <a href="/refrigeracao">Gestão de Serviços de Refrigeração</a>.</p></details>
+        <p>Hoje os dados já saem pela <a href="/api">API OData do ServPilot</a>, com documentação aberta para o seu time de
+          TI. A integração com o Protheus está sendo construída: a empresa escolhe quem é dono do cadastro, a cobrança pode
+          ir pelo ERP e o custo realizado volta para o ServPilot.</p></details>
+      <details class="revelar"><summary>O equipamento é rastreado?</summary>
+        <p>Não. O ServPilot sabe onde o equipamento está pelos movimentos registrados (saída, chegada, retorno). No app de
+          entrega, que está sendo construído, a posição do celular é lida só no momento do registro, com o app aberto,
+          nunca em segundo plano.</p></details>
+      <details class="revelar"><summary>Como fica a cobrança da locação?</summary>
+        <p>Hoje o contrato calcula o valor previsto pelo preço por dia, semana ou mês. A medição do período e a cobrança por
+          boleto ou Pix registrado nos principais bancos, por arquivo CNAB ou pelo ERP estão sendo construídas.</p></details>
+      <details class="revelar"><summary>Já uso o ServPilot na refrigeração. Posso ter as duas?</summary>
+        <p>Sim. As duas são aplicações do mesmo ServPilot, com o mesmo login, e a
+          <a href="/refrigeracao">Gestão de Serviços de Refrigeração</a> continua funcionando do mesmo jeito.</p></details>
     </div>
   </div>
 </section>
@@ -214,15 +419,17 @@
 <section class="chamada" id="aviso">
   <div class="faixa chamada-dentro revelar">
     <img src="/img/simbolo-escuro.svg" alt="" width="72" height="72" class="chamada-simbolo">
-    <h2>Quer saber quando estiver pronta?</h2>
-    <p>Mande uma mensagem e avisamos pelo WhatsApp. Se quiser, conte como você controla os equipamentos hoje: isso ajuda a desenhar a ferramenta.</p>
+    <h2>Quer ser um dos primeiros?</h2>
+    <p>Conte quantos equipamentos você tem e como controla hoje. Mostramos a Gestão de Equipamentos com o seu dia a dia
+      e vemos se a sua empresa entra no teste.</p>
     <div class="abertura-acoes centro">
-      <a class="botao coral grande" data-whatsapp="Olá! Quero ser avisado quando a Gestão de Equipamentos do ServPilot estiver disponível." href="#aviso">
+      <a class="botao coral grande" data-whatsapp="Olá! Quero testar a Gestão de Equipamentos do ServPilot." href="#aviso">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.7a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3Z"/></svg>
-        Quero ser avisado
+        Falar pelo WhatsApp
       </a>
-      <a class="botao contorno-claro grande" href="/">Ver as outras aplicações</a>
+      <a class="botao contorno-claro grande" href="/demonstracao">Pedir uma demonstração</a>
     </div>
+    <p class="hub-ja-cliente"><a href="/">Ver as outras aplicações do ServPilot</a></p>
   </div>
 </section>
 
@@ -238,10 +445,12 @@
       <a href="/">Início</a>
       <a href="/refrigeracao">Gestão de Refrigeração</a>
       <a href="/precos">Preços</a>
+      <a href="/api">API</a>
       <a href="https://painel.servpilot.com.br" rel="noopener">Entrar no painel</a>
       <a href="/blog">Blog</a>
       <a href="/termos">Termos de uso</a>
       <a href="/privacidade">Privacidade</a>
+      <a href="/suporte">Suporte</a>
       <a href="#" data-cookies>Cookies</a> <a href="https://www.instagram.com/servpilot" target="_blank" rel="noopener">Instagram</a> <a href="https://www.tiktok.com/@servpilot" target="_blank" rel="noopener">TikTok</a> <a href="https://www.facebook.com/1345149045355955" target="_blank" rel="noopener">Facebook</a>
       <a href="mailto:contato@servpilot.com.br">contato@servpilot.com.br</a>
     </nav>

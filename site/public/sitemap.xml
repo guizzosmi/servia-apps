@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://servpilot.com.br/</loc><lastmod>2026-11-04</lastmod></url>
+  <url><loc>https://servpilot.com.br/</loc><lastmod>2026-11-08</lastmod></url>
   <url><loc>https://servpilot.com.br/refrigeracao</loc><lastmod>2026-11-04</lastmod></url>
-  <url><loc>https://servpilot.com.br/equipamentos</loc><lastmod>2026-11-04</lastmod></url>
+  <url><loc>https://servpilot.com.br/equipamentos</loc><lastmod>2026-11-08</lastmod></url>
   <url><loc>https://servpilot.com.br/sistema-para-refrigeracao</loc><lastmod>2026-10-30</lastmod></url>
   <url><loc>https://servpilot.com.br/modelo-pmoc</loc><lastmod>2026-11-06</lastmod></url>
   <url><loc>https://servpilot.com.br/software-pmoc</loc><lastmod>2026-10-30</lastmod></url>
@@ -17,9 +17,10 @@
   <url><loc>https://servpilot.com.br/blog/checklist-manutencao-preventiva-ar-condicionado</loc><lastmod>2026-10-30</lastmod></url>
   <url><loc>https://servpilot.com.br/blog/ordem-de-servico-refrigeracao</loc><lastmod>2026-10-30</lastmod></url>
   <url><loc>https://servpilot.com.br/termos</loc><lastmod>2026-10-30</lastmod></url>
-  <url><loc>https://servpilot.com.br/privacidade</loc><lastmod>2026-10-30</lastmod></url>
+  <url><loc>https://servpilot.com.br/privacidade</loc><lastmod>2026-11-07</lastmod></url>
   <url><loc>https://servpilot.com.br/api</loc><lastmod>2026-11-05</lastmod></url>
-  <url><loc>https://servpilot.com.br/excluir-conta</loc></url>
+  <url><loc>https://servpilot.com.br/excluir-conta</loc><lastmod>2026-11-07</lastmod></url>
   <url><loc>https://servpilot.com.br/demonstracao</loc><lastmod>2026-11-07</lastmod></url>
   <url><loc>https://servpilot.com.br/conector</loc><lastmod>2026-11-07</lastmod></url>
+  <url><loc>https://servpilot.com.br/suporte</loc><lastmod>2026-11-07</lastmod></url>
 </urlset>

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../cobranca/widgets_cobranca.dart' show CartaoCobranca;
 import '../servicos/parametros.dart';
 import '../servicos/status.dart' show dataHoraBr;
 import '../widgets/margem.dart';
@@ -428,6 +429,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // Guia 100: cobrança parametrizável (boleto/Pix registrado, CNAB).
+          const CartaoCobranca(),
           const SizedBox(height: 12),
           // Guia 73: Pix para receber (QR Code e copia e cola em Caixa > A receber).
           Card(

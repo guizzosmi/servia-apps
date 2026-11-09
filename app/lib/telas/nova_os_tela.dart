@@ -10,6 +10,7 @@ import '../core/acoes_relato.dart';
 import '../core/consultas.dart';
 import '../core/estado.dart';
 import '../core/formatos.dart';
+import '../widgets/busca_aparelhos.dart';
 import '../widgets/cadastros_rapidos.dart';
 import '../widgets/entrar_no_servico.dart';
 import '../widgets/relato_audio.dart';
@@ -21,10 +22,14 @@ import '../widgets/status_chip.dart';
 /// de um serviço ("outra OS neste cliente"). [audioId]: uma OS falada
 /// (guia 17b), que preenche a tela com o que a IA entendeu.
 class NovaOsTela extends StatefulWidget {
-  const NovaOsTela({super.key, this.clienteId, this.localId, this.audioId, this.falarAoAbrir = false});
+  const NovaOsTela(
+      {super.key, this.clienteId, this.localId, this.equipamentoId, this.audioId, this.falarAoAbrir = false});
 
   final String? clienteId;
   final String? localId;
+
+  /// Guia 108: "Abrir OS para este aparelho" (etiqueta lida fora da OS): já vem marcado.
+  final String? equipamentoId;
   final String? audioId;
 
   /// Abre já gravando ("Falar a OS" da tela Hoje).
@@ -75,6 +80,10 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   TimeOfDay? _inicio;
   TimeOfDay? _fim;
 
+  /// Guia 95: o dia da OS que não é "atender agora" (aaaa-mm-dd; null = hoje).
+  /// Ela entra na agenda da equipe dele nesse dia.
+  String? _dia;
+
   /// Guia 80: as OS em aberto do cliente e a escolhida para usar (null = OS
   /// nova). [_decidiuNova]: ele tocou "Abrir uma OS nova".
   List<OsAberta> _abertas = const [];
@@ -88,6 +97,9 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   Map? _retornoSugerido;
   String? _retornoOsId;
   List<Map> _clientesSugeridos = const [];
+  /// Nome do cliente falado que a IA não achou no cadastro: o técnico pode cadastrá-lo com um toque.
+  String _clienteFalado = '';
+  String _lNomeFalado = '';
 
   @override
   void initState() {
@@ -103,6 +115,8 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     if (_cliente != null) {
       _local = banco.um('locais', widget.localId);
       if (_local == null) _escolherLocalPadrao();
+      final eq = banco.um('equipamentos', widget.equipamentoId);
+      if (eq != null && eq['local_id'] == _local?['id']) _equipamentos.add('${eq['id']}');
     }
   }
 
@@ -203,13 +217,29 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         _clienteNovo = false;
         _escolherLocalPadrao();
       } else {
-        _cliente = null;
-        _clienteNovo = true;
-        _cNome.text = escolha.nomeDigitado;
-        _local = null;
-        _localNovo = true;
+        _cadastrarNovo(escolha.nomeDigitado);
       }
     });
+  }
+
+  /// Passa o formulário para "Cliente novo" (com o nome já preenchido, se houver) e um local novo.
+  /// Chamar dentro de setState.
+  void _cadastrarNovo(String nome, {String local = ''}) {
+    _limparEquipamentos();
+    _esquecerAbertas();
+    _contatoId = null;
+    _contatoNovo = null;
+    _cliente = null;
+    _clienteNovo = true;
+    _cNome.text = nome;
+    _local = null;
+    _localNovo = true;
+    if (local.isNotEmpty) _lNome.text = local;
+    _clientesSugeridos = const [];
+    _clienteFalado = '';
+    _dicas = _dicas
+        .where((d) => !d.startsWith('Qual cliente') && !d.startsWith('Não deu para saber o cliente'))
+        .toList();
   }
 
   // ------------------------------------------------------------------
@@ -246,6 +276,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       _audioId = null;
       _dicas = const [];
       _clientesSugeridos = const [];
+      _clienteFalado = '';
       _esquecerAbertas();
     });
   }
@@ -309,6 +340,8 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     final falado = '${cli['falado'] ?? ''}'.trim();
     setState(() {
       _propostaAplicada = true;
+      _clienteFalado = '';
+      _lNomeFalado = '';
       // O que o técnico já escolheu (ou veio preenchido) fica: a proposta só completa.
       final jaTinhaCliente = _cliente != null || _clienteNovo;
       if (!jaTinhaCliente) {
@@ -324,13 +357,18 @@ class _NovaOsTelaState extends State<NovaOsTela> {
           _local = null;
           _localNovo = true;
           _lNome.text = '${loc['falado'] ?? ''}'.trim();
-          dicas.add('Cliente "$falado" não está no cadastro: confira o nome (ou escolha da lista).');
+          dicas.add('Cliente novo: "$falado" não está no cadastro. Confira o nome e complete o telefone abaixo, '
+              'ou toque em "Escolher da lista" se ele já existir com outro nome.');
         } else {
           sugeridos = [
             for (final x in (cli['candidatos'] is List ? cli['candidatos'] as List : const []).whereType<Map>())
               if (banco.um('clientes', x['cliente_id']) != null) x,
           ];
-          dicas.add(falado.isEmpty ? 'Não deu para saber o cliente: escolha.' : 'Qual cliente é "$falado"? Escolha.');
+          dicas.add(falado.isEmpty
+              ? 'Não deu para saber o cliente: escolha ou cadastre.'
+              : 'Qual cliente é "$falado"? Escolha abaixo ou cadastre como cliente novo.');
+          _clienteFalado = falado;
+          _lNomeFalado = '${loc['falado'] ?? ''}'.trim();
         }
       } else if (_cliente != null && cli['cliente_id'] != null && cli['cliente_id'] != _cliente!['id']) {
         dicas.add('A IA entendeu outro cliente ("$falado"). Ficou o que já estava escolhido.');
@@ -373,6 +411,9 @@ class _NovaOsTelaState extends State<NovaOsTela> {
       final horario = ab['horario'] is Map ? ab['horario'] as Map : const {};
       _inicio = _hora(horario['inicio']);
       _fim = _hora(horario['fim']);
+      // Guia 96: o dia falado ("amanhã às 9h") vira o dia do serviço, se ele ainda não trocou.
+      final diaFalado = _diaFalado(ab['data_prevista']);
+      if (diaFalado != null && _dia == null) _dia = diaFalado;
       // Guia 80: as OS em aberto deste cliente (a que combina com o falado vem primeiro).
       final abertas = ab['os_aberta'] is Map ? ab['os_aberta'] as Map : const {};
       final clienteId = _cliente?['id'];
@@ -394,6 +435,14 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     if (m == null) return null;
     final h = int.parse(m[1]!), min = int.parse(m[2]!);
     return h < 24 && min < 60 ? TimeOfDay(hour: h, minute: min) : null;
+  }
+
+  /// 'aaaa-mm-dd' de hoje até 120 dias (o limite de "Trocar dia"); senão null.
+  static String? _diaFalado(Object? v) {
+    final s = '${v ?? ''}'.trim();
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s) || DateTime.tryParse(s) == null) return null;
+    final hoje = EstadoApp.instancia.sync!.hoje;
+    return s.compareTo(hoje) >= 0 && s.compareTo(somarDias(hoje, 120)) <= 0 ? s : null;
   }
 
   static String _hhmm(TimeOfDay? t) =>
@@ -597,6 +646,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                         setState(() {
                           _trocarCliente(cliente);
                           _clientesSugeridos = const [];
+                          _clienteFalado = '';
                           _dicas = _dicas
                               .where((d) => !d.startsWith('Qual cliente') && !d.startsWith('Não deu para saber o cliente'))
                               .toList();
@@ -606,6 +656,18 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                       },
                     ),
                 ]),
+              if (_clienteFalado.isNotEmpty && _cliente == null && !_clienteNovo)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setState(() => _cadastrarNovo(_clienteFalado, local: _lNomeFalado)),
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: Text('Cadastrar "$_clienteFalado" como cliente novo'),
+                    ),
+                  ),
+                ),
               if ((r?.transcricao ?? '').trim().isNotEmpty)
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
@@ -656,6 +718,65 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   }
 
   // ------------------------------------------------------------------
+  // Guia 95: o dia da agenda
+
+  String get _diaEscolhido {
+    final hoje = EstadoApp.instancia.sync!.hoje;
+    final d = _dia;
+    return d == null || d.compareTo(hoje) < 0 ? hoje : d;
+  }
+
+  /// 'sábado, 07/11 (hoje)'
+  String _textoDia(String dia) {
+    final hoje = EstadoApp.instancia.sync!.hoje;
+    final quando = dia == hoje ? ' (hoje)' : dia == somarDias(hoje, 1) ? ' (amanhã)' : '';
+    return '${dataComDia(dia)}$quando';
+  }
+
+  /// 'hoje', 'amanhã' ou 'sexta, 14/11'
+  String _quando(String dia) {
+    final hoje = EstadoApp.instancia.sync!.hoje;
+    return dia == hoje ? 'hoje' : dia == somarDias(hoje, 1) ? 'amanhã' : dataComDia(dia);
+  }
+
+  Future<void> _escolherDia() async {
+    final hoje = DateTime.parse(EstadoApp.instancia.sync!.hoje);
+    final d = await showDatePicker(
+      context: context,
+      initialDate: DateTime.parse(_diaEscolhido),
+      firstDate: hoje,
+      lastDate: hoje.add(const Duration(days: 120)),
+      helpText: 'Para que dia é o serviço?',
+    );
+    if (d == null || !mounted) return;
+    setState(() => _dia = dataIso(d));
+  }
+
+  /// O que acontece com a OS que não é "atender agora" (embaixo do botão).
+  String _dicaAgenda() {
+    if (!AcoesOs.tenhoEquipe) return 'Você não está em nenhuma equipe: a OS vai para a fila do escritório.';
+    final parte = AcoesOs.minhaParteNoDia(_diaEscolhido);
+    final banco = EstadoApp.instancia.banco!;
+    if (parte == null) return 'Entra na agenda da sua equipe nesse dia. O escritório vê no quadro e pode mudar.';
+    if (parte['status'] == 'rascunho') {
+      return 'Entra na parte da ${banco.nomeEquipe(parte['equipe_id'])}, que o escritório ainda vai publicar.';
+    }
+    return 'Entra no fim da parte da ${banco.nomeEquipe(parte['equipe_id'])}. O escritório vê no quadro e pode mudar.';
+  }
+
+  /// O aviso depois de salvar a OS que não é "atender agora".
+  String _avisoAgenda(String dia, {required bool tinhaParte}) {
+    final quando = _quando(dia);
+    if (!AcoesOs.tenhoEquipe) {
+      return 'OS registrada. Você não está em nenhuma equipe: ela vai para a fila do escritório (sobe quando houver internet).';
+    }
+    if (tinhaParte) return 'OS na sua agenda de $quando. O escritório vê no quadro e pode mudar.';
+    final hoje = EstadoApp.instancia.sync!.hoje;
+    if (dia.compareTo(somarDias(hoje, 2)) > 0) {
+      return 'OS registrada para $quando, na agenda da sua equipe. Ela aparece na tela Hoje 2 dias antes.';
+    }
+    return 'OS registrada para $quando: entra na agenda da sua equipe assim que subir para a plataforma.';
+  }
 
   Future<void> _salvar({required bool agora}) async {
     if (_salvando) return;
@@ -719,7 +840,10 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         contatoNovo: _contatoNovo,
         retornoDeOsId: _retornoOsId,
       );
-      final itemId = await AcoesOs.abrir(pedido, parte: parte, audioId: _audioUsavel(), audioComoRelato: _comoRelato);
+      final dia = _diaEscolhido;
+      final tinhaParte = !agora && AcoesOs.minhaParteNoDia(dia) != null;
+      final itemId = await AcoesOs.abrir(pedido,
+          parte: parte, dia: agora ? null : dia, audioId: _audioUsavel(), audioComoRelato: _comoRelato);
       if (!mounted) return;
       final aviso = ScaffoldMessenger.of(context);
       if (itemId != null && _audioId != null) {
@@ -734,8 +858,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
         aviso.showSnackBar(const SnackBar(content: Text('OS aberta e incluída na sua parte. Faça o check-in quando começar.')));
         context.pushReplacement('/servico/$itemId');
       } else {
-        aviso.showSnackBar(const SnackBar(
-            content: Text('OS registrada. Ela vai para a fila do escritório (sobe quando houver internet).')));
+        aviso.showSnackBar(SnackBar(content: Text(_avisoAgenda(dia, tinhaParte: tinhaParte))));
         context.pop();
       }
     } catch (e) {
@@ -1009,14 +1132,29 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                       trailing: TextButton(onPressed: _escolherCliente, child: const Text('Trocar')),
                     )
                   else
-                    SizedBox(
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: _escolherCliente,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Escolher cliente'),
+                    Row(children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: _escolherCliente,
+                            icon: const Icon(Icons.search),
+                            label: const Text('Escolher cliente'),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: () => setState(() => _cadastrarNovo('')),
+                            icon: const Icon(Icons.person_add_alt_1),
+                            label: const Text('Cliente novo'),
+                          ),
+                        ),
+                      ),
+                    ]),
                 ]),
 
                 // ---------- local ----------
@@ -1039,7 +1177,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                         controller: _lNome,
                         textCapitalization: TextCapitalization.sentences,
                         decoration: const InputDecoration(
-                            labelText: 'Nome do local', hintText: 'Ex.: Matriz, Unidade Cacic (vazio: Principal)'),
+                            labelText: 'Nome do local', hintText: 'Ex.: Matriz, Loja Centro (vazio: Principal)'),
                       ),
                       const SizedBox(height: 8),
                       Row(children: [
@@ -1199,8 +1337,16 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                 // ---------- equipamentos ----------
                 if (_local != null || _localNovo)
                   _Secao(titulo: 'Equipamentos (opcional)', filhos: [
-                    for (final e in equipamentos)
-                      CheckboxListTile(
+                    // Guia 108: com muitos aparelhos, a busca (e a etiqueta) no topo, por ambiente.
+                    BuscaAparelhos(
+                      key: ValueKey('aparelhos-${_local?['id']}'),
+                      aparelhos: equipamentos,
+                      aoAcharPorEtiqueta: (e, _) async {
+                        setState(() => _equipamentos.add('${e['id']}'));
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text('Marcado: ${rotuloAparelho(e)}')));
+                      },
+                      item: (e) => CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _equipamentos.contains(e['id']),
@@ -1219,6 +1365,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                             ].where((x) => x != null && '$x'.isNotEmpty).join(' · '),
                             e['id']),
                       ),
+                    ),
                     for (final e in _novos)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -1281,13 +1428,29 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                           style: const TextStyle(fontSize: 12, color: Cores.neutro),
                         ),
                       ),
+                      // Guia 95: sem "atender agora", a OS vai para a agenda da equipe no dia escolhido.
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        const Icon(Icons.event_outlined, size: 20, color: Cores.neutro),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('Dia do serviço: ${_textoDia(_diaEscolhido)}',
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                        TextButton(onPressed: _salvando ? null : _escolherDia, child: const Text('Trocar dia')),
+                      ]),
                       SizedBox(
                         height: 48,
                         child: OutlinedButton.icon(
                           onPressed: _salvando ? null : () => _salvar(agora: false),
-                          icon: const Icon(Icons.send_outlined),
-                          label: const Text('Mandar para o escritório'),
+                          icon: Icon(AcoesOs.tenhoEquipe ? Icons.event_available_outlined : Icons.send_outlined),
+                          label: Text(AcoesOs.tenhoEquipe ? 'Pôr na minha agenda' : 'Mandar para o escritório'),
                         ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(_dicaAgenda(),
+                            textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Cores.neutro)),
                       ),
                     ]),
               ),

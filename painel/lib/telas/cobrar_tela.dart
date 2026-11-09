@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:servia_comum/servia_comum.dart';
 
+import '../cobranca/widgets_cobranca.dart' show BotaoTitulo;
 import '../servicos/cobranca.dart';
 import '../servicos/contratos.dart' show modalidadesContrato;
 import '../servicos/status.dart';
@@ -473,10 +474,14 @@ class _CobrarTelaState extends State<CobrarTela> {
                 'Mensalidade ${b['contrato']} (${diaBr(b['competencia_ini'])} a ${diaBr(b['competencia_fim'])})',
               if (b['observacao'] != null) '${b['observacao']}',
             ].join(' · ')),
-            trailing: TextButton(
-              onPressed: () => _desfazer('Desfazer esta cobrança?', () => desfazerCobranca(cobrancaId: '${b['id']}')),
-              child: const Text('Desfazer'),
-            ),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              // Guia 100: boleto/Pix registrado desta cobrança (some no modo manual).
+              BotaoTitulo(cobrancaId: '${b['id']}'),
+              TextButton(
+                onPressed: () => _desfazer('Desfazer esta cobrança?', () => desfazerCobranca(cobrancaId: '${b['id']}')),
+                child: const Text('Desfazer'),
+              ),
+            ]),
           ),
         ),
       const SizedBox(height: 16),

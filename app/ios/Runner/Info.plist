@@ -70,6 +70,8 @@
 	<string>O microfone é usado para gravar o relato do atendimento.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>A câmera é usada para ler a etiqueta dos equipamentos e tirar as fotos do atendimento.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>A localização é usada só quando você registra a entrega, a retirada ou o retorno de um equipamento, ou o check-in de uma manutenção: marca o ponto exato do registro, com o app aberto. O ServPilot não acompanha o celular em segundo plano.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>As fotos da galeria podem ser anexadas ao atendimento.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

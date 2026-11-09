@@ -1,0 +1,19 @@
+{
+  "_leia": "Configuração da esteira dos apps (esteira-apps.cmd, guia 110). Nada aqui é segredo: as chaves ficam só em C:\\dev\\chaves, fora do Git.",
+  "android": {
+    "pacote": "br.com.servpilot.app",
+    "contaDeServico": "C:\\dev\\chaves\\play-conta-servico.json",
+    "faixaPadrao": "internal",
+    "rolloutProducaoPct": 20,
+    "notas": "app\\notas-da-versao.txt",
+    "idiomaNotas": "pt-BR"
+  },
+  "ios": {
+    "codemagicToken": "C:\\dev\\chaves\\codemagic-token.txt",
+    "nomeNoCodemagic": "servia-apps",
+    "appId": "",
+    "workflowId": "ios-testflight",
+    "branch": "main",
+    "limiteMinutos": 90
+  }
+}

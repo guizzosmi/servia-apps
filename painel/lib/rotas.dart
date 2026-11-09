@@ -6,6 +6,9 @@ import 'package:servia_comum/servia_comum.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cadastros/catalogo.dart';
+import 'cobranca/rotas_cobranca.dart';
+import 'equipamentos/rotas_equipamentos.dart';
+import 'erp/rotas_erp.dart';
 import 'quadro/quadro_tela.dart';
 import 'telas/agenda_tela.dart';
 import 'telas/comercial_funil_tela.dart';
@@ -154,6 +157,11 @@ final rotas = GoRouter(
             ),
           ],
         ),
+        // Guia 98: Gestão de Equipamentos (a aplicação do hub).
+        rotaEquipamentos,
+        // Guia 100: títulos de cobrança e Configurações › Cobrança.
+        rotaTitulos,
+        rotaErp, // guia 105: ERP (Protheus) e a fila
         GoRoute(
           path: '/quadro',
           builder: (_, state) {

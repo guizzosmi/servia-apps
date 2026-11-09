@@ -29,6 +29,8 @@ workflows:
           if [ -f ios/Podfile ]; then cd ios && pod install; else echo "sem Podfile: dependências pelo Swift Package Manager"; fi
       - name: Build (número do build = número da execução no Codemagic)
         script: |
+          # Guia 104: o GPS é só "durante o uso"; sem isto o plugin pede também a permissão "sempre".
+          export BYPASS_PERMISSION_LOCATION_ALWAYS=1
           flutter build ipa --release \
             --build-number=$((100 + PROJECT_BUILD_NUMBER)) \
             --export-options-plist=/Users/builder/export_options.plist

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'banco_local.dart';
 import 'consultas.dart';
 import 'estado.dart';
+import 'posicao.dart';
 import 'sincronizacao.dart';
 
 /// Ações do atendimento. Cada uma vira uma operação na fila (a plataforma
@@ -59,11 +60,13 @@ class AcoesAtendimento {
   /// check-in de quem pediu. O líder pode levar junto os membros livres.
   /// Com [colaboradorId], o líder faz o check-in de outra pessoa. [em]: a
   /// hora em que começou, se não foi agora (o serviço que ele já fez, guia 80).
+  /// [posicao]: o ponto do GPS no check-in da manutenção de equipamento (guia 104).
   static Future<String> checkin(
     Map<String, dynamic> item, {
     List<String> acompanhantes = const [],
     String? colaboradorId,
     DateTime? em,
+    Posicao? posicao,
   }) async {
     final atdId = idAtendimento(item['id']);
     final quem = colaboradorId ?? eu;
@@ -80,6 +83,11 @@ class AcoesAtendimento {
         'participante_id': participanteId,
         if (colaboradorId != null) 'colaborador_id': colaboradorId,
         if (acomp.isNotEmpty) 'acompanhantes': acomp,
+        if (posicao != null) ...{
+          'lat': posicao.paraEnvio()['latitude'],
+          'lng': posicao.paraEnvio()['longitude'],
+          'precisao_m': posicao.paraEnvio()['precisao_m'],
+        },
       },
       aplicarLocal: () async {
         final ag = _banco.agendamentoDo(item) ?? const {};
@@ -401,6 +409,7 @@ class AcoesAtendimento {
     required String arquivoLocal,
     required String sha256,
     String? equipamentoId,
+    String? momento,
   }) async {
     final conta = _estado.conta!;
     final agora = DateTime.now();
@@ -415,6 +424,8 @@ class AcoesAtendimento {
         'sha256': sha256,
         'tirada_em': agora.toUtc().toIso8601String(),
         if (equipamentoId != null) 'equipamento_id': equipamentoId,
+        // Guia 104: OS de equipamento, foto de antes ou de depois do serviço.
+        if (momento != null) 'momento': momento,
         // Só para o app: onde está o arquivo (a plataforma ignora).
         'arquivo_local': arquivoLocal,
       },
@@ -427,6 +438,7 @@ class AcoesAtendimento {
           'sha256': sha256,
           'tirada_em': agora.toUtc().toIso8601String(),
           'arquivo_local': arquivoLocal,
+          if (momento != null) 'momento': momento,
         }
       ]),
     );

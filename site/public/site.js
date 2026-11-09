@@ -56,3 +56,22 @@ const MENSAGEM = 'Olá! Vi o site do ServPilot e quero conhecer o sistema para a
   const ano = document.getElementById('ano');
   if (ano) ano.textContent = String(new Date().getFullYear());
 })();
+
+// Origem da visita (guia 97): guarda a 1ª página e a campanha (utm_*, gclid, fbclid) e o site de onde
+// veio, só nesta aba (sessionStorage, sem cookie), para o pedido de demonstração dizer de onde a pessoa veio.
+(function () {
+  try {
+    if (sessionStorage.getItem('servpilot_origem')) return;
+    const q = new URLSearchParams(location.search);
+    const o = { entrada: location.pathname };
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'].forEach((k) => {
+      const v = q.get(k);
+      if (v) o[k] = v.slice(0, 200);
+    });
+    if (document.referrer) {
+      const r = new URL(document.referrer);
+      if (r.host !== location.host) o.referencia = r.host;
+    }
+    sessionStorage.setItem('servpilot_origem', JSON.stringify(o));
+  } catch (_) { /* sem armazenamento: o pedido vai sem a origem */ }
+})();

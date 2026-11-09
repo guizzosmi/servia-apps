@@ -7,6 +7,8 @@
   --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
 * { box-sizing: border-box; }
+/* O atributo hidden vence o display das classes (.ad-menu a, .ad-passo, .ad-campo...): sem isso a busca e o console não escondiam nada. */
+[hidden] { display: none !important; }
 html { scroll-padding-top: 76px; }
 body { margin: 0; background: var(--fundo); color: var(--tinta); font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; font-size: 15px; line-height: 1.55; }
 a { color: var(--indigo-500); }
