@@ -11,7 +11,7 @@
   "ios": {
     "codemagicToken": "C:\\dev\\chaves\\codemagic-token.txt",
     "nomeNoCodemagic": "servia-apps",
-    "appId": "",
+    "appId": "6aef5a2af3a32714087a8758",
     "workflowId": "ios-testflight",
     "branch": "main",
     "limiteMinutos": 90
