@@ -74,7 +74,17 @@ Future<void> atenderOsDoAparelho(BuildContext context, OsDoAparelho o, Map<Strin
       _aviso(context, motivo);
       return;
     }
-    final partes = AcoesOs.partesParaAtender();
+    // Guia 113: no modo simples, sem parte hoje, abre o dia do técnico.
+    if (AcoesOs.partesParaAtender().isEmpty) _aviso(context, 'Abrindo o seu dia de hoje...');
+    final List<Map<String, dynamic>> partes;
+    try {
+      partes = await AcoesOs.partesParaAtenderAgora();
+    } on FalhaMeuDia catch (e) {
+      if (context.mounted) _aviso(context, e.motivo);
+      return;
+    }
+    if (partes.isEmpty || !context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final parte = partes.length == 1 ? partes.first : await _escolherParte(context, partes);
     if (parte == null || !context.mounted) return;
     final aberta = o.comoOsAberta;

@@ -4,3 +4,4 @@ Gestão de Equipamentos: entrega e devolução com o ponto do GPS, fotos, checkl
 Ler etiqueta na tela Hoje e busca de aparelhos por código, ambiente e capacidade.
 O líder da equipe reabre a OS pelo app, com o motivo.
 O gestor encerra a OS no app ao concluir o atendimento.
+Modo simples: ao ler a etiqueta, o técnico atende a preventiva na hora, mesmo sem nada agendado para hoje.

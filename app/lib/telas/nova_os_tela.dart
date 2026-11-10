@@ -801,8 +801,8 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     Map<String, dynamic>? parte;
     (DateTime, DateTime)? periodo;
     if (agora) {
-      final partes = AcoesOs.partesParaAtender();
-      if (partes.isEmpty) return;
+      final partes = await _partesAgora();
+      if (partes == null || !mounted) return;
       parte = partes.length == 1 ? partes.first : await _escolherParte(partes);
       if (parte == null || !mounted) return;
       // Já fez: o horário antes de abrir (se desistir, nada é registrado).
@@ -937,8 +937,8 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     Map<String, dynamic>? parte;
     var confirmado = false;
     if (item == null) {
-      final partes = AcoesOs.partesParaAtender();
-      if (partes.isEmpty) return;
+      final partes = await _partesAgora();
+      if (partes == null || !mounted) return;
       parte = partes.length == 1 ? partes.first : await _escolherParte(partes);
       if (parte == null || !mounted) return;
       if (os.comOutraEquipe) {
@@ -970,6 +970,25 @@ class _NovaOsTelaState extends State<NovaOsTela> {
     }
   }
 
+  /// As partes para atender agora (guia 113: no modo simples, sem parte hoje,
+  /// abre o dia do técnico). null = não deu (o motivo já apareceu).
+  Future<List<Map<String, dynamic>>?> _partesAgora() async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (AcoesOs.partesParaAtender().isEmpty) {
+      messenger.showSnackBar(const SnackBar(content: Text('Abrindo o seu dia de hoje...')));
+    }
+    try {
+      final partes = await AcoesOs.partesParaAtenderAgora();
+      messenger.hideCurrentSnackBar();
+      return partes.isEmpty ? null : partes;
+    } on FalhaMeuDia catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.motivo), backgroundColor: Cores.erro));
+      return null;
+    }
+  }
+
   /// Guia 80: a OS está com outra equipe (ou em outro dia): trazer só confirmando.
   Future<bool> _confirmarTrazer(OsAberta os) async {
     final ok = await showDialog<bool>(
@@ -990,7 +1009,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   String _dicaUsar(OsAberta os, List<Map<String, dynamic>> partes) {
     if (_momento == 'futuro') return 'Nenhuma OS nova: o áudio fica nesta OS.';
     if (os.impedimento case final motivo?) return motivo;
-    if (partes.isEmpty) return 'Para usar a OS agora, você precisa estar numa parte publicada de hoje.';
+    if (partes.isEmpty) return AcoesOs.semParteHoje ?? AcoesOs.abreMeuDia;
     if (os.naMinhaParte) return 'Ela já está na sua parte de hoje.';
     if (os.comOutraEquipe) return 'Ela sai de onde está e entra no fim da sua parte (o escritório é avisado).';
     return partes.length == 1
@@ -999,7 +1018,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
   }
 
   Widget _botoesUsar(OsAberta os, List<Map<String, dynamic>> partes) {
-    final bloqueado = _momento != 'futuro' && (os.impedimento != null || partes.isEmpty);
+    final bloqueado = _momento != 'futuro' && (os.impedimento != null || !AcoesOs.possoAtenderAgora);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SizedBox(
         height: 52,
@@ -1404,7 +1423,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                       SizedBox(
                         height: 52,
                         child: FilledButton.icon(
-                          onPressed: _salvando || partes.isEmpty ? null : () => _salvar(agora: true),
+                          onPressed: _salvando || !AcoesOs.possoAtenderAgora ? null : () => _salvar(agora: true),
                           icon: const Icon(Icons.play_arrow),
                           label: Text(_audioId == null
                               ? 'Atender agora'
@@ -1420,7 +1439,7 @@ class _NovaOsTelaState extends State<NovaOsTela> {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           partes.isEmpty
-                              ? 'Para atender agora, você precisa estar numa parte publicada de hoje.'
+                              ? AcoesOs.semParteHoje ?? AcoesOs.abreMeuDia
                               : partes.length == 1
                                   ? 'Entra no fim da parte da ${banco.nomeEquipe(partes.first['equipe_id'])}.'
                                   : 'Entra no fim da parte da sua equipe.',

@@ -1,7 +1,7 @@
 name: servia_app
 description: "ServPilot - app do técnico (parte do dia, atendimento, offline)."
 publish_to: 'none'
-version: 0.21.0+21
+version: 0.21.1+22
 
 environment:
   sdk: ^3.9.0

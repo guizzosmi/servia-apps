@@ -63,9 +63,8 @@ class OsDoAparelho {
   String? get impedimento {
     if (noMeuDia) return null;
     if (onde == 'outra_parte') return 'Está na agenda de outra equipe ou de outro dia: fale com o escritório.';
-    if (AcoesOs.partesParaAtender().isEmpty) {
-      return 'Para atender agora, você precisa estar numa parte publicada de hoje.';
-    }
+    // Guia 113: no modo simples, sem parte hoje, o "Atender agora" abre o dia.
+    if (AcoesOs.semParteHoje case final motivo?) return motivo;
     return comoOsAberta.impedimento;
   }
 }

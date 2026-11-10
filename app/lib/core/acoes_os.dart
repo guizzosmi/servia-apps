@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'acoes_atendimento.dart';
 import 'acoes_cadastro.dart';
 import 'acoes_orcamento.dart';
@@ -143,6 +145,16 @@ class OsAberta {
 /// celular na hora (com "OS nova" até a plataforma dar o número) e sobe
 /// quando houver internet. Os ids nascem aqui, para o atendimento poder
 /// começar antes de sincronizar.
+/// Guia 113: não deu para abrir o dia de hoje (o motivo vai para o técnico).
+class FalhaMeuDia implements Exception {
+  const FalhaMeuDia(this.motivo);
+
+  final String motivo;
+
+  @override
+  String toString() => motivo;
+}
+
 class AcoesOs {
   AcoesOs._();
 
@@ -162,6 +174,50 @@ class AcoesOs {
               _banco.presentes(p['id'] as String).any((c) => c['colaborador_id'] == _eu))
             p,
       ];
+
+  /// Guia 113: no modo simples não existe dia publicado pelo escritório (o
+  /// dia só existe quando a Agenda põe algo nele). Quem está numa equipe abre
+  /// o próprio dia de hoje para atender agora (com internet).
+  static bool get possoAbrirMeuDia => AcoesOrcamento.config.modoSimples && tenhoEquipe;
+
+  /// Dá para "atender agora"? (tem parte publicada hoje ou pode abrir o dia).
+  static bool get possoAtenderAgora => partesParaAtender().isNotEmpty || possoAbrirMeuDia;
+
+  /// Por que não dá para atender agora (null = dá).
+  static String? get semParteHoje {
+    if (partesParaAtender().isNotEmpty) return null;
+    if (AcoesOrcamento.config.modoSimples) {
+      return tenhoEquipe ? null : 'Para atender agora, você precisa estar numa equipe: fale com o escritório.';
+    }
+    return 'Para atender agora, você precisa estar numa parte publicada de hoje.';
+  }
+
+  /// O que acontece no "atender agora" sem parte hoje (modo simples).
+  static const abreMeuDia = 'Abre o seu dia de hoje (precisa de internet) e entra no serviço.';
+
+  /// As partes para atender agora. Sem nenhuma, no modo simples, abre o meu
+  /// dia de hoje na plataforma (app_abrir_meu_dia), sincroniza e espera ele
+  /// chegar no celular. Não deu: [FalhaMeuDia] com o motivo.
+  static Future<List<Map<String, dynamic>>> partesParaAtenderAgora() async {
+    final ja = partesParaAtender();
+    if (ja.isNotEmpty || !possoAbrirMeuDia) return ja;
+    try {
+      await Supabase.instance.client.rpc('app_abrir_meu_dia', params: {
+        'p': {'dispositivo_id': _estado.conta!.dispositivoId},
+      }).timeout(const Duration(seconds: 15));
+    } on PostgrestException catch (e) {
+      throw FalhaMeuDia(e.message);
+    } catch (_) {
+      throw const FalhaMeuDia('Sem internet: para abrir o seu dia de hoje, conecte-se e tente de novo.');
+    }
+    for (var i = 0; i < 24; i++) {
+      if (i % 8 == 0) await _sync.sincronizar();
+      final partes = partesParaAtender();
+      if (partes.isNotEmpty) return partes;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    throw const FalhaMeuDia('O seu dia de hoje foi aberto, mas ainda não chegou no celular: sincronize e tente de novo.');
+  }
 
   /// Guia 95: a minha parte (não encerrada) num dia, se ela já está no aparelho.
   static Map<String, dynamic>? minhaParteNoDia(String data) {
