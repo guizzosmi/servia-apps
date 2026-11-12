@@ -7,6 +7,7 @@ import '../cobranca/widgets_cobranca.dart' show CartaoCobranca;
 import '../servicos/parametros.dart';
 import '../servicos/status.dart' show dataHoraBr;
 import '../widgets/margem.dart';
+import 'cartao_dados_empresa.dart';
 
 /// Conector do Claude (guia 91): endereço do servidor MCP e o app "Claude AI" cadastrado no OAuth do Supabase
 /// (cliente público, sem segredo).
@@ -411,6 +412,9 @@ class _ConfiguracoesTelaState extends State<ConfiguracoesTela> {
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // Guia 114: nome, contato, endereço e logo (cabeçalho dos PDFs).
+          const CartaoDadosEmpresa(),
+          const SizedBox(height: 12),
           // Guia 62: modo simples para a empresa pequena.
           Card(
             child: Padding(

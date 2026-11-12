@@ -146,6 +146,8 @@ class _DialogoCupomState extends State<_DialogoCupom> {
         content: SizedBox(
           width: 480,
           child: SingleChildScrollView(
+            // Espaço em cima para o rótulo do primeiro campo não ficar cortado.
+            padding: const EdgeInsets.only(top: 8),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (widget.cupom == null)
                 campoTexto(_codigo, 'Código', ajuda: 'Letras e números, sem espaço (ex.: AMIGO20, PARCEIRO).'),

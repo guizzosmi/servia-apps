@@ -187,6 +187,7 @@ Widget campoTexto(TextEditingController c, String rotulo, {String? ajuda, TextIn
       child: TextField(
         controller: c,
         keyboardType: teclado,
-        decoration: InputDecoration(labelText: rotulo, helperText: ajuda),
+        // A ajuda quebra em até 3 linhas (antes cortava com "...").
+        decoration: InputDecoration(labelText: rotulo, helperText: ajuda, helperMaxLines: 3),
       ),
     );

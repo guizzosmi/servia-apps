@@ -37,6 +37,7 @@ class _AplicacoesTelaState extends State<AplicacoesTela> {
           content: SizedBox(
             width: 480,
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 8),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 if (a == null) campoTexto(codigo, 'Código', ajuda: 'Minúsculas, sem espaço (ex.: equipamentos). Não muda depois.'),
                 campoTexto(nome, 'Nome'),

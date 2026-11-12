@@ -179,6 +179,7 @@ class _DialogoParceiroState extends State<_DialogoParceiro> {
         content: SizedBox(
           width: 480,
           child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 8),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               campoTexto(_nome, 'Nome (pessoa ou empresa)'),
               campoTexto(_documento, 'CPF ou CNPJ', ajuda: 'Indicação de quem tem o mesmo documento não vale.'),
